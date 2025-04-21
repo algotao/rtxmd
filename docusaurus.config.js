@@ -95,7 +95,7 @@ const config = {
       prism: {
         theme: lightTheme,
         darkTheme: darkTheme,
-        additionalLanguages: ['protobuf', 'http', 'bash'],
+        additionalLanguages: ['protobuf', 'http', 'bash', 'toml', 'lua'],
       },
       typesense: {
         typesenseCollectionName: 'wiki',
