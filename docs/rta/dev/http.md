@@ -19,7 +19,7 @@ keywords: [RTA, http, https, cookie, keep-alive]
 | 数据类型 | 请求及回复均使用 Protobuf格式 `Content-Type: application/x-protobuf; charset=UTF-8` 。**Header中可不填充该字段** |
 | 压缩支持 | 不支持。 |
 | 时延上限 | `60ms` 包括网络传输时间+内部处理时间。 |
-| 超时率 | 超时率需控制在 `2%` 以内，超过该指标将被系统自动打压。 |
+| 超时率 | 超时率或超时率需控制在 `2%` 以内，超过该指标将被系统自动打压。 |
 
 ## 示例
 
