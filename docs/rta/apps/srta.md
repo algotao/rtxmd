@@ -14,7 +14,7 @@ keywords: [RTA, sRTA, SaaS]
 以SaaS的方式，让广告客户能够以低门槛、高灵活度的方式使用RTA能力。广告客户可以免除对接整套RTA时涉及到的工程投入、基建投入，专注在策略开发中；同时由于RTA-SaaS部署在平台域内，数据安全和合规性获得更强保障，进而可以衍生出更多玩法，解决更多业务问题。
 
 :::warning
-该功能目前处于alpha阶段，由RTA团队主动邀约，**不接受外部申请，不接受咨询**。
+该功能目前处于alpha阶段，由RTA团队主动邀约。
 :::
 
 + **适用行业与客户**：
@@ -117,7 +117,7 @@ struct StoreValue{
 
 #### 4.3.1 交互协议proto
 
-协议源码地址（协议在高频变动中，最新版本请参考 [git源码](#隐藏)：
+协议源码地址（协议在高频变动中，最新版本请拉取 [git源码](https://e.coding.net/rta/public/saasapi.git)：
 
 ```protobuf
 syntax = "proto3";
@@ -807,7 +807,7 @@ saastool 是提供给客户的便捷命令行工具，使客户在不开发或�
 
 开发者也可以参考该工具的功能源码(golang)，实现贴合自身业务的处理逻辑。
 
-源码：[saastool](#TODO) 
+源码：[saastool](https://rta.coding.net/p/public/d/saasapi/git/tree/master/cmd/saastool) 
 
 #### 4.4.1 命令行
 
