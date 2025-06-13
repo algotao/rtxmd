@@ -19,25 +19,27 @@ keywords: [RTA, sRTA, SaaS]
 
 + **适用行业与客户**：
 
-  + 希望以RTA方式接入广告系统，但无法满足RTA对接门槛要求的；
-  + 希望且能够自己定制策略，优化后链路效果或转化人群结构的；
-  + 希望应用二方数据作用在特定业务中的（如小程序和app双端用增）
+  + **DID/OpenID无缝互通**：希望应用二方数据作用在特定业务中的（如小程序和app双端用增）。
+  + **零成本服务器成本**：希望以RTA方式接入广告系统，但无法满足RTA对接门槛要求的；
+  + **多方数据联合应用**：一方（客户）、二方（平台）、三方（服务商）数据实时获取，丰富应用场景；
 
 * 产品对比：
 
 | 产品对比 | RTA-SaaS | 完整RTA |
 | --- | --- | --- |
-| 工程 | 简单 <br /> 涉及策略管理和数据管理 | 较复杂 <br /> 涉及策略管理和数据管理、网络、存储、日志等模块 |
+| 工程 | 简单 <br /> 仅需做策略管理和数据管理 | 较复杂 <br /> 需实现策略管理和数据管理、网络、存储、日志等模块 |
 | 数据 | 传至平台侧 | 保存在客户侧 |
-| 策略 | 平台提供容器内编写 | 客户系统内编写 |
-| 数据交互量级 | 取决于客户，当前限制QPS为1 | 取决于平台，请求级交互QPS峰值30w |
-| 机器成本 | 极小 | 较大 |
+| 策略 | 低代码LUA | 客户系统开发与实现 |
+| 数据交互量级 | 由客户主动更新 | 取决于平台，请求级交互QPS峰值30w |
+| 机器成本 | 无 | 较大 |
 | 使用门槛 | 业务侧评估 | 业务侧评估 + 日耗门槛10w/天 |
-| 客户数据安全性 | 以QPS为1的量级，向平台侧上传用户ID+标志位，平台侧无法理解用标志位的含义 | 以平均25万QPS向平台返回用户ID + 策略决策结果，平台侧无法理解策略ID的含义 |
+| 客户数据安全性 | 向平台侧上传用户ID+标志位，平台侧无法理解用标志位的含义 | 以平均25万QPS向平台返回用户ID + 策略决策结果，平台侧无法理解策略ID的含义 |
 
 ## 2 使用流程
 
-TODO
++ 实现数据批量上传
++ 实现数据增量更新
++ 实现策略LUA代码
 
 ## 3 模块一览
 ![sRTA](/img/srta.png)
@@ -45,7 +47,8 @@ TODO
 ## 4 对接协议与文档
 
 ### 4.1 策略维护接口
-TODO
+
+策略维护接口预计于 7 月中可用，当前提供人工维护支持。
 
 ### 4.2 数据底座
 
@@ -108,7 +111,7 @@ struct StoreValue{
 
 #### 4.2.3 三方数据
 
-三方数据在存储中的结构与一方数据相同。多个来源的三方数据使用namespace概念进行区分与授权管理。不同的namespace在操作时隔离，在使用时基于授权机制决定是否作为 LUA 的入参。
+三方数据在存储中的结构与一方数据相同。多个来源的三方数据使用dataspace概念进行区分与授权管理。不同的dataspace在操作时隔离，在使用时基于授权机制决定是否作为 LUA 的入参。
 
 ### 4.3 数据管理
 
@@ -125,13 +128,9 @@ option go_package = "e.coding.net/rta/public/saasapi";
 
 // SaasReq 命令请求
 message SaasReq {
-    UserIdType userid_type                       = 1;   // 用户ID类型
-    string appid                                 = 2;   // 小程序/小游戏/公众号/视频号的appid
-
     oneof cmd {
         Read read                                = 10;  // 批量读取
         Write write                              = 11;  // 批量写入
-        ColumnWrite column_write                 = 12;  // 全量列式写入
 
         Task task_create                         = 20;  // 任务创建
         TaskList task_list                       = 21;  // 列出任务
@@ -143,7 +142,9 @@ message SaasReq {
 
 // Read 批量读取命令
 message Read {
-    repeated ReadItem read_items                 = 1;   // 批量获取命令
+    string dataspace_id                          = 1;   // 数据空间ID
+    string appid                                 = 2;   // 小程序/小游戏/公众号/视频号的appid
+    repeated ReadItem read_items                 = 3;   // 批量获取命令
 }
 
 // ReadItem 读取命令
@@ -153,8 +154,10 @@ message ReadItem {
 
 // Write 批量写入命令
 message Write {
-    bool is_clear_all_first                      = 1;   // 是否先清空该用户所有数据
-    repeated WriteItem write_items               = 2;   // 批量写入命令
+    string dataspace_id                          = 1;   // 数据空间ID
+    string appid                                 = 2;   // 小程序/小游戏/公众号/视频号的appid
+    bool is_clear_all_first                      = 3;   // 是否先清空该用户所有数据
+    repeated WriteItem write_items               = 4;   // 批量写入命令
 }
 
 // WriteItem 写入命令
@@ -176,7 +179,7 @@ message Bytes {
 message Uint32s {
     repeated uint32 uint32s                      = 1;   // 写入的uint32
     uint64 index_1                               = 2;   // 写入uint32的索引值(0..15) 最多 16 个
-    //uint64 index_2 = 3;                               // 写入uint32的索引值(64..127)(当前不支持)
+    //uint64 index_2 = 3;                               // 写入uint32的索引值(当前不支持)
 }
 
 // FlagsWithExpire 写入标志位区域
@@ -192,26 +195,22 @@ message FlagWithExpire {
     uint32 expire                                = 3;   // 过期时间，为 0 则永不过期
 }
 
-// UserIdType 用户 ID 类型
-enum UserIdType {
-    DEVICEID                                     = 0;   // 设备号
-    OPENID                                       = 1;   // OpenId
-    INNERID1                                     = 10;   // 内部ID1
-}
-
 // ColumnWrite 全量列式写入命令
 message ColumnWrite {
-    Bytes write_bytes                            = 2;   // byte区域
-    Uint32s write_uint32s                        = 3;   // uint32区域
-    FlagsWithExpire write_flags_with_expire      = 4;   // 标志位区域
-    bool is_clear_all_first                      = 5;   // 是否先执行清空
+    string dataspace_id                          = 1;   // 数据空间ID
+    bool is_clear_all_first                      = 2;   // 是否先执行清空
+    Bytes write_bytes                            = 3;   // byte区域
+    Uint32s write_uint32s                        = 4;   // uint32区域
+    FlagsWithExpire write_flags_with_expire      = 5;   // 标志位区域
 }
 
 message Task {
-    string task_sha256                           = 1;   // 任务sha256
-    string task_description                      = 2;   // 任务描述
-    repeated FileInfo task_file_infos            = 3;   // 文件列表
-    uint64 task_block_size                       = 4;   // 文件块字节大小（推荐50M）
+    string dataspace_id                          = 1;   // 数据空间ID
+    string appid                                 = 2;   // 小程序/小游戏/公众号/视频号的appid
+    string task_sha256                           = 3;   // 任务sha256
+    string task_description                      = 4;   // 任务描述
+    repeated FileInfo task_file_infos            = 5;   // 文件列表
+    uint64 task_block_size                       = 6;   // 文件块字节大小（推荐200M）
 
     // 以下字段只在返回时填写，用于提供服务端的任务状态。在请求时填写会被忽略
     string create_time                           = 10;   // 创建时间
@@ -250,7 +249,7 @@ message FileInfo {
 message FileBlock {
     string block_sha256                          = 1;   // 块的sha256
     uint64 block_length                          = 2;   // 块的字节长度
-    bool uploaded                                = 3;   // 是否已上传（在TaskInfo请求返回）
+    bool uploaded                                = 3;   // 是否已上传（在TaskCreate/TaskInfo请求返回）
 }
 
 // SaasRes 命令返回
@@ -276,9 +275,9 @@ message ReadRes {
 }
 
 message WriteRes {
-    uint32 succ_cmd_count                        = 1;  // 成功的命令数量
-    uint32 fail_cmd_count                        = 2;  // 失败的命令数量
-    repeated ValueItem cmd_res                   = 3;  // 返回的失败命令，仅填写cmd_index和cmd_code
+    //uint32 succ_cmd_count                        = 1;  // 成功的命令数量
+    //uint32 fail_cmd_count                        = 2;  // 失败的命令数量
+    repeated string failed_userid                = 3;  // 返回的失败的用户ID
 }
 
 // ValueItem 读取命令返回内容
@@ -309,6 +308,7 @@ enum ErrorCode {
     QPS_LIMIT                                    = 113; // 并发请求量超限
     CMDS_LIMIT                                   = 114; // 命令数量超限
     CMDS_NULL                                    = 115; // 命令为空
+    DATASPACE_NOT_EXISTS                         = 116; // 数据空间不存在
 
     TASK_EXISTS                                  = 120; // 任务已存在
     TASK_IS_NOT_EXISTS                           = 121; // 任务不存在
@@ -317,7 +317,14 @@ enum ErrorCode {
     TASK_TOTAL_SIZE                              = 124; // 总文件大小超限
     TASK_MARSHAL                                 = 125; // 序列化
 
+    TASK_IS_WATING                               = 130; // 任务未上传完毕
+    TASK_IS_RUNNING                              = 131; // 任务已经在运行
+    TASK_FAILED                                  = 132; // 任务已失败
+    TASK_FINISHED                                = 133; // 任务已完成
+ 
+
     DATA_ERROR                                   = 201; // 数据错误
+    CMD_ERROR                                    = 202; // 命令行执行错误
 }
 
 enum CmdErrorCode {
@@ -327,12 +334,14 @@ enum CmdErrorCode {
 enum TaskStatus {
     ALL                                          = 0;   // 全部
     WAITING                                      = 1;   // 等待中
-    RUNNING                                      = 2;   // 运行中
-    SUCCESS                                      = 3;   // 成功
-    FAIL                                         = 4;   // 失败
+    READY                                        = 2;   // 上传完毕
+    RUNNING                                      = 3;   // 运行中
+    SUCCESS                                      = 4;   // 成功
+    FAIL                                         = 5;   // 失败
 
-    DELETED                                      = 5;   // 已删除，仅在执行删除成功时返回
+    DELETED                                      = 10;   // 已删除，仅在执行删除成功时返回
 }
+
 ```
 
 #### 4.3.2 API域名
@@ -396,24 +405,31 @@ API以protobuf格式返回，返回信息为SaasRes结构
 | 113 | QPS_LIMIT | 并发请求量超限 |
 | 114 | CMDS_LIMIT | 命令数量超限 |
 | 115 | CMDS_NULL | 命令为空 |
+| 116 | DATASPACE_NOT_EXISTS | 数据空间不存在 |
 | 120 | TASK_EXISTS | 任务已存在 |
 | 121 | TASK_IS_NOT_EXISTS | 任务不存在 |
 | 122 | TASK_NUM_LIMIT | 任务数达到上限 |
 | 123 | TASK_BLOCK_SIZE | 块大小超限 |
 | 124 | TASK_TOTAL_SIZE | 总文件大小超限 |
 | 125 | TASK_MARSHAL | 序列化失败 |
+| 130 | TASK_IS_WATING | 任务未上传完毕 |
+| 131 | TASK_IS_RUNNING | 任务已经在运行 |
+| 132 | TASK_FAILED | 任务已失败 |
+| 133 | TASK_FINISHED | 任务已完成 |
 | 201 | DATA_ERROR | 数据错误 |
+| 202 | CMD_ERROR | 命令行执行错误 |
 
 #### 4.3.7 任务状态码/过滤码定义
 
 | 状态码 | proto常量 | 描述 |
 | :--- | :--- | :--- |
 | 0 | ALL | 全部 |
-| 101 | WAITING | 等待中 |
-| 102 | RUNNING | 运行中 |
-| 103 | SUCCESS | 成功 |
-| 104 | FAIL | 失败 |
-| 105 | DELETED | 已删除，仅在执行删除成功时返回 |
+| 1 | WAITING | 等待中 |
+| 2 | READY | 上传完毕 |
+| 3 | RUNNING | 运行中 |
+| 4 | SUCCESS | 成功 |
+| 5 | FAIL | 失败 |
+| 10 | DELETED | 已删除，仅在执行删除成功时返回 |
 
 #### 4.3.8 实践建议
 
@@ -439,8 +455,6 @@ API以protobuf格式返回，返回信息为SaasRes结构
 | 字段名称 | 字段类型 | 必填 | 描述 |
 | :--- | :--- | :--- | :--- |
 | SaasReq | SaasReq | 是 | 请求消息结构 |
-| SaasReq.userid_type | UserIdType | 否 | 用户 ID类型，当 ID 为设备号时可不填。为openid或其他时须填写。<br/>DEVICEID 设备号<br/>OPENID 小程序、小游戏、公众号、视频号的openid<br/>INNERID1 内部 ID。保留。 |
-| SaasReq.appid | string | 是 | 用户ID | 
 |  |  |  | 以下字段根据操作选择 **唯一** 的一个 |
 | SaasReq.read | Rea | 是 | 实时读取数据 |
 | SaasReq.write | Write | 是 | 实时写入数据 |
@@ -478,6 +492,8 @@ API以protobuf格式返回，返回信息为SaasRes结构
 
 | 字段名称 | 字段类型 | 必填 | 描述 |
 | :--- | :--- | :--- | :--- |
+| dataspace_id | string | 是 | 数据空间ID，当前支持did(设备号)、wuid(openid) |
+| appid | string | 否 | 如appid不为空，且dataspace_id为wuid，则表示数据空间为wuid（微信生态用户标识） |
 | read_items | array of ReadItem | 是 | 用户列表 |
 | read_item.userid | string | 是 | 用户 ID |
 
@@ -492,6 +508,12 @@ API以protobuf格式返回，返回信息为SaasRes结构
 | cmd_res | array of ValueItem | 否 | 失败命令信息 |
 | value_item.cmd_index | uint32 | 是 | 命令编号，对应请求的数组编号 |
 | value_item.cmd_code | CmdErrorCode | 是 | 子命令状态 |
+| value_item.bytes | array of uint8 | 是 | uint8区域数值 |
+| value_item.uint32s | array of uint32 | 是 | uint32区域数值 |
+| value_item.flags_with_expire | array of FlagWithExpire | 是 | 标志位区域内容 |
+| value_item.flags_with_expire.flag | bool | 是 | 标志位。在读取时，标志位未过期则返回flag值，过期则返回default_flag值 |
+| value_item.flags_with_expire.default_flag | bool | 否 | 默认标志位。过期后则回到默认值 |
+| value_item.flags_with_expire.expire | uint32 | 否 | 过期时间，为 0 则永不过期 |
 
 #### 4.3.11 实时写
 
@@ -505,7 +527,9 @@ API以protobuf格式返回，返回信息为SaasRes结构
 
 | 字段名称 | 字段类型 | 必填 | 描述 |
 | :--- | :--- | :--- | :--- |
-| is_clear_all_first | bool	否	是否先清空该用户的所有数据 |
+| dataspace_id | string | 是 | 数据空间ID，当前支持did(设备号)、wuid(openid) |
+| appid | string | 否 | 如appid不为空，且dataspace_id为wuid，则表示数据空间为wuid（微信生态用户标识） |
+| is_clear_all_first | bool	| 否 | 是否先清空该用户的所有数据 |
 | write_items | array of WriteItem | 是 | 批量写入命令 |
 | write_item.userid | string | 是 | 用户 ID（设备号 or OpenID） |
 | write_item.write_bytes | Bytes | 否 | 写入的uint8类型数值 |
@@ -528,13 +552,9 @@ API以protobuf格式返回，返回信息为SaasRes结构
 
 | 字段名称 | 字段类型 | 必填 | 描述 |
 | :--- | :--- | :--- | :--- |
-| succ_cmd_count | uint32 | 是 | 成功的命令数量 |
-| fail_cmd_count | uint32 | 是 | 失败的命令数量 |
-| cmd_res | array of ValueItem | 否	失败命令信息 |
-| value_item.cmd_index | uint32 | 是 | 命令编号，对应请求的数组编号 |
-| value_item.cmd_code | CmdErrorCode | 是 | 子命令状态 |
+| faied_userid | array of string | 否 | 失败的用户ID |
 
-#### 4.3.12 全列覆盖写
+#### 4.3.12 全列覆盖写(暂不可用)
 
 **说明**：该接口用于设置全量用户的一个或多个列（byte、uint32、flag）状态。例如在拉活场景中，当天发生过唤起的用户会逐步从可设放变为不可投放（在 UV级将某列标记为不可投放），在跨天时全量用户又需变成可设放状态。在常规思路下需要记录变更用户集，跨天时将该用户集全部改写一遍，存在着数据量大且可能有遗漏的情形。通过此接口可快速设置全量用户的状态，即时生效。
 
@@ -555,7 +575,7 @@ API以protobuf格式返回，返回信息为SaasRes结构
 
 | 字段名称 | 字段类型 | 必填 | 描述 |
 | :--- | :--- | :--- | :--- |
-| is_clear_all_first | bool	否	是否先清空该用户的所有数据 |
+| is_clear_all_first | bool	| 否 | 是否先清空该用户的所有数据 |
 | write_bytes | Bytes | 否 | 写入的uint8类型数值 |
 | write_bytes.bytes | array of byte/bytes | 是 | 写入的byte数组，每个byte 的填写编号由下面index决定 |
 | write_bytes.index_1 | uint64 | 是 | 写入byte的索引值(0..63)，位置使用bit位表示 |
@@ -586,6 +606,8 @@ API以protobuf格式返回，返回信息为SaasRes结构
 
 | 字段名称 | 字段类型 | 必填 | 描述 |
 | :--- | :--- | :--- | :--- |
+| dataspace_id | string | 是 | 数据空间ID，当前支持did(设备号)、wuid(openid) |
+| is_clear_all_first | bool | 否 | 是否先清空该用户的所有数据 |
 | task_sha256 | string | 是 | 任务sha256 |
 | task_description | string | 否 | 任务描述，不重要，它是个对客户的助记符 |
 | task_file_infos | array of FileInfo | 是 | 文件列表 |
@@ -602,8 +624,8 @@ API以protobuf格式返回，返回信息为SaasRes结构
 
 | 字段名称 | 字段类型 | 必填 | 描述 |
 | :--- | :--- | :--- | :--- |
-| task_sha256 | string	是	任务sha256 |
-| task_description | string	否	任务描述，不重要，它是个对客户的助记符 |
+| task_sha256 | string | 是| 任务sha256 |
+| task_description | string | 否 | 任务描述，不重要，它是个对客户的助记符 |
 | task_file_infos | array of FileInfo | 是 | 文件列表 |
 | task_file_infos.file_name | string | 否 | 文件名，不重要，它是个对客户的助记符 |
 | task_file_infos.file_size | uint64 | 是 | 文件大小 |
@@ -923,7 +945,7 @@ saastool convert -map map.json -source ./notconverted/ -dest ./converted/
 
 #### 4.5.1 系统函数支持表
 
-出于安全及性能原因，RTA SaaS禁用了大量不必要的 LUA功能。以下为支持的函数列表。
+出于安全及性能原因，RTA SaaS禁用了大量不必要的 LUA功能。以下为支持的全局函数列表。
 
 | 函数名 | 功能 |
 | :--- | :--- |
@@ -934,29 +956,141 @@ saastool convert -map map.json -source ./notconverted/ -dest ./converted/
 | type | 获取变量类型 |
 | unpack | 将table 的元素解包为多值返回 |
 
-#### 4.5.2 内置模块srta
+#### 4.5.2 内置模块time
+
+time为时间计算相关功能函数，系统使用uint32为基础格式，存放Unix Timestamp。
+
+##### 4.5.2.1 函数
+
+| 函数名 | 功能 |
+| :--- | :--- |
+| time.now | 获取当前时间 |
+| time.date | 获取日期，一次返回年月日 |
+| time.hour | 获取小时 |
+| time.minute | 获取分钟 |
+| time.second | 获取秒 |
+| time.weekday | 获取星期几，星期日为 0，星期一为 1，以此类推 |
+| time.truncate | 向下取整，第二参数可指定取整类型 |
+| time.addtime | 增减时间，可一次增减时分秒 |
+| time.adddate | 增减日期，可一次增减年月日 |
+| time.setdate | 设置日期，可一次设置年月日时分秒 |
+
+##### 4.5.2.1.1 time.now函数
+
+函数获取当前时间戳，返回值为uint32类型。
+
+```lua
+now = time.now()
+```
+
+##### 4.5.2.1.2 time.date函数
+
+函数传入时间戳，一次返回年、月、日三个值。
+
+```lua
+now = time.now()
+year, month, day = time.date(now)
+```
+
+##### 4.5.2.1.3 time.hour函数
+
+函数传入时间戳，返回小时。
+
+```lua
+now = time.now()
+hour = time.hour(now)
+```
+
+##### 4.5.2.1.4 time.minute函数
+
+函数传入时间戳，返回分钟。
+
+```lua
+now = time.now()
+minute = time.minute(now)
+```
+
+##### 4.5.2.1.5 time.second函数
+
+函数传入时间戳，返回秒。
+
+```lua
+now = time.now()
+second = time.second(now)
+```
+
+##### 4.5.2.1.6 time.weekday函数
+
+函数传入时间戳，返回星期几。星期天为 0，星期一为 1，以此类推。
+
+```lua
+now = time.now()
+weekday = time.weekday(now)
+```
+
+##### 4.5.2.1.7 time.truncate函数
+
+函数传入时间戳，及截断精度，返回截断后的时间戳。
+
+时间精度可以是以下值：month、day、hour、minute。
+
+```lua
+now = time.now()
+month_start = time.truncate(now, "month") -- 本月开始时间戳
+today_start = time.truncate(now, "day") -- 今天开始时间戳
+hour_start = time.truncate(now, "hour") -- 本小时开始时间戳
+minute_start = time.truncate(now, "minute") -- 本分钟开始时间戳
+```
+
+##### 4.5.2.1.8 time.addtime函数
+
+函数传入时间戳，及增减时间（时分秒），时分秒可为 0 或 负值，返回增减后的时间戳。
+
+```lua
+now = time.now()
+newstamp = time.addtime(now, -1, 1, 1) -- 前1小时，再增加1分1秒
+```
+
+##### 4.5.2.1.9 time.adddate函数
+
+函数传入时间戳，及增减日期（年月日），年月日可为 0 或 负值，返回增减后的时间戳。
+
+```lua
+now = time.now()
+newstamp = time.adddate(now, -1, 1, 1) -- 去年，再增加1月1天
+```
+
+##### 4.5.2.1.10 time.setdate函数
+
+函数传入年月日时分秒，返回时间戳。
+
+```lua
+newstamp = time.setdate(2025, 6, 18, 12，13,14) -- 2025:06:18 12:13:14
+```
+
+#### 4.5.3 内置模块srta
 
 服务内置了名为 srta 的模块，提供了访问数据的功能及相关常量。
 
 | 常量名称 | 含义 | 适用函数或变量 |
 | :--- | :--- | :-- |
-| srta.NAMESPACE_DID | 默认设备数据空间编号 | srta.get_nsdata() |
-| srta.NAMESPACE_WUID | 默认 WUID数据空间编号 | srta.get_nsdata() |
-| srta.DATA_UINT8 | UINT8字段区 | nsdata |
-| srta.DATA_UINT32 | UINT32字段区 | nsdata |
-| srta.DATA_FLAG | FLAG字段区 | nsdata |
+| srta.DS_DID | 默认设备数据空间编号 | srta.get_dsdata() |
+| srta.DS_WUID | 默认 WUID数据空间编号 | srta.get_dsdata() |
+| srta.U8 | UINT8字段区 | dsdata |
+| srta.U32 | UINT32字段区 | dsdata |
+| srta.FLAG | FLAG字段区 | dsdata |
 | srta.TARGETINFO_ENABLE | 策略参竞 | target_info |
 | srta.TARGETINFO_CPC_PRICE | CPC出价 | target_info |
 | srta.TARGETINFO_CPA_PRICE | CPA出价 | target_info |
 | srta.TARGETINFO_USER_WEIGHT_FACTOR | 用户权重系数	target_info |
 | srta.TARGETINFO_CPC_FACTOR | CPC出价系统 | target_info |
 
-##### 4.5.2.2 函数
-###### 4.6.2.2.1 srta.get_nsdata 获取命名空间数据
+##### 4.5.3.2 函数
+###### 4.6.3.2.1 srta.get_dsdata 获取命名空间数据
 
 返回的数据以 LUA Table 结构存在，定义如下
 ```lua
-didData = srta.get_nsdata(srta.NAMESPACE_DID) -- 获取设备数据
+didData = srta.get_dsdata(srta.DS_DID) -- 获取设备数据
 -- 以下为字段返回值示例
 didData = {
     [1]: {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, .... 0, 0, 0, 0, 0, 0, 0, 0},
@@ -965,7 +1099,7 @@ didData = {
 }
 ```
 
-###### 4.5.2.2.2 srta.get_targets 获取需决策的策略 ID列表
+###### 4.5.3.2.2 srta.get_targets 获取需决策的策略 ID列表
 
 返回的数据以 LUA Table 结构存在，定义如下
 
@@ -975,13 +1109,13 @@ targets = srta.get_targets() -- 获取策略列表
 targets = {"news", "music", "video_for_new"}
 ```
 
-#### 4.5.3 主函数入口
+#### 4.5.4 主函数入口
 
 业务逻辑由使用方实现，为便于系统调用，约定使用main函数名。该函数无入口参数，后续所需数据通过调用内置函数获取
 
 ```lua
 function main()
-    didData = srta.get_nsdata(srta.NAMESPACE_DID) -- 获取DID数据
+    didData = srta.get_dsdata(srta.DS_DID) -- 获取DID数据
     
     -- 客户逻辑
     
@@ -1000,38 +1134,38 @@ IDXFLAG_NEWS = 1
 IDXFLAG_MUSIC = 2
 
 function main()
-    didData = srta.get_nsdata(srta.NAMESPACE_DID) -- 获取DID数据
+    didData = srta.get_dsdata(srta.DS_DID) -- 获取DID数据
     targets = srta.get_targets()
     local results = {} -- 返回结果
     
     for i, targetid in ipairs(targets) do -- 遍历待决策策略ID
         if targetid == "news" then -- 新闻拉活策略
-            local is_news_installed = didData[srta.DATA_UINT8][IDXU8_NEWS] == 1 -- 是否新闻已安装
-            local is_news_touched = didData[srta.DATA_UINT8][IDXFLAG_NEWS] -- 是否新闻已完成当天唤起
+            local is_news_installed = didData[srta.U8][IDXU8_NEWS] == 1 -- 是否新闻已安装
+            local is_news_touched = didData[srta.U8][IDXFLAG_NEWS] -- 是否新闻已完成当天唤起
             if is_news_installed and is_news_touched then
-                result[targetid] = { [srta.DATA_TARGETINFO_ENABLE] = true } -- 已安装未拉活，可出拉活广告
+                result[targetid] = { [srta.TARGETINFO_ENABLE] = true } -- 已安装未拉活，可出拉活广告
             end
         end
 
         if targetid == "music" then -- 音乐拉活策略
-            local is_music_installed = didData[srta.DATA_UINT8][IDXU8_MUSIC] == 1 -- 是否音乐已安装
-            local is_music_touched = didData[srta.DATA_UINT8][IDXFLAG_MUSIC] -- 是否音乐已完成当天唤起
+            local is_music_installed = didData[srta.U8][IDXU8_MUSIC] == 1 -- 是否音乐已安装
+            local is_music_touched = didData[srta.U8][IDXFLAG_MUSIC] -- 是否音乐已完成当天唤起
             if is_music_installed and is_music_touched then
-                result[targetid] = { [srta.DATA_TARGETINFO_ENABLE] = true } -- 已安装未拉活，可出拉活广告
+                result[targetid] = { [srta.TARGETINFO_ENABLE] = true } -- 已安装未拉活，可出拉活广告
             end
         end
     
         if targetid == "video_for_new" then -- 视频拉新策略
-            local is_video_not_installed = didData[srta.DATA_UINT8][IDXU8_VIDEO] == 0 -- 是否视频未安装
+            local is_video_not_installed = didData[srta.U8][IDXU8_VIDEO] == 0 -- 是否视频未安装
             if is_video_not_installed then
-                result[targetid] = { [srta.DATA_TARGETINFO_ENABLE] = true } -- 未安装，可出拉新广告
+                result[targetid] = { [srta.TARGETINFO_ENABLE] = true } -- 未安装，可出拉新广告
             end
         end
     end
 end
 ```
 
-#### 4.5.4 主函数返回
+#### 4.5.5 主函数返回
 
 主函数返回一个结果，为table格式并可引用srta常量以设置以下成员编号
 
@@ -1043,13 +1177,13 @@ end
 | srta.TARGETINFO_USER_WEIGHT_FACTOR | float | 策略用户权重系数 |
 | srta.TARGETINFO_CPC_FACTOR | float | 策略CPC出价系数 |
 
-#### 4.5.5 实验分桶
+#### 4.5.6 实验分桶
 TODO
 
-#### 4.5.6 上报统计
+#### 4.5.7 上报统计
 TODO
 
-#### 4.5.7 自助联调
+#### 4.5.8 自助联调
 TODO
 
 ## 5 业务场景实践
