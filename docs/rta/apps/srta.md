@@ -960,7 +960,7 @@ saastool convert -map map.json -source ./notconverted/ -dest ./converted/
 
 time为时间计算相关功能函数，系统使用uint32为基础格式，存放Unix Timestamp。
 
-##### 4.5.2.1 函数
+##### 4.5.2.1 函数列表
 
 | 函数名 | 功能 |
 | :--- | :--- |
@@ -1085,8 +1085,16 @@ newstamp = time.setdate(2025, 6, 18, 12，13,14) -- 2025:06:18 12:13:14
 | srta.TARGETINFO_USER_WEIGHT_FACTOR | 用户权重系数	target_info |
 | srta.TARGETINFO_CPC_FACTOR | CPC出价系统 | target_info |
 
-##### 4.5.3.2 函数
-###### 4.6.3.2.1 srta.get_dsdata 获取命名空间数据
+##### 4.5.3.2 函数列表
+
+| 函数名 | 功能 |
+| :--- | :--- |
+| srta.get_dsdata | 获取数据空间数据 |
+| srta.get_targets | 获取需决策的策略ID列表 |
+| srta.get_apps | 获取App安装态(需授权) |
+| srta.get_scores | 获取模型分(需授权) |
+
+##### 4.6.3.2.1 srta.get_dsdata函数
 
 返回的数据以 LUA Table 结构存在，定义如下
 ```lua
@@ -1099,7 +1107,7 @@ didData = {
 }
 ```
 
-###### 4.5.3.2.2 srta.get_targets 获取需决策的策略 ID列表
+##### 4.5.3.2.2 srta.get_targets函数
 
 返回的数据以 LUA Table 结构存在，定义如下
 
@@ -1107,6 +1115,30 @@ didData = {
 targets = srta.get_targets() -- 获取策略列表
 -- 以下为字段返回值示例
 targets = {"news", "music", "video_for_new"}
+```
+
+##### 4.5.3.2.3 srta.get_apps函数
+
+一次可以获得多个App安装态，每个返回值为 true(已安装)/false(未安装)/nil(无权限或不可靠)中的一个状态
+
+```lua
+app1, app2, app3 = srta.get_apps(app1hash, app2hash, app3hash) -- 获取App安装态，可支持多个。
+-- 以下为字段返回值示例
+app1 = true
+app2 = false
+app3 = nil
+```
+
+##### 4.5.3.2.3 srta.get_scores函数
+
+一次可以获得多个模型安装态，每个返回值为数字/nil(无权限或不可靠)中的一个状态
+
+```lua
+score1, score2, score3 = srta.get_apps(model1, model2, model1) -- 获取模型分，可支持多个。
+-- 以下为字段返回值示例
+score1 = 0
+score2 = 80
+score3 = nil
 ```
 
 #### 4.5.4 主函数入口
