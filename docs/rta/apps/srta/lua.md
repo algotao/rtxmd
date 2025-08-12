@@ -239,9 +239,37 @@ os = srta.get_os() -- 获取终端操作系统
 1 -- 代表iOS，可以用srta常量进行判断
 ```
 
-## 5.4 主函数
+## 5.4 内置模块string
 
-### 5.4.1 入口
+string为字符串计算相关功能函数。
+
+### 5.4.1 函数列表
+
+| 函数名 | 功能 |
+| :--- | :--- |
+| string.split | 切割字符串 |
+
+### 5.4.2 string.split函数
+
+使用指定的分割符(sep)对字符串进行分割，并返回分割后的字符串数组。
+
+```lua
+str = "test,a,b"
+strs = string.split(str, ",")
+print("strs len" , #strs)
+for i, item in ipairs(strs) do
+    print(i, item)
+end
+-- 以下为字段返回示例
+3
+1   test
+2   a
+3   b
+```
+
+## 5.5 主函数
+
+### 5.5.1 入口
 
 业务逻辑由使用方实现，为便于系统调用，约定使用main函数名。该函数无入口参数，后续所需数据通过调用内置函数获取
 
@@ -297,7 +325,7 @@ function main()
 end
 ```
 
-### 5.4.2 返回
+### 5.5.2 返回
 
 主函数返回一个结果，为table格式并可引用srta常量以设置以下成员编号
 
