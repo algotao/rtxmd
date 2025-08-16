@@ -6,7 +6,7 @@ description: 以SaaS的方式，让广告客户能够以低门槛、高灵活度
 keywords: [RTA, sRTA, SaaS]
 ---
 
-# 5 LUA语法说明
+# 5 LUA智能决策
 
 ## 5.1 系统函数列表
 
@@ -21,137 +21,25 @@ keywords: [RTA, sRTA, SaaS]
 | type | 获取变量类型 |
 | unpack | 将table 的元素解包为多值返回 |
 
-## 5.2 内置模块time
+## 5.2 内置模块srta
 
-time为时间计算相关功能函数，系统使用uint32为基础格式，存放Unix Timestamp。
-
-### 5.2.1 函数列表
-
-| 函数名 | 功能 |
-| :--- | :--- |
-| time.now | 获取当前时间 |
-| time.date | 获取日期，一次返回年月日 |
-| time.hour | 获取小时 |
-| time.minute | 获取分钟 |
-| time.second | 获取秒 |
-| time.weekday | 获取星期几，星期日为 0，星期一为 1，以此类推 |
-| time.truncate | 向下取整，第二参数可指定取整类型 |
-| time.addtime | 增减时间，可一次增减时分秒 |
-| time.adddate | 增减日期，可一次增减年月日 |
-| time.setdate | 设置日期，可一次设置年月日时分秒 |
-
-### 5.2.2 time.now函数
-
-函数获取当前时间戳，返回值为uint32类型。
-
-```lua
-now = time.now()
-```
-
-### 5.2.3 time.date函数
-
-函数传入时间戳，一次返回年、月、日三个值。
-
-```lua
-now = time.now()
-year, month, day = time.date(now)
-```
-
-### 5.2.4 time.hour函数
-
-函数传入时间戳，返回小时。
-
-```lua
-now = time.now()
-hour = time.hour(now)
-```
-
-### 5.2.5 time.minute函数
-
-函数传入时间戳，返回分钟。
-
-```lua
-now = time.now()
-minute = time.minute(now)
-```
-
-### 5.2.6 time.second函数
-
-函数传入时间戳，返回秒。
-
-```lua
-now = time.now()
-second = time.second(now)
-```
-
-### 5.2.7 time.weekday函数
-
-函数传入时间戳，返回星期几。星期天为 0，星期一为 1，以此类推。
-
-```lua
-now = time.now()
-weekday = time.weekday(now)
-```
-
-### 5.2.8 time.truncate函数
-
-函数传入时间戳，及截断精度，返回截断后的时间戳。
-
-时间精度可以是以下值：month、day、hour、minute。
-
-```lua
-now = time.now()
-month_start = time.truncate(now, "month") -- 本月开始时间戳
-today_start = time.truncate(now, "day") -- 今天开始时间戳
-hour_start = time.truncate(now, "hour") -- 本小时开始时间戳
-minute_start = time.truncate(now, "minute") -- 本分钟开始时间戳
-```
-
-### 5.2.9 time.addtime函数
-
-函数传入时间戳，及增减时间（时分秒），时分秒可为 0 或 负值，返回增减后的时间戳。
-
-```lua
-now = time.now()
-newstamp = time.addtime(now, -1, 1, 1) -- 前1小时，再增加1分1秒
-```
-
-### 5.2.10 time.adddate函数
-
-函数传入时间戳，及增减日期（年月日），年月日可为 0 或 负值，返回增减后的时间戳。
-
-```lua
-now = time.now()
-newstamp = time.adddate(now, -1, 1, 1) -- 去年，再增加1月1天
-```
-
-### 5.2.11 time.setdate函数
-
-函数传入年月日时分秒，返回时间戳。
-
-```lua
-newstamp = time.setdate(2025, 6, 18, 12，13,14) -- 2025:06:18 12:13:14
-```
-
-## 5.3 内置模块srta
-
-### 5.3.1 常量
+### 5.2.1 常量
 服务内置了名为 srta 的模块，提供了访问数据的功能及相关常量。
 
-#### 5.3.1.1 数据区
+**数据区**
 | 常量名称 | 含义 | 适用函数或变量 |
 | :--- | :--- | :-- |
 | srta.DS_DID | 默认设备数据空间编号 | srta.get_dsdata() |
 | srta.DS_WUID | 默认 WUID数据空间编号 | srta.get_dsdata() |
 
-#### 5.3.1.2 字段区
+**字段区**
 | 常量名称 | 含义 | 适用函数或变量 |
 | :--- | :--- | :-- |
 | srta.U8 | UINT8字段区 | dsdata |
 | srta.U32 | UINT32字段区 | dsdata |
 | srta.FLAG | FLAG字段区 | dsdata |
 
-#### 5.3.1.3 操作系统
+**操作系统**
 | 常量名称 | 含义 | 适用函数或变量 |
 | :--- | :--- | :-- |
 | srta.OS_UNKNOWN | 未知操作系统 | srta.get_os() |
@@ -159,7 +47,7 @@ newstamp = time.setdate(2025, 6, 18, 12，13,14) -- 2025:06:18 12:13:14
 | srta.OS_ANDROID | Android | srta.get_os() |
 | srta.OS_OTHER | 其它操作系统 | srta.get_os() |
 
-#### 5.3.1.4 策略参数
+**策略参数**
 | 常量名称 | 含义 | 适用函数或变量 |
 | :--- | :--- | :-- |
 | srta.TARGETINFO_ENABLE | 策略参竞 | target_info |
@@ -168,7 +56,7 @@ newstamp = time.setdate(2025, 6, 18, 12，13,14) -- 2025:06:18 12:13:14
 | srta.TARGETINFO_USER_WEIGHT_FACTOR | 用户权重系数	target_info |
 | srta.TARGETINFO_CPC_FACTOR | CPC出价系统 | target_info |
 
-### 5.3.2 函数列表
+### 5.2.2 函数列表
 
 | 函数名 | 功能 |
 | :--- | :--- |
@@ -177,8 +65,10 @@ newstamp = time.setdate(2025, 6, 18, 12，13,14) -- 2025:06:18 12:13:14
 | srta.get_apps | 获取App安装态(需授权) |
 | srta.get_scores | 获取模型分(需授权) |
 | srta.get_os | 获取终端操作系统 |
+| srta.get_expid | 获取实验分桶ID |
 
-### 5.3.2.1 srta.get_dsdata函数
+
+### 5.2.3 srta.get_dsdata函数
 
 返回的数据以 LUA Table 结构存在，定义如下
 ```lua
@@ -192,7 +82,7 @@ didData = {
 }
 ```
 
-### 5.3.2.2 srta.get_targets函数
+### 5.2.4 srta.get_targets函数
 
 返回的数据以 LUA Table 结构存在，定义如下
 
@@ -203,7 +93,7 @@ targets = srta.get_targets() -- 获取策略列表
 targets = {"news", "music", "video_for_new"}
 ```
 
-### 5.3.2.3 srta.get_apps函数
+### 5.2.5 srta.get_apps函数
 
 一次可以获得多个App安装态，每个返回值为 true(已安装)/false(未安装)/nil(无权限或不可靠)中的一个状态
 
@@ -216,9 +106,9 @@ app2 = false
 app3 = nil
 ```
 
-### 5.3.2.3 srta.get_scores函数
+### 5.2.6 srta.get_scores函数
 
-一次可以获得多个模型安装态，每个返回值为数字/nil(无权限或不可靠)中的一个状态
+一次可以获得多个模型打分，每个返回值为数字/nil(无权限或不可靠)中的一个状态
 
 ```lua
 score1, score2, score3 = srta.get_apps(model1, model2, model1) -- 获取模型分，可支持多个。
@@ -228,28 +118,39 @@ score2 = 80
 score3 = nil
 ```
 
-### 5.3.2.3 srta.get_os函数
+### 5.2.7 srta.get_os函数
 
-获取终端的操作系统。返回值参考[系统常量](#5313-操作系统)
+获取终端的操作系统。返回值参考[系统常量]
 
 ```lua
 os = srta.get_os() -- 获取终端操作系统
 
--- 以下为字段返回值示例
+-- 以下为返回值示例
 1 -- 代表iOS，可以用srta常量进行判断
 ```
 
-## 5.4 内置模块string
+### 5.2.8 srta.get_expid函数
+
+获取实验分桶编号。返回值为 0-10。1-10 每个分桶 UV 比例接近于 10%。由于系统原因，目前线上极少量的流量不会被分到任何实验分组，当分桶号为 0 时，代表流量未分桶。
+
+```lua
+expid = srta.get_expid() -- 获取实验分桶号
+
+-- 以下为返回值示例
+5 -- 代表5号分桶
+```
+
+## 5.3 内置模块string
 
 string为字符串计算相关功能函数。
 
-### 5.4.1 函数列表
+### 5.3.1 函数列表
 
 | 函数名 | 功能 |
 | :--- | :--- |
 | string.split | 切割字符串 |
 
-### 5.4.2 string.split函数
+### 5.3.2 string.split函数
 
 使用指定的分割符(sep)对字符串进行分割，并返回分割后的字符串数组。
 
@@ -265,6 +166,118 @@ end
 1   test
 2   a
 3   b
+```
+
+## 5.4 内置模块time
+
+time为时间计算相关功能函数，系统使用uint32为基础格式，存放Unix Timestamp。
+
+### 5.4.1 函数列表
+
+| 函数名 | 功能 |
+| :--- | :--- |
+| time.now | 获取当前时间 |
+| time.date | 获取日期，一次返回年月日 |
+| time.hour | 获取小时 |
+| time.minute | 获取分钟 |
+| time.second | 获取秒 |
+| time.weekday | 获取星期几，星期日为 0，星期一为 1，以此类推 |
+| time.truncate | 向下取整，第二参数可指定取整类型 |
+| time.addtime | 增减时间，可一次增减时分秒 |
+| time.adddate | 增减日期，可一次增减年月日 |
+| time.setdate | 设置日期，可一次设置年月日时分秒 |
+
+### 5.4.2 time.now函数
+
+函数获取当前时间戳，返回值为uint32类型。
+
+```lua
+now = time.now()
+```
+
+### 5.4.3 time.date函数
+
+函数传入时间戳，一次返回年、月、日三个值。
+
+```lua
+now = time.now()
+year, month, day = time.date(now)
+```
+
+### 5.4.4 time.hour函数
+
+函数传入时间戳，返回小时。
+
+```lua
+now = time.now()
+hour = time.hour(now)
+```
+
+### 5.4.5 time.minute函数
+
+函数传入时间戳，返回分钟。
+
+```lua
+now = time.now()
+minute = time.minute(now)
+```
+
+### 5.4.6 time.second函数
+
+函数传入时间戳，返回秒。
+
+```lua
+now = time.now()
+second = time.second(now)
+```
+
+### 5.4.7 time.weekday函数
+
+函数传入时间戳，返回星期几。星期天为 0，星期一为 1，以此类推。
+
+```lua
+now = time.now()
+weekday = time.weekday(now)
+```
+
+### 5.4.8 time.truncate函数
+
+函数传入时间戳，及截断精度，返回截断后的时间戳。
+
+时间精度可以是以下值：month、day、hour、minute。
+
+```lua
+now = time.now()
+month_start = time.truncate(now, "month") -- 本月开始时间戳
+today_start = time.truncate(now, "day") -- 今天开始时间戳
+hour_start = time.truncate(now, "hour") -- 本小时开始时间戳
+minute_start = time.truncate(now, "minute") -- 本分钟开始时间戳
+```
+
+### 5.4.9 time.addtime函数
+
+函数传入时间戳，及增减时间（时分秒），时分秒可为 0 或 负值，返回增减后的时间戳。
+
+```lua
+now = time.now()
+newstamp = time.addtime(now, -1, 1, 1) -- 前1小时，再增加1分1秒
+```
+
+### 5.4.10 time.adddate函数
+
+函数传入时间戳，及增减日期（年月日），年月日可为 0 或 负值，返回增减后的时间戳。
+
+```lua
+now = time.now()
+newstamp = time.adddate(now, -1, 1, 1) -- 去年，再增加1月1天
+```
+
+### 5.4.11 time.setdate函数
+
+函数传入年月日时分秒，返回时间戳。
+
+```lua
+newstamp = time.setdate(2025, 6, 18, 12，13,14) -- 2025:06:18 12:13:14
 ```
 
 ## 5.5 主函数
@@ -337,11 +350,6 @@ end
 | srta.TARGETINFO_USER_WEIGHT_FACTOR | float | 策略用户权重系数 |
 | srta.TARGETINFO_CPC_FACTOR | float | 策略CPC出价系数 |
 
-## 5.6 实验分桶
-TODO
 
-## 5.7 上报统计
-TODO
-
-## 5.8 自助联调
+## 5.6 自助联调
 TODO
