@@ -1,5 +1,5 @@
 ---
-sidebar_position: 4
+sidebar_position: 5
 toc_min_heading_level: 2
 toc_max_heading_level: 5
 description: 以SaaS的方式，让广告客户能够以低门槛、高灵活度的方式使用RTA能力。广告客户可以免除对接整套RTA时涉及到的工程投入、基建投入，专注在策略开发中；同时由于RTA-SaaS部署在平台域内，数据安全和合规性获得更强保障，进而可以衍生出更多玩法，解决更多业务问题。
@@ -280,7 +280,7 @@ newstamp = time.adddate(now, -1, 1, 1) -- 去年，再增加1月1天
 newstamp = time.setdate(2025, 6, 18, 12，13,14) -- 2025:06:18 12:13:14
 ```
 
-## 5.5 主函数
+## 5.5 主函数main
 
 ### 5.5.1 入口
 
@@ -289,9 +289,12 @@ newstamp = time.setdate(2025, 6, 18, 12，13,14) -- 2025:06:18 12:13:14
 ```lua
 function main()
     didData = srta.get_dsdata(srta.DS_DID) -- 获取DID数据
+    local results = {} -- 返回结果
     
     -- 客户逻辑
-    
+    ...
+
+    return results
 end
 ```
 
@@ -335,6 +338,8 @@ function main()
             end
         end
     end
+
+    return results
 end
 ```
 
@@ -351,5 +356,81 @@ end
 | srta.TARGETINFO_CPC_FACTOR | float | 策略CPC出价系数 |
 
 
-## 5.6 自助联调
-TODO
+## 5.6 代码调试
+
+sRTA 创建了完全独立的 LUA 运行时，有自己的生态库及机密数据依赖，所以`无法在IDE内调试`。需要通过 [API接口](./api.md#322-脚本-运行-scriptrun) 提交代码`在服务端沙箱运行并返回结果`。
+
+根据数据源的不同，在沙箱运行有不同的限制。
+
+| 引用数据源 | 真实数据 | 沙箱数据 | 说明 |
+| :-------: | :--: | :--: | :-- |
+| 一方 | 可 | 可 | 可通过 API 参数传递 did/openid 信息，沙箱在运行 srta.get_dsdata 时自动读取存储于服务端的用户数据。<br/>也可用hijack模拟 |
+| 二方 | 否 | 可 | 通过hijack模拟返回 |
+| 三方 | 否 | 可 | 通过hijack模拟返回 |
+
+### 5.6.1 沙箱函数hijack
+
+#### 5.6.1.1 入口
+
+约定使用hijack函数名并由使用方实现，在该函数内可以劫持部分系统模块功能调用，以桩数据内容返回。该函数无入口参数。
+
+```lua
+function hijack()
+    local sandbox = {}
+    -- 数据模拟
+
+    return sandbox
+end
+```
+
+
+#### 5.6.1.2 返回
+
+hijack函数返回一个沙箱结果集合。
+
+较为完整的使用示例
+```lua
+function hijack()
+    local sandbox = {
+        srta_get_dsdata: {
+            [srta.DS_DID]: {
+                [srta.U8]: {0, 0, 0, 0, 0, 0, 0, 0,.... 0, 0, 0, 0, 0, 0, 0},
+                [srta.U32]: {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+                [srta.FLAG]: {false, false, false, false,false, false, false, false}
+            }
+        },
+        srta_get_targets: {"t1", "t2", "t3"},
+        srta_get_apps: {
+            [13717681]: true,
+            [306821611]: false
+        },
+        srta_get_scores: {
+            [1]: 10,
+            [3]: 50
+        },
+        srta_get_os: srta.OS_IOS,
+        srta_get_expid: 1,
+        time_now: 1755414905
+    }
+
+    return sandbox
+end
+```
+
+**返回约定：**
++ 一级成员变量：使用 `模块名_函数`。例如 `srta.get_dsdata` 函数，在 table 中命名为 `srta_get_dsdata`
++ 无参数函数：使用对应 `模块名_函数` 成员的值。例如 `srta.get_os()`，在上述例子中将返回 `srta.OS_IOS`
++ 单参数函数：使用对应 `模块名_函数` 成员的 `以函数参数为索引的` 次级值。例如 `srta_get_dsdata(srta.DS_DID)`，在上述例子中将返回 `srta_get_dsdata[srta.DS_DID]`的 value。
++ 多参数多返回函数：使用对应 `模块名_函数` 成员的 `以函数参数为索引的` 次级值。例如 `srta_get_scores(1,3)`，在上述例子中将返回 `{10,50}`。
+
+**hijack未填字段默认行为：**
+
+| 函数  | 说明 |
+| :-- | :-- |
+| srta_get_dsdata | 使用srta.get_dsdata获取对应用户的真实一方数据 |
+| srta_get_targets | 使用srta.get_targets获取真实的策略列表 |
+| srta_get_apps | 返回nil |
+| srta_get_scores | 返回nil |
+| srta_get_os | 随机返回 srta.OS_IOS、srta.OS_ANDROID 之一 |
+| srta_get_expid | 随机返回数字 0-10 之一 |
+| time_now | 使用time.now获取真实的系统时间 |

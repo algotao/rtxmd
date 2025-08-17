@@ -1,5 +1,5 @@
 ---
-sidebar_position: 2
+sidebar_position: 3
 toc_min_heading_level: 2
 toc_max_heading_level: 5
 description: 以SaaS的方式，让广告客户能够以低门槛、高灵活度的方式使用RTA能力。广告客户可以免除对接整套RTA时涉及到的工程投入、基建投入，专注在策略开发中；同时由于RTA-SaaS部署在平台域内，数据安全和合规性获得更强保障，进而可以衍生出更多玩法，解决更多业务问题。
@@ -39,7 +39,8 @@ message SaasReq {
         BindSet bind_set                         = 61;  // 设置绑定
         BindDelete bind_delete                   = 62;  // 解除绑定
 
-        //Debug debug                              = 90;  // 试运行lua脚本
+        ScriptRun script_run                     = 90;  // 运行脚本（Debug）
+        ScriptUpdate script_update               = 91;  // 脚本升级
     }
 }
 
@@ -180,15 +181,16 @@ message BindDelete {
     repeated Bind binds                          = 2;   // 解除绑定内容
 }
 
-// Debug 调试
-message Debug {
+// ScriptRun 运行脚本
+message ScriptRun {
     string lua_script                            = 1;   // 要调试的lua脚本
-    bool use_server_data                         = 2;   // 是否使用服务端用户数据
-    string server_did                            = 3;   // 将从服务端读取该DID下的数据
-    string appid                                 = 4;   // 小程序/小游戏/公众号/视频号的appid
-    string server_openid                         = 5;   // 将从服务端读取该openid下的数据，需与appid配对使用
-    WriteItem local_did_data                     = 6;   // 客户自定义DID用户数据
-    WriteItem local_openid_data                  = 7;   // 客户定定义OpenID用户数据
+    string server_did                            = 2;   // 将从服务端读取该DID下的数据
+    string appid                                 = 3;   // 小程序/小游戏/公众号/视频号的appid
+    string server_openid                         = 4;   // 将从服务端读取该openid下的数据，需与appid配对使用
+}
+
+// ScriptUpdate 升级脚本
+message ScriptUpdate {
 }
 
 // SaasRes 命令返回
@@ -211,6 +213,9 @@ message SaasRes {
 
         BindSetRes bind_set_res                  = 61;  // 设置绑定返回状态
         BindDeleteRes bind_delete_res            = 62;  // 删除绑定返回状态
+
+        ScriptRunRes script_run_res              = 90;  // 运行脚本返回（Debug）
+        ScriptUpdateRes script_update_res        = 91;  // 升级脚本返回
     }
 }
 
@@ -307,11 +312,15 @@ message BindError {
 }
 
 
-// DebugRes 调试返回
-message DebugRes {
-    string PrintOutput                           = 1;  // print输出
-    string Error                                 = 2;  // 错误信息
-    string TargetsOutput                         = 3;  // 策略输出
+// ScriptRunRes 运行脚本返回
+message ScriptRunRes {
+    string print_output                           = 1;  // print输出
+    string error                                  = 2;  // 错误信息
+    string targets_output                         = 3;  // 策略输出
+}
+
+// ScriptUpdateRes 升级脚本返回
+message ScriptUpdateRes {
 }
 
 // ErrorCode 返回码
@@ -975,3 +984,33 @@ API以protobuf格式返回，返回信息为SaasRes结构
 | errors.bind_id | int64 | 是 | 解绑错误的ID |
 | errors.bind_type | BindType | 是 | 绑定类型<br/>AdgroupId = 1;//广告ID<br/>AccountId = 3;//广告主ID  |
 | errors.reason | string | 是 | 错误解绑原因 |
+
+
+## 3.22 脚本-运行 ScriptRun
+
+**说明**：该接口用于调试 LUA 脚本，LUA 将在服务端沙箱环境运行并返回结果。调试模式下 print 函数将生效，可用于输出中间状态。关于该函数使用的更多信息，请参阅[代码调试](./lua.md#56-代码调试)。
+
+**接口**：/saas/script/run
+
+**请求参数**：
+
+表格节点位于 SaasReq.script_run
+
+| 字段名称 | 字段类型 | 必填 | 描述 |
+| :--- | :--- | :--- | :--- |
+| lua_script | string | 是 | LUA脚本 |
+| server_did | string | 否 | 将从服务端读取该DID下的数据 |
+| appid | string | 否 | 小程序/小游戏/公众号/视频号的appid |
+| server_openid | string | 否 | 将从服务端读取该openid下的数据，需与appid配对使用 |
+
+**返回参数**：
+
+顶层节点 SaasRes.code/SaasRes.status 表达全局的操作成功/失败状态。
+
+表格节点位于 SaasRes.script_run_res
+
+| 字段名称 | 字段类型 | 必填 | 描述 |
+| :--- | :--- | :--- | :--- |
+| print_output | string | 否 | 调用print函数的打印输出 |
+| error | string | 否 | LUA脚本运行错误 |
+| targets_output | string | 否 | 策略输出内容 |
