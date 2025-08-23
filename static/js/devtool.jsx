@@ -403,16 +403,18 @@ export function RTATool() {
 
 export function PingTool() {
   const [dest, setDest] = useState("")
+  const [ipVersion, setIPVersion] = useState(0);
   const [disableButton, setDisableButton] = useState(false);
   const [retBJ, setBJ] = useState("");
   const [retSH, setSH] = useState("");
   const [retGZ, setGZ] = useState("");
+  const ipVersionMap = new Map([[0, "自动"], [4, "IPv4"], [6, "IPv6"]]);
   async function doPing(pingMode) {
     setDisableButton(true);
     setBJ("处理中...");
     setSH("处理中...");
     setGZ("处理中...");
-    const pingReq = { target: dest, ping_mode: pingMode };
+    const pingReq = { target: dest, ping_mode: pingMode, ip_version: ipVersion,};
     //上海
     RTAAPI("/rtacaller/ping", 0, pingReq)
       .then((data) => {
@@ -469,6 +471,14 @@ export function PingTool() {
           <button type='button' className='button button--primary' disabled={disableButton} onClick={() => doPing(1)}>PING</button>&nbsp;
           <button type='button' className='button button--primary' disabled={disableButton} onClick={() => doPing(2)}>MTR</button>&nbsp;
           <button type='button' className='button button--primary' disabled={disableButton} onClick={() => doPing(3)}>DIG</button>
+          <div className="dropdown dropdown--hoverable keepspace">
+              <div className="button button--success">IPv ({ipVersionMap.get(ipVersion)})</div>
+              <ul className="dropdown__menu">
+                <li><div className="dropdown__link" onClick={() => setIPVersion(0)}>{ipVersion == 0 ? "✓" : ""} {ipVersionMap.get(0)}</div></li>
+                <li><div className="dropdown__link" onClick={() => setIPVersion(4)}>{ipVersion == 4 ? "✓" : ""} {ipVersionMap.get(4)}</div></li>
+                <li><div className="dropdown__link" onClick={() => setIPVersion(6)}>{ipVersion == 6 ? "✓" : ""} {ipVersionMap.get(6)}</div></li>
+              </ul>
+            </div>
         </div>
       </div>
       <br />
@@ -627,165 +637,6 @@ export function ADXTool() {
         <br />
         <div className="row">
           <div className="col col-12">
-            <CodeView title="返回状态" language="http" code={codeRecvInfo} />
-            <CodeView title="返回HTTP Header" language="http" code={codeRecvHeader} />
-            <CodeView title="返回Body内容" language={codeRecvCodeClass} code={codeRecvBody} />
-          </div>
-        </div>
-      </form>
-      <br />
-    </div>
-  );
-}
-
-export function PDBTool() {
-  return (
-    <div className="container"></div>
-  );
-}
-
-export function SPTool() {
-  const [inputs, setInputs] = useState({});
-  const [localDomain, setLocalDomain] = useState(false);
-  useEffect(() => {
-    const setting = localStorage.getItem("tencent_rtasp_setting");
-    const jsonSetting = setting ? JSON.parse(setting) : { hostArea: 0 };
-    setInputs(jsonSetting);
-    setLocalDomain(window.location.hostname != "wiki.algo.com.cn");
-  }, []);
-  const [codeSendBody, setSendBody] = useState("");
-  const [codeRecvInfo, setRecvInfo] = useState("");
-  const [codeRecvHeader, setRecvHeader] = useState("");
-  const [codeRecvBody, setRecvBody] = useState("");
-  const [codeRecvCodeClass, setRecvCodeClass] = useState("protobuf");
-  const osInfoMap = new Map([[1, "未知"], [2, "iOS"], [3, "Android"]]);
-  const didTypeMap = new Map([[2, "IDFA MD5"], [3, "CAID MD5"], [4, "OAID MD5"], [5, "IMEI MD5"], [7, "MAC MD5"]]);
-  const hostAreaMap = new Map([[0, "上海"], [1, "北京"], [2, "广州"], [3, "本机"]]);
-  const handleChange = (event) => {
-    const name = event.target.name;
-    const value = event.target.value;
-    setInputs(values => ({ ...values, [name]: value }))
-  }
-  function sendSPCmd() {
-    localStorage.setItem("tencent_rtasp_setting", JSON.stringify(inputs));
-    //console.log(inputs);
-    RTAAPI("/rtacaller/sendSPCmd", inputs.hostArea, inputs)
-      .then((data) => {
-        setSendBody(data.reqbody)
-        setRecvInfo(data.state.text);
-        setRecvHeader(data.resheader);
-        setRecvBody(data.resbody);
-        setRecvCodeClass(data.codeclass);
-      })
-      .catch((error) => {
-        //console.error('Error:', error);
-      });
-  }
-  function selectOS(os) {
-    setInputs(values => ({ ...values, ["os"]: os }));
-    if (inputs.imode == 1 || inputs.imode == 3) {
-      selectOSDefaultDIDType(os);
-    }
-    return false;
-  }
-  function selectOSDefaultDIDType(os) {
-    switch (os) {
-      case 2:
-        selectDIDType(2);
-        break;
-      case 3:
-        selectDIDType(4);
-        break;
-      case 1:
-        selectDIDType(7);
-        break;
-    }
-  }
-  function selectDIDType(didtype) {
-    setInputs(values => ({ ...values, ["didtype"]: didtype }));
-    return false;
-  }
-  function selectHostArea(hostArea) {
-    setInputs(values => ({ ...values, ["hostArea"]: hostArea }));
-  }
-  return (
-    <div className="container">
-      <form>
-        <div className="row">
-          <InputItem colwidth="col--12" prepend="BidURL" placeholder="请输入BidURL，必填" name="bidurl" defaultvalue={inputs.bidurl || ""} onchange={handleChange} />
-        </div>
-        <br />
-        <div className="row">
-          <div className="col col-12">
-            <div className="dropdown dropdown--hoverable">
-              <div className="button button--success" >系统 ({osInfoMap.get(inputs.os) || ""})</div>
-              <ul className="dropdown__menu">
-                <li><div className="dropdown__link" onClick={() => selectOS(2)} > {inputs.os == 2 ? "✓" : ""} {osInfoMap.get(2)}</div></li>
-                <li><div className="dropdown__link" onClick={() => selectOS(3)} > {inputs.os == 3 ? "✓" : ""} {osInfoMap.get(3)}</div></li>
-                <li><div className="dropdown__link" onClick={() => selectOS(1)} > {inputs.os == 1 ? "✓" : ""} {osInfoMap.get(1)}</div></li>
-              </ul>
-            </div>
-            <div className="dropdown dropdown--hoverable keepspace">
-              <div className="button button--success">主设备 ({didTypeMap.get(inputs.didtype) || ""})</div>
-              <ul className="dropdown__menu">
-                {inputs.os == 2 &&
-                  <li><div className="dropdown__link" onClick={() => selectDIDType(2)}> {inputs.didtype == 2 ? "✓" : ""} {didTypeMap.get(2)}</div></li>
-                }
-                {inputs.os == 2 &&
-                  <li><div className="dropdown__link" onClick={() => selectDIDType(3)}> {inputs.didtype == 3 ? "✓" : ""} {didTypeMap.get(3)}</div></li>
-                }
-                {inputs.os == 3 &&
-                  <li><div className="dropdown__link" onClick={() => selectDIDType(4)}> {inputs.didtype == 4 ? "✓" : ""} {didTypeMap.get(4)}</div></li>
-                }
-                {inputs.os == 3 &&
-                  <li><div className="dropdown__link" onClick={() => selectDIDType(5)}>{inputs.didtype == 5 ? "✓" : ""} {didTypeMap.get(5)}</div></li>
-                }
-                <li><div className="dropdown__link" onClick={() => selectDIDType(7)}> {inputs.didtype == 7 ? "✓" : ""} {didTypeMap.get(7)}</div></li>
-              </ul>
-            </div>
-          </div>
-        </div>
-        <br />
-        {inputs.os == 2 &&
-          <div className="row">
-            <InputItem colwidth="col--6" prepend="IDFA MD5" placeholder="选填" name="idfamd5" defaultvalue={inputs.idfamd5 || ""} onchange={handleChange} />
-            <InputItem colwidth="col--6" prepend="CAID MD5" placeholder="选填" name="caidmd5" defaultvalue={inputs.caidmd5 || ""} onchange={handleChange} />
-          </div>
-        }
-        {inputs.os == 3 &&
-          <div className="row">
-            <InputItem colwidth="col--6" prepend="OAID MD5" placeholder="选填" name="oaidmd5" defaultvalue={inputs.oaidmd5 || ""} onchange={handleChange} />
-            <InputItem colwidth="col--6" prepend="IMEI MD5" placeholder="选填" name="imeimd5" defaultvalue={inputs.imeimd5 || ""} onchange={handleChange} />
-          </div>
-        }
-        <div className="row">
-          <InputItem colwidth="col--6" prepend="MAC MD5" placeholder="选填" name="macmd5" defaultvalue={inputs.macmd5 || ""} onchange={handleChange} />
-        </div>
-        <br />
-        <div className="row">
-          <InputItem colwidth="col--6" prepend="SecKey" placeholder="选填" name="seckey" defaultvalue={inputs.seckey || ""} onchange={handleChange} />
-        </div>
-        <br />
-        <div className="row">
-          <div className="col col-12">
-            <button type="button" className="button button--primary" onClick={sendSPCmd}>发送</button>
-            <div className="dropdown dropdown--hoverable keepspace">
-              <div className="button button--success">发起地区 ({hostAreaMap.get(inputs.hostArea)})</div>
-              <ul className="dropdown__menu">
-                <li><div className="dropdown__link" onClick={() => selectHostArea(0)}>{inputs.hostArea == 0 ? "✓" : ""} {hostAreaMap.get(0)}</div></li>
-                <li><div className="dropdown__link" onClick={() => selectHostArea(1)}>{inputs.hostArea == 1 ? "✓" : ""} {hostAreaMap.get(1)}</div></li>
-                <li><div className="dropdown__link" onClick={() => selectHostArea(2)}>{inputs.hostArea == 2 ? "✓" : ""} {hostAreaMap.get(2)}</div></li>
-                {localDomain &&
-                  <li><div className="dropdown__link" onClick={() => selectHostArea(3)}>{inputs.hostArea == 3 ? "✓" : ""} {hostAreaMap.get(3)}</div></li>
-                }
-              </ul>
-            </div>
-          </div>
-        </div>
-        <br />
-        <div className="row">
-          <div className="col col-12">
-            <CodeView title="发送内容" language="protobuf" code={codeSendBody} />
             <CodeView title="返回状态" language="http" code={codeRecvInfo} />
             <CodeView title="返回HTTP Header" language="http" code={codeRecvHeader} />
             <CodeView title="返回Body内容" language={codeRecvCodeClass} code={codeRecvBody} />
