@@ -12,19 +12,19 @@ keywords: [RTA, sRTA, SaaS]
 
 以下是一方数据存储中的结构示意.
 
-### 6.1.1 命名空间
+### 6.1.1 数据空间
 
-每个客户可以有 1 个（设备号存储区）或 2 个（设备号+wuid存储区）命名空间。
+每个账号下可以有多个数据空间，数据空间有两种类型：设备号存储区 / WUID存储区。当数据空间容量不足时，可申请更多独立空间。
 
 ![sRTA 存储](/img/srta_store1.png)
 
-### 6.1.2 命名空间内存储
+### 6.1.2 数据空间内存储
 
 存储区有三种类型的字段，可满足不同场景的诉求。
 
 ![sRTA 存储结构](/img/srta_store2.png)
 
-uint8 共 128 个		uint32 共 16 个		flagWithExpire 共 8 个
+uint8 共 64 个		uint32 共 8 个		flagWithExpire 共 4 个
 
 ### 6.1.3 字段使用
 
@@ -50,9 +50,9 @@ struct FlagWithExpire {
 };
 
 struct StoreValue{
-    uint8_t bytes[128];                        // byte型存储
-    uint32_t uint32s[16];                      // uint32型存储
-    struct FlagWithExpire flag_with_expire[8]; // flag型存储
+    uint8_t bytes[64];                         // byte型存储
+    uint32_t uint32s[8];                       // uint32型存储
+    struct FlagWithExpire flag_with_expire[4]; // flag型存储
 };
 ```
 

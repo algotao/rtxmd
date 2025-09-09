@@ -47,13 +47,22 @@ keywords: [RTA, sRTA, SaaS]
 | srta.OS_ANDROID | Android | srta.get_os() |
 | srta.OS_OTHER | 其它操作系统 | srta.get_os() |
 
+**站点集**
+| 常量名称 | 含义 | 适用函数或变量 |
+| :--- | :--- | :-- |
+| srta.SITESET_UNION | 优量汇 | srta.get_siteset() |
+| srta.SITESET_WECHAT | 微信| srta.get_siteset() |
+| srta.SITESET_XQ | XQ | srta.get_siteset() |
+| srta.SITESET_XS_NEWS | 腾讯新闻 | srta.get_siteset() |
+| srta.SITESET_XS_VIDEO | 腾讯视频 | srta.get_siteset() |
+
 **策略参数**
 | 常量名称 | 含义 | 适用函数或变量 |
 | :--- | :--- | :-- |
 | srta.TARGETINFO_ENABLE | 策略参竞 | target_info |
 | srta.TARGETINFO_CPC_PRICE | CPC出价 | target_info |
 | srta.TARGETINFO_CPA_PRICE | CPA出价 | target_info |
-| srta.TARGETINFO_USER_WEIGHT_FACTOR | 用户权重系数	target_info |
+| srta.TARGETINFO_USER_WEIGHT_FACTOR | 用户权重系数 | target_info |
 | srta.TARGETINFO_CPC_FACTOR | CPC出价系统 | target_info |
 
 ### 5.2.2 函数列表
@@ -65,6 +74,7 @@ keywords: [RTA, sRTA, SaaS]
 | srta.get_apps | 获取App安装态(需授权) |
 | srta.get_scores | 获取模型分(需授权) |
 | srta.get_os | 获取终端操作系统 |
+| srta.get_siteset | 获取站点集ID |
 | srta.get_expid | 获取实验分桶ID |
 
 
@@ -76,9 +86,9 @@ didData = srta.get_dsdata(srta.DS_DID) -- 获取设备数据
 
 -- 以下为字段返回值示例
 didData = {
-    [1]: {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, .... 0, 0, 0, 0, 0, 0, 0, 0},
-    [2]: {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-    [3]: {false, false, false, false,false, false, false, false}
+    [1] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, .... 0, 0, 0, 0, 0, 0, 0, 0},
+    [2] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+    [3] = {false, false, false, false,false, false, false, false}
 }
 ```
 
@@ -129,7 +139,18 @@ os = srta.get_os() -- 获取终端操作系统
 1 -- 代表iOS，可以用srta常量进行判断
 ```
 
-### 5.2.8 srta.get_expid函数
+### 5.2.8 srta.get_siteset函数
+
+获取媒体站点集ID。返回值参考[系统常量]
+
+```lua
+siteset = srta.get_siteset() -- 获取媒体站点集ID
+
+-- 以下为返回值示例
+21 -- 21代表微信，可以用srta常量进行判断
+```
+
+### 5.2.9 srta.get_expid函数
 
 获取实验分桶编号。返回值为 0-10。1-10 每个分桶 UV 比例接近于 10%。由于系统原因，目前线上极少量的流量不会被分到任何实验分组，当分桶号为 0 时，代表流量未分桶。
 
@@ -280,9 +301,11 @@ newstamp = time.adddate(now, -1, 1, 1) -- 去年，再增加1月1天
 newstamp = time.setdate(2025, 6, 18, 12，13,14) -- 2025:06:18 12:13:14
 ```
 
-## 5.5 主函数main
+## 5.5 被调函数
 
-### 5.5.1 入口
+### 5.5.1 一次请求main
+
+#### 5.5.1.1 调用
 
 业务逻辑由使用方实现，为便于系统调用，约定使用main函数名。该函数无入口参数，后续所需数据通过调用内置函数获取
 
@@ -343,7 +366,7 @@ function main()
 end
 ```
 
-### 5.5.2 返回
+#### 5.5.1.2 返回
 
 主函数返回一个结果，为table格式并可引用srta常量以设置以下成员编号
 
@@ -355,6 +378,11 @@ end
 | srta.TARGETINFO_USER_WEIGHT_FACTOR | float | 策略用户权重系数 |
 | srta.TARGETINFO_CPC_FACTOR | float | 策略CPC出价系数 |
 
+
+### 5.5.2 二次请求second
+
+#### 5.5.2.1 调用
+#### 5.5.2.2 返回
 
 ## 5.6 代码调试
 
@@ -391,29 +419,29 @@ hijack函数返回一个沙箱结果集合。
 较为完整的使用示例
 ```lua
 function hijack()
-    local sandbox = {
-        srta_get_dsdata: {
-            [srta.DS_DID]: {
-                [srta.U8]: {0, 0, 0, 0, 0, 0, 0, 0,.... 0, 0, 0, 0, 0, 0, 0},
-                [srta.U32]: {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-                [srta.FLAG]: {false, false, false, false,false, false, false, false}
-            }
-        },
-        srta_get_targets: {"t1", "t2", "t3"},
-        srta_get_apps: {
-            [13717681]: true,
-            [306821611]: false
-        },
-        srta_get_scores: {
-            [1]: 10,
-            [3]: 50
-        },
-        srta_get_os: srta.OS_IOS,
-        srta_get_expid: 1,
-        time_now: 1755414905
-    }
+    print("hijack run")
+	local sandbox = {
+		srta_get_dsdata = {
+			[srta.DS_DID] = {[srta.U8] = {[1] = 100},
+			[srta.U32] = {[2] = 99},
+			[srta.FLAG] = {[1] = true}}
+		},
+		srta_get_targets = {"t1", "t2", "t3"},
+		srta_get_apps = {
+			[13717681] = true,
+			[3704767080] = true
+		},
+		srta_get_scores = {
+			[200701123] = 10,
+			[200701129] = 50
+		},
+		srta_get_os = srta.OS_IOS,
+		srta_get_expid = 1,
+        srta_get_siteset = srta.SITESET_WECHAT,
+		time_now = 1755414905
+	}
 
-    return sandbox
+	return sandbox
 end
 ```
 
@@ -427,10 +455,11 @@ end
 
 | 函数  | 说明 |
 | :-- | :-- |
-| srta_get_dsdata | 使用srta.get_dsdata获取对应用户的真实一方数据 |
+| srta_get_dsdata | 未指定则使用srta.get_dsdata获取对应用户的真实一方数据。只有部分字段指定时，由指定字段覆盖原DS对应值 |
 | srta_get_targets | 使用srta.get_targets获取真实的策略列表 |
 | srta_get_apps | 返回nil |
 | srta_get_scores | 返回nil |
-| srta_get_os | 随机返回 srta.OS_IOS、srta.OS_ANDROID 之一 |
-| srta_get_expid | 随机返回数字 0-10 之一 |
+| srta_get_os | 使用ScriptRun接口调用的 os 字段，如调用接口未指定则为 srta.OS_ANDROID |
+| srta_get_expid | 0 |
+| srta_get_siteset | 0 |
 | time_now | 使用time.now获取真实的系统时间 |

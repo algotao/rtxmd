@@ -34,6 +34,7 @@ Commands:
     task               Task commands    
     target             Target commands
     bind               Bind commands
+    script             Script commands
 
 "help" is the default command.
 
@@ -98,6 +99,23 @@ Commands:
 "help" is the default command.
 
 Use "saastool bind COMMAND -help" for more information about a command.
+```
+
+### 4.1.4 script（脚本）命令列表
+
+```sh
+saastool script help
+```
+
+```
+Usage:  saastoola script COMMAND [OPTIONS]
+
+Commands:
+    run                  Run lua script test on server
+
+"help" is the default command.
+
+Use "saastool script COMMAND -help" for more information about a command.
 ```
 
 ## 4.2 cfg.toml配置文件

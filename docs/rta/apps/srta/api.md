@@ -10,14 +10,14 @@ keywords: [RTA, sRTA, SaaS]
 
 ## 3.1 交互协议proto
 
-协议源码地址（协议在高频变动中，最新版本请拉取 [git源码](https://e.coding.net/rta/public/saasapi.git)：
+协议源码地址（协议在高频变动中，最新版本请拉取 [git源码](https://git.algo.com.cn/public/saasapi.git)：
 
 ```protobuf
 syntax = "proto3";
 
 package saasapi;
 
-option go_package = "e.coding.net/rta/public/saasapi";
+option go_package = "git.algo.com.cn/public/saasapi";
 
 // SaasReq 命令请求
 message SaasReq {
@@ -39,7 +39,7 @@ message SaasReq {
         BindSet bind_set                         = 61;  // 设置绑定
         BindDelete bind_delete                   = 62;  // 解除绑定
 
-        ScriptRun script_run                     = 90;  // 运行脚本（Debug）
+        ScriptRun script_run                     = 90;  // 运行脚本
         ScriptUpdate script_update               = 91;  // 脚本升级
     }
 }
@@ -187,6 +187,7 @@ message ScriptRun {
     string server_did                            = 2;   // 将从服务端读取该DID下的数据
     string appid                                 = 3;   // 小程序/小游戏/公众号/视频号的appid
     string server_openid                         = 4;   // 将从服务端读取该openid下的数据，需与appid配对使用
+    OS os                                        = 5;   // 操作系统
 }
 
 // ScriptUpdate 升级脚本
@@ -214,7 +215,7 @@ message SaasRes {
         BindSetRes bind_set_res                  = 61;  // 设置绑定返回状态
         BindDeleteRes bind_delete_res            = 62;  // 删除绑定返回状态
 
-        ScriptRunRes script_run_res              = 90;  // 运行脚本返回（Debug）
+        ScriptRunRes script_run_res              = 90;  // 运行脚本返回
         ScriptUpdateRes script_update_res        = 91;  // 升级脚本返回
     }
 }
@@ -315,8 +316,9 @@ message BindError {
 // ScriptRunRes 运行脚本返回
 message ScriptRunRes {
     string print_output                           = 1;  // print输出
-    string error                                  = 2;  // 错误信息
+    string error_output                           = 2;  // 错误信息
     string targets_output                         = 3;  // 策略输出
+    string dataspace_out                          = 4;  // 数据区输出
 }
 
 // ScriptUpdateRes 升级脚本返回
@@ -370,7 +372,13 @@ enum TaskStatus {
     SUCCESS                                      = 4;   // 成功
     FAIL                                         = 5;   // 失败
 
-    DELETED                                      = 10;   // 已删除，仅在执行删除成功时返回
+    DELETED                                      = 10;  // 已删除，仅在执行删除成功时返回
+}
+
+enum OS {
+    UNKNOWN                                      = 0;
+    IOS                                          = 1; 
+    ANDROID                                      = 2;
 }
 ```
 
@@ -999,9 +1007,10 @@ API以protobuf格式返回，返回信息为SaasRes结构
 | 字段名称 | 字段类型 | 必填 | 描述 |
 | :--- | :--- | :--- | :--- |
 | lua_script | string | 是 | LUA脚本 |
-| server_did | string | 否 | 将从服务端读取该DID下的数据 |
+| server_did | string | 是 | 将从服务端读取该DID下的数据 |
 | appid | string | 否 | 小程序/小游戏/公众号/视频号的appid |
 | server_openid | string | 否 | 将从服务端读取该openid下的数据，需与appid配对使用 |
+| os | os OS | 否 | 操作系统<br/>IOS = 1;<br/>Android = 2;<br/>默认 2  |
 
 **返回参数**：
 
@@ -1012,5 +1021,6 @@ API以protobuf格式返回，返回信息为SaasRes结构
 | 字段名称 | 字段类型 | 必填 | 描述 |
 | :--- | :--- | :--- | :--- |
 | print_output | string | 否 | 调用print函数的打印输出 |
-| error | string | 否 | LUA脚本运行错误 |
+| error_output | string | 否 | LUA脚本运行错误 |
 | targets_output | string | 否 | 策略输出内容 |
+| dataspace_out | string | 否 | 数据区输出内容 |
