@@ -10,7 +10,4 @@ import {SRTATool} from "/js/devtool.jsx";
 
 ## 沙箱调试
 
-
-**求一位前端大哥，指导下如何解决下面代码展示与光标不匹配的问题**
-
 <SRTATool />

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import CodeBlock from '@theme/CodeBlock';
 import CodeEditor from '@uiw/react-textarea-code-editor';
+import '@site/src/css/code-editor-fix.css';
 
 async function RTAQuery(url, reqbody) {
   const response = await fetch(url,
@@ -84,18 +85,32 @@ export const TextArea = ({ name, info, disabled, prepend, placeholder, colwidth,
 }
 
 export default function LuaCodeEditor({name, code, onchange, language}) {
+  // 创建事件包装器，确保传递正确的name属性
+  const handleCodeChange = (event) => {
+    const syntheticEvent = {
+      target: {
+        name: name,
+        value: event.target.value
+      }
+    };
+    onchange(syntheticEvent);
+  };
+
   return (
     <CodeEditor
       value={code}
-      name={name}
       language={language}
       placeholder="请输入sRTA LUA代码."
-      onChange={onchange}
+      onChange={handleCodeChange}
       padding={15}
       style={{
         backgroundColor: "#f5f5f5",
         fontFamily: 'ui-monospace,SFMono-Regular,SF Mono,Consolas,Liberation Mono,Menlo,monospace',
+        fontSize: '14px',
+        lineHeight: '1.5',
+        minHeight: '200px',
       }}
+      data-color-mode="light"
     />
   );
 }
@@ -442,7 +457,7 @@ export function SRTATool() {
     
     console.log(name, value);
     setInputs(values => ({ ...values, [name]: value }));
-  }
+  };
   function selectEnv(env) {
     setInputs(values => ({ ...values, ["env"]: env }));
   }
