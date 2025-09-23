@@ -1,6 +1,6 @@
-import React from "react";
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import CodeBlock from '@theme/CodeBlock';
+import CodeEditor from '@uiw/react-textarea-code-editor';
 
 async function RTAQuery(url, reqbody) {
   const response = await fetch(url,
@@ -35,6 +35,11 @@ const getHostURL = (areacode) => {
     default:
       return "https://sh.algo.com.cn";
   }
+};
+
+async function SRTAAPI(urlpath, reqbody) {
+  var url = "https://sh.algo.com.cn" + urlpath;
+  return RTAQuery(url, reqbody);
 };
 
 export const CodeView = ({ language, title, code }) => {
@@ -75,6 +80,23 @@ export const TextArea = ({ name, info, disabled, prepend, placeholder, colwidth,
       </div>
       <textarea placeholder={placeholder} name={name} disabled={disabled} rows={rows} cols={cols} readOnly={readOnly} value={info} />
     </div>
+  );
+}
+
+export default function LuaCodeEditor({name, code, onchange, language}) {
+  return (
+    <CodeEditor
+      value={code}
+      name={name}
+      language={language}
+      placeholder="请输入sRTA LUA代码."
+      onChange={onchange}
+      padding={15}
+      style={{
+        backgroundColor: "#f5f5f5",
+        fontFamily: 'ui-monospace,SFMono-Regular,SF Mono,Consolas,Liberation Mono,Menlo,monospace',
+      }}
+    />
   );
 }
 
@@ -401,6 +423,94 @@ export function RTATool() {
   );
 }
 
+export function SRTATool() {
+  const [inputs, setInputs] = useState({});
+  const [codeRecvError, setRecvError] = useState("");
+  const [codeRecvPrint, setRecvPrint] = useState("");
+  const [codeRecvTargets, setRecvTargets] = useState("");
+  const [codeRecvDataSpace, setRecvDataSpace] = useState("");
+  const envMap = new Map([[0, "Demo"], [1, "正式沙箱"]]);
+  useEffect(() => {
+    const setting = localStorage.getItem("tencent_srta_setting");
+    const jsonSetting = setting ? JSON.parse(setting) : { env: 0 };
+    console.log(jsonSetting)
+    setInputs(jsonSetting);
+  }, []);
+  const handleChange = (event) => {
+    const name = event.target.name;
+    const value = event.target.value;
+    
+    console.log(name, value);
+    setInputs(values => ({ ...values, [name]: value }));
+  }
+  function selectEnv(env) {
+    setInputs(values => ({ ...values, ["env"]: env }));
+  }
+  function sendDebug() {
+    localStorage.setItem("tencent_srta_setting", JSON.stringify(inputs));
+    
+    SRTAAPI("/srtacaller/sendDebug",  { 
+      env: inputs.env, 
+      lua: inputs.luacode, 
+      account: inputs.account, 
+      token: inputs.token,
+      did: inputs.did,
+    })
+      .then((data) => {
+        setRecvError(data.state.text+"\n"+data.Error);
+        setRecvPrint(data.Print);
+        setRecvTargets(data.Targets);
+        setRecvDataSpace(data.DataSpace);
+      })
+      .catch((error) => {
+        //console.error('Error:', error);
+      });
+  }
+  return (
+    <div className="container">
+      <form>
+          <div className="row">
+            <InputItem colwidth="col--6" prepend="Account" placeholder="账号" name="account" defaultvalue={inputs.account || ""} onchange={handleChange} />
+            <InputItem colwidth="col--6" prepend="Token" placeholder="Token" name="token" defaultvalue={inputs.token || ""} onchange={handleChange} />
+          </div>
+        <br />
+        <div className="row">
+          <div className="col col-12">
+            <LuaCodeEditor name="luacode" language="lua" code={inputs.luacode || ""} onchange={handleChange} />
+          </div>
+        </div>
+        <br />
+        <div className="row">
+          <InputItem colwidth="col--4" prepend="设备号MD5" placeholder="必填" name="did" defaultvalue={inputs.did || ""} onchange={handleChange} />
+        </div>
+        <br />
+        <div className="row">
+          <div className="col col-12">
+            <button type="button" className="button button--primary" onClick={sendDebug}>发送</button>
+            <div className="dropdown dropdown--hoverable keepspace">
+              <div className="button button--success">环境 ({envMap.get(inputs.env)})</div>
+              <ul className="dropdown__menu">
+                <li><div className="dropdown__link" onClick={() => selectEnv(0)}>{inputs.env == 0 ? "✓" : ""} {envMap.get(0)}</div></li>
+                <li><div className="dropdown__link" onClick={() => selectEnv(1)}>{inputs.env == 1 ? "✓" : ""} {envMap.get(1)}</div></li>
+              </ul>
+            </div>
+          </div>
+        </div>
+        <br />
+        <div className="row">
+          <div className="col col-12">
+            <CodeView title="返回错误"  code={codeRecvError} />
+            <CodeView title="返回打印输出" code={codeRecvPrint} />
+            <CodeView title="返回策略" language="json" code={codeRecvTargets} />
+            <CodeView title="返回数据区" language="json" code={codeRecvDataSpace} />
+          </div>
+        </div>
+      </form>
+      <br />
+    </div>
+  );
+}
+
 export function PingTool() {
   const [dest, setDest] = useState("")
   const [ipVersion, setIPVersion] = useState(0);
@@ -501,152 +611,6 @@ export function PingTool() {
   );
 }
 
-export function ADXTool() {
-  const [inputs, setInputs] = useState({});
-  useEffect(() => {
-    const setting = localStorage.getItem("tencent_adx_setting");
-    const jsonSetting = setting ? JSON.parse(setting) : { hostArea: 0 };
-    setInputs(jsonSetting);
-  }, []);
-  const [codeSendBody, setSendBody] = useState("");
-  const [codeRecvInfo, setRecvInfo] = useState("");
-  const [codeRecvHeader, setRecvHeader] = useState("");
-  const [codeRecvBody, setRecvBody] = useState("");
-  const [codeRecvCodeClass, setRecvCodeClass] = useState("protobuf");
-  const osInfoMap = new Map([[0, "未知"], [1, "iOS"], [2, "Android"], [3, "PC"]]);
-  const sitesetMap = new Map([[15, "优量汇-15"], [27, "腾讯新闻-27"], [28, "腾讯视频-28"], [25, "XQ-25"], [21, "微信-21"]]);
-  const hostAreaMap = new Map([[0, "上海"], [1, "北京"], [2, "广州"]]);
-  const handleChange = (event) => {
-    const name = event.target.name;
-    const value = event.target.value;
-    setInputs(values => ({ ...values, [name]: value }))
-  }
-  function makeBody() {
-    localStorage.setItem("tencent_adx_setting", JSON.stringify(inputs));
-    RTAAPI("/adxcaller/makeCmd", inputs.hostArea, inputs)
-      .then(data => {
-        setSendHeader(data.header);
-        setSendBody(data.body);
-      })
-      .catch((error) => {
-        //console.error('Error:', error);
-      });
-  }
-
-  function sendCmd() {
-    localStorage.setItem("tencent_adx_setting", JSON.stringify(inputs));
-    RTAAPI("/adxcaller/sendCmd", inputs.hostArea, { bidurl: inputs.bidurl, sendbody: codeSendBody, headers: codeSendHeader, })
-      .then((data) => {
-        setRecvInfo(data.state.text);
-        setRecvHeader(data.header);
-        setRecvBody(data.body);
-        setRecvCodeClass(data.codeclass);
-      })
-      .catch((error) => {
-        //console.error('Error:', error);
-      });
-  }
-  function selectOS(os) {
-    setInputs(values => ({ ...values, ["os"]: os }));
-  }
-  function selectSiteset(siteset) {
-    setInputs(values => ({ ...values, ["siteset"]: siteset }));
-  }
-  function selectHostArea(hostArea) {
-    setInputs(values => ({ ...values, ["hostArea"]: hostArea }));
-  }
-  return (
-    <div className="container">
-      <form>
-        <div className="row">
-          <InputItem colwidth="col--12" prepend="BidURL" placeholder="请输入BidURL，必填" name="bidurl" defaultvalue={inputs.bidurl || ""} onchange={handleChange} />
-        </div>
-        <br />
-        <div className="row">
-          <div className="col col-12">
-            <div className="dropdown dropdown--hoverable">
-              <div className="button button--success" >站点集 ({sitesetMap.get(inputs.siteset) || ""})</div>
-              <ul className="dropdown__menu">
-                <li><div className="dropdown__link" onClick={() => selectSiteset(15)} > {inputs.siteset == 15 ? "✓" : ""} 优量汇-15</div></li>
-                <li><div className="dropdown__link" onClick={() => selectSiteset(27)} > {inputs.siteset == 27 ? "✓" : ""} 腾讯新闻-27</div></li>
-                <li><div className="dropdown__link" onClick={() => selectSiteset(28)} > {inputs.siteset == 28 ? "✓" : ""} 腾讯视频-28</div></li>
-                <li><div className="dropdown__link" onClick={() => selectSiteset(25)} > {inputs.siteset == 25 ? "✓" : ""} XQ-25</div></li>
-                <li><div className="dropdown__link" onClick={() => selectSiteset(21)} > {inputs.siteset == 21 ? "✓" : ""} 微信-21</div></li>
-              </ul>
-            </div>
-            <div className="dropdown dropdown--hoverable keepspace">
-              <div className="button button--success" >系统 ({osInfoMap.get(inputs.os) || ""})</div>
-              <ul className="dropdown__menu">
-                <li><div className="dropdown__link" onClick={() => selectOS(2)} > {inputs.os == 2 ? "✓" : ""} {osInfoMap.get(2)}</div></li>
-                <li><div className="dropdown__link" onClick={() => selectOS(1)} > {inputs.os == 1 ? "✓" : ""} {osInfoMap.get(1)}</div></li>
-                <li><div className="dropdown__link" onClick={() => selectOS(3)} > {inputs.os == 3 ? "✓" : ""} {osInfoMap.get(3)}</div></li>
-                <li><div className="dropdown__link" onClick={() => selectOS(0)} > {inputs.os == 0 ? "✓" : ""} {osInfoMap.get(0)}</div></li>
-              </ul>
-            </div>
-          </div>
-        </div>
-        <br />
-        {inputs.os == 1 &&
-          <div className="row">
-            <InputItem colwidth="col--6" prepend="IDFA MD5" placeholder="选填" name="idfamd5" defaultvalue={inputs.idfamd5 || ""} onchange={handleChange} />
-            <InputItem colwidth="col--6" prepend="CAID MD5" placeholder="选填" name="caidmd5" defaultvalue={inputs.caidmd5 || ""} onchange={handleChange} />
-          </div>
-        }
-        {inputs.os == 2 &&
-          <div className="row">
-            <InputItem colwidth="col--6" prepend="OAID MD5" placeholder="选填" name="oaidmd5" defaultvalue={inputs.oaidmd5 || ""} onchange={handleChange} />
-            <InputItem colwidth="col--6" prepend="IMEI MD5" placeholder="选填" name="imeimd5" defaultvalue={inputs.imeimd5 || ""} onchange={handleChange} />
-          </div>
-        }
-        <div className="row">
-          <InputItem colwidth="col--6" prepend="MAC MD5" placeholder="选填" name="macmd5" defaultvalue={inputs.macmd5 || ""} onchange={handleChange} />
-        </div>
-        <br />
-        <div className="row">
-          <InputItem colwidth="col--6" prepend="IP" placeholder="选填（BidRequest.ip）" name="ip" defaultvalue={inputs.ip || ""} onchange={handleChange} />
-        </div>
-        <br />
-        <div className="row">
-          <InputItem colwidth="col--6" prepend="经度" placeholder="选填（BidRequest.geo.latitude）" name="latitude" defaultvalue={inputs.latitude || ""} onchange={handleChange} />
-          <InputItem colwidth="col--6" prepend="纬度" placeholder="选填（BidRequest.geo.longitude）" name="longitude" defaultvalue={inputs.longitude || ""} onchange={handleChange} />
-        </div>
-        <div className="row">
-          <div className="col col-12">
-            <button type="button" className="button button--primary" onClick={makeBody}>生成</button>
-          </div>
-        </div>
-        <br />
-        <div className="row">
-          <div className="col col-12">
-            <CodeView title="发送内容" language="protobuf" code={codeSendBody} />
-          </div>
-        </div>
-        <div className="row">
-          <div className="col col-12">
-            <button type="button" className="button button--primary" onClick={sendCmd}>发送</button>
-            <div className="dropdown dropdown--hoverable keepspace">
-              <div className="button button--success">发起地区 ({hostAreaMap.get(inputs.hostArea)})</div>
-              <ul className="dropdown__menu">
-                <li><div className="dropdown__link" onClick={() => selectHostArea(0)}>{inputs.hostArea == 0 ? "✓" : ""} {hostAreaMap.get(0)}</div></li>
-                <li><div className="dropdown__link" onClick={() => selectHostArea(1)}>{inputs.hostArea == 1 ? "✓" : ""} {hostAreaMap.get(1)}</div></li>
-                <li><div className="dropdown__link" onClick={() => selectHostArea(2)}>{inputs.hostArea == 2 ? "✓" : ""} {hostAreaMap.get(2)}</div></li>
-              </ul>
-            </div>
-          </div>
-        </div>
-        <br />
-        <div className="row">
-          <div className="col col-12">
-            <CodeView title="返回状态" language="http" code={codeRecvInfo} />
-            <CodeView title="返回HTTP Header" language="http" code={codeRecvHeader} />
-            <CodeView title="返回Body内容" language={codeRecvCodeClass} code={codeRecvBody} />
-          </div>
-        </div>
-      </form>
-      <br />
-    </div>
-  );
-}
 
 export function DecodeTool() {
   const [encoded, setEncoded] = useState("")
