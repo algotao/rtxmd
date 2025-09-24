@@ -420,28 +420,28 @@ hijack函数返回一个沙箱结果集合。
 ```lua
 function hijack()
     print("hijack run")
-	local sandbox = {
-		srta_get_dsdata = {
-			[srta.DS_DID] = {[srta.U8] = {[1] = 100},
-			[srta.U32] = {[2] = 99},
-			[srta.FLAG] = {[1] = true}}
-		},
-		srta_get_targets = {"t1", "t2", "t3"},
-		srta_get_apps = {
-			[13717681] = true,
-			[3704767080] = true
-		},
-		srta_get_scores = {
-			[200701123] = 10,
-			[200701129] = 50
-		},
-		srta_get_os = srta.OS_IOS,
-		srta_get_expid = 1,
+    local sandbox = {
+    srta_get_dsdata = {
+        [srta.DS_DID] = {[srta.U8] = {[1] = 100},
+            [srta.U32] = {[2] = 99},
+            [srta.FLAG] = {[1] = true}}
+        },
+        srta_get_targets = {"t1", "t2", "t3"},
+        srta_get_apps = {
+            [13717681] = true,
+            [3704767080] = true
+        },
+        srta_get_scores = {
+            [200701123] = 10,
+            [200701129] = 50
+        },
+        srta_get_os = srta.OS_IOS,
+        srta_get_expid = 1,
         srta_get_siteset = srta.SITESET_WECHAT,
-		time_now = 1755414905
-	}
+        time_now = 1755414905
+    }
 
-	return sandbox
+    return sandbox
 end
 ```
 

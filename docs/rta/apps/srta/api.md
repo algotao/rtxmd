@@ -81,14 +81,12 @@ message WriteItem {
 message Bytes {
     bytes bytes                                  = 1;   // 写入的byte
     uint64 index_1                               = 2;   // 写入byte的索引值(0..63)
-    uint64 index_2                               = 3;   // 写入byte的索引值(64..127)
 }
 
 // Uint32s 写入uint32区域
 message Uint32s {
     repeated uint32 uint32s                      = 1;   // 写入的uint32
     uint64 index_1                               = 2;   // 写入uint32的索引值(0..15) 最多 16 个
-    //uint64 index_2 = 3;                               // 写入uint32的索引值(当前不支持)
 }
 
 // FlagsWithExpire 写入标志位区域
@@ -127,6 +125,8 @@ message Task {
     string create_time                           = 10;   // 创建时间
     string run_time                              = 11;   // 运行时间
     string finish_time                           = 12;   // 完成时间
+    uint32 running_block                         = 13;   // 正在运行的块编号
+    uint32 total_block                           = 14;   // 总块数
 
     TaskStatus status                            = 15;   // 任务状态
 }
@@ -249,6 +249,7 @@ message ValueItem {
     repeated uint32 uint32s                      = 4;  // uint32区域
     repeated FlagWithExpire flags_with_expire    = 5;  // 标志位区域
     uint32 last_modify_time                      = 6;  // 最后修改时间
+    uint32 version                               = 7;  // 存储版本
 }
 
 // TaskListRes 任务列表返回
@@ -379,6 +380,14 @@ enum OS {
     UNKNOWN                                      = 0;
     IOS                                          = 1; 
     ANDROID                                      = 2;
+}
+
+// MAX 最大限定
+enum MAX {
+    MAX_UNKNOWN                                  = 0;
+    U8                                           = 64;
+    U32                                          = 8;
+    FLAG                                         = 4;
 }
 ```
 
@@ -609,7 +618,6 @@ API以protobuf格式返回，返回信息为SaasRes结构
 | write_item.write_bytes | Bytes | 否 | 写入的uint8类型数值 |
 | write_item.write_bytes.bytes | array of byte/bytes | 是 | 写入的byte数组，每个byte 的填写编号由下面index决定 |
 | write_item.write_bytes.index_1 | uint64 | 是 | 写入byte的索引值(0..63)，位置使用bit位表示 |
-| write_item.write_bytes.index_2 | uint64 | 是 | 写入byte的索引值(64..127)，位置使用bit位表示 |
 | write_item.write_uint32s | Uint32s | 否 | 写入的uint32类型数值 |
 | write_item.write_uint32s.uint32s | array of uint32 | 是 | 写入的uint32数组，每个uint32 的填写编号由下面index决定 |
 | write_item.write_uint32s.index_1 | uint64 | 是 | 写入uint32的索引值(0..15)，位置使用bit位表示 |
@@ -653,7 +661,6 @@ API以protobuf格式返回，返回信息为SaasRes结构
 | write_bytes | Bytes | 否 | 写入的uint8类型数值 |
 | write_bytes.bytes | array of byte/bytes | 是 | 写入的byte数组，每个byte 的填写编号由下面index决定 |
 | write_bytes.index_1 | uint64 | 是 | 写入byte的索引值(0..63)，位置使用bit位表示 |
-| write_bytes.index_2 | uint64 | 是 | 写入byte的索引值(64..127)，位置使用bit位表示 |
 | write_uint32s | Uint32s | 否 | 写入的uint32类型数值 |
 | write_uint32s.uint32s | array of uint32 | 是 | 写入的uint32数组，每个uint32 的填写编号由下面index决定 |
 | write_uint32s.index_1 | uint64 | 是 | 写入uint32的索引值(0..15)，位置使用bit位表示 |
@@ -711,12 +718,14 @@ API以protobuf格式返回，返回信息为SaasRes结构
 | task_file_infos.file_blocks.block_sha256 | string | 是 | 块的sha256 |
 | task_file_infos.file_blocks.block_size | uint64 | 是 | 块的大小。一般情况下块大小与task_block_size 一致，文件最后一块除外。 |
 | task_file_infos.file_blocks.uploaded | bool | 否 | 分块是否已上传。即使是刚创建的任务，也有可能因为分块曾经上传过而将此值标记为true。已经上传的分块无须再次上传 |
-| create_time | string | 是 | 创建时间 |
-| run_time | string | 否 | 运行时间 |
-| finish_time | string | 否 | 完成时间 |
 | task_block_size | uint64 | 是 | 块的大小 |
 | source_path | string | 否 | 任务数据源路径 |
 | task_size | uint64 | 否 | 任务所有文件的总大小 |
+| create_time | string | 是 | 创建时间 |
+| run_time | string | 否 | 运行时间 |
+| finish_time | string | 否 | 完成时间 |
+| running_block | uint32 | 否 | 当前运行块 |
+| total_block | uint32 | 否 | 总块数 |
 | status | TaskStatus | 是 | 任务状态<br/>WAITING = 1;// 等待中<br/>RUNNING = 2;// 运行中<br/>SUCCESS = 3;// 成功<br/>FAIL = 4;// 失败<br/>DELETED = 5; // 已删除，仅在执行删除成功时返回 |
 
 ## 3.15 任务-列表 TaskList
@@ -743,12 +752,14 @@ API以protobuf格式返回，返回信息为SaasRes结构
 | tasks.appid | string | 否 | 如appid不为空，且dataspace_id必须wuid，表示数据空间为wuid（微信生态用户标识） |
 | tasks.task_sha256 | string | 是 | 任务sha256 |
 | tasks.task_description | string | 否 | 任务描述，不重要，它是个对客户的助记符 |
-| tasks.create_time | string | 是 | 创建时间 |
-| tasks.run_time | string | 否 | 运行时间 |
-| tasks.finish_time | string | 否 | 完成时间 |
 | tasks.task_block_size | uint64 | 是 | 块的大小 |
 | tasks.source_path | string | 否 | 任务数据源路径 |
 | tasks.task_size | uint64 | 否 | 任务所有文件的总大小 |
+| tasks.create_time | string | 是 | 创建时间 |
+| tasks.run_time | string | 否 | 运行时间 |
+| tasks.finish_time | string | 否 | 完成时间 |
+| tasks.running_block | uint32 | 否 | 当前运行块 |
+| tasks.total_block | uint32 | 否 | 总块数 |
 | tasks.status | TaskStatus | 是 | 任务状态<br/>WAITING = 1;// 等待中<br/>RUNNING = 2;// 运行中<br/>SUCCESS = 3;// 成功<br/>FAIL = 4;// 失败<br/>DELETED = 5; // 已删除，仅在执行删除成功时返回 |
 
 ## 3.16 任务-执行 TaskRun
@@ -785,12 +796,13 @@ API以protobuf格式返回，返回信息为SaasRes结构
 | task_file_infos.file_blocks.block_size | uint64 | 是 | 块的大小。一般情况下块大小与task_block_size 一致，文件最后一块除外 |
 | task_file_infos.file_blocks.uploaded | bool | 否 | 分块是否已上传。即使是刚创建的任务，也有可能因为分块曾经上传过而将此值标记为true。已经上传的分块无须再次上传 |
 | task_block_size | uint64 | 是 | 块的大小 |
+| source_path | string | 否 | 任务数据源路径 |
+| task_size | uint64 | 否 | 任务所有文件的总大小 |
 | create_time | string | 是 | 创建时间 |
 | run_time | string | 否 | 运行时间 |
 | finish_time | string | 否 | 完成时间 |
-| task_block_size | uint64 | 是 | 块的大小 |
-| source_path | string | 否 | 任务数据源路径 |
-| task_size | uint64 | 否 | 任务所有文件的总大小 |
+| running_block | uint32 | 否 | 当前运行块 |
+| total_block | uint32 | 否 | 总块数 |
 | status | TaskStatus | 是 | 任务状态<br/>WAITING = 1;// 等待中<br/>RUNNING = 2;// 运行中<br/>SUCCESS = 3;// 成功<br/>FAIL = 4;// 失败<br/>DELETED = 5; // 已删除，仅在执行删除成功时返回 |
 
 ## 3.17 任务-删除 TaskDelete
@@ -827,12 +839,13 @@ API以protobuf格式返回，返回信息为SaasRes结构
 | task_file_infos.file_blocks.block_size | uint64 | 是 | 块的大小。一般情况下块大小与task_block_size 一致，文件最后一块除外 |
 | task_file_infos.file_blocks.uploaded | bool | 否 | 分块是否已上传。即使是刚创建的任务，也有可能因为分块曾经上传过而将此值标记为true。已经上传的分块无须再次上传 |
 | task_block_size | uint64 | 是 | 块的大小 |
+| source_path | string | 否 | 任务数据源路径 |
+| task_size | uint64 | 否 | 任务所有文件的总大小 |
 | create_time | string | 是 | 创建时间 |
 | run_time | string | 否 | 运行时间 |
 | finish_time | string | 否 | 完成时间 |
-| task_block_size | uint64 | 是 | 块的大小 |
-| source_path | string | 否 | 任务数据源路径 |
-| task_size | uint64 | 否 | 任务所有文件的总大小 |
+| running_block | uint32 | 否 | 当前运行块 |
+| total_block | uint32 | 否 | 总块数 |
 | status | TaskStatus | 是 | 任务状态<br/>WAITING = 1;// 等待中<br/>RUNNING = 2;// 运行中<br/>SUCCESS = 3;// 成功<br/>FAIL = 4;// 失败<br/>DELETED = 5; // 已删除，仅在执行删除成功时返回 |
 
 ## 3.18 任务-详情 TaskInfo
@@ -870,14 +883,14 @@ API以protobuf格式返回，返回信息为SaasRes结构
 | task_file_infos.file_blocks.block_size | uint64 | 是 | 块的大小。一般情况下块大小与task_block_size 一致，文件最后一块除外 |
 | task_file_infos.file_blocks.uploaded | bool | 否 | 分块是否已上传。即使是刚创建的任务，也有可能因为分块曾经上传过而将此值标记为true。已经上传的分块无须再次上传 |
 | task_block_size | uint64 | 是 | 块的大小 |
+| source_path | string | 否 | 任务数据源路径 |
+| task_size | uint64 | 否 | 任务所有文件的总大小 |
 | create_time | string | 是 | 创建时间 |
 | run_time | string | 否 | 运行时间 |
 | finish_time | string | 否 | 完成时间 |
-| task_block_size | uint64 | 是 | 块的大小 |
-| source_path | string | 否 | 任务数据源路径 |
-| task_size | uint64 | 否 | 任务所有文件的总大小 |
+| running_block | uint32 | 否 | 当前运行块 |
+| total_block | uint32 | 否 | 总块数 |
 | status | TaskStatus | 是 | 任务状态<br/>WAITING = 1;// 等待中<br/>RUNNING = 2;// 运行中<br/>SUCCESS = 3;// 成功<br/>FAIL = 4;// 失败<br/>DELETED = 5; // 已删除，仅在执行删除成功时返回 |
-
 
 ## 3.19 任务-上传数据文件分片 TaskUpload
 
