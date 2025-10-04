@@ -2,8 +2,8 @@
 sidebar_position: 5
 toc_min_heading_level: 2
 toc_max_heading_level: 5
-description: 以SaaS的方式，让广告客户能够以低门槛、高灵活度的方式使用RTA能力。广告客户可以免除对接整套RTA时涉及到的工程投入、基建投入，专注在策略开发中；同时由于RTA-SaaS部署在平台域内，数据安全和合规性获得更强保障，进而可以衍生出更多玩法，解决更多业务问题。
-keywords: [RTA, sRTA, SaaS]
+description: 深入探索LUA智能决策在RTA SaaS中的应用！本文全面介绍LUA智能决策的系统函数、内置模块（如srta、string、time）、被调函数（一次请求main、二次请求second）以及代码调试方法（通过sRTA沙箱和hijack函数模拟数据）。为广告开发者提供详细的LUA编程指南，助力实现精准的广告决策逻辑。
+keywords: [LUA智能决策, RTA SaaS, 系统函数, 内置模块, srta, string, time, 被调函数, main, second, 代码调试, sRTA沙箱, hijack函数]
 ---
 
 # 5 LUA智能决策

@@ -1,7 +1,7 @@
 ---
 sidebar_position: 2
-description: RTA网络质量分析工具，具有ping, mtr, dig等三大类功能。可分析基础网络设施中存在的问题。
-keywords: [RTA, 联调, 网络质量, ping, mtr, dig]
+description: Ping拨测工具提供自动IPv4和IPv6的ping、MTR和DIG测试，支持北京、上海、广州等地的返回结果，帮助用户快速诊断网络连接问题。
+keywords: [Ping拨测, IPv4, IPv6, 网络诊断, MTR, DIG, 北京, 上海, 广州]
 ---
 
 import {PingTool} from "/js/devtool.jsx";

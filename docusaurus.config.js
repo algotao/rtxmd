@@ -22,8 +22,8 @@ const config = {
     locales: ['zh-Hans'],
   },
   scripts: [
-    { src: 'https://hm.baidu.com/hm.js?4fe7505b2ad8d0a8fb1ac4db5ab518ad', async: true },
-    { src: '/js/bing.js' },
+    { src: '/js-sdk-pro.min.js', async: false },
+    { src: '/js/51la.js', async: false }
   ],
   presets: [
     [

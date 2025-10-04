@@ -1,0 +1,1 @@
+LA.init({id:"3NdvezuKSBzaGLHN",ck:"3NdvezuKSBzaGLHN", hashMode: true})

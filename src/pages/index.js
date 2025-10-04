@@ -31,7 +31,7 @@ export default function Home() {
   return (
     <Layout
       title={`${siteConfig.title}`}
-      description="RTA（Real Time API）基于轻量级的交互接口，在标准 直投 广告的基础上引入广告主实时决策，实现人群筛选、用户分层、商品推荐等能力的扩展。">
+      description="探索程序化广告的核心技术！本文深入解析RTA（实时API）、RTB（实时竞价）及PDB的广告投放模式，重点介绍RTA如何通过轻量级接口实现广告主实时决策（如人群筛选、用户分层），并简述RTB由DSP驱动的竞价逻辑。程序化广告从业者必读，快速掌握精准营销技术要点！">
       <HomepageHeader />
       <main>
         <HomepageFeatures />

@@ -1,7 +1,7 @@
 ---
 sidebar_position: 2
-description: RTA广告播放支持监测宏，通过监测宏可将决策与广告播放结果串联起来，还原历史决策过程中的是否、权重、出价等信息。
-keywords: [RTA, 监测宏, RTA TraceID]
+description: 掌握RTA监测宏，精准追踪广告效果！本文介绍了用于曝光与点击回传的关键监测宏，强调RTA_TRACE_ID作为必填参数的重要性，并详细解析了各宏参数的含义与用途，助力广告主高效利用数据进行策略优化。
+keywords: [RTA监测宏, 曝光回传, 点击回传, RTA_TRACE_ID, 实验分桶ID, RTA CPC出价, RTA CPA出价, 用户竞争力等级, 策略ID, 功能状态码, RTA_DSP_TAG]
 ---
 
 # 监测宏

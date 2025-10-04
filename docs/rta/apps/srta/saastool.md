@@ -2,8 +2,8 @@
 sidebar_position: 4
 toc_min_heading_level: 2
 toc_max_heading_level: 5
-description: 以SaaS的方式，让广告客户能够以低门槛、高灵活度的方式使用RTA能力。广告客户可以免除对接整套RTA时涉及到的工程投入、基建投入，专注在策略开发中；同时由于RTA-SaaS部署在平台域内，数据安全和合规性获得更强保障，进而可以衍生出更多玩法，解决更多业务问题。
-keywords: [RTA, sRTA, SaaS]
+description: 高效管理程序化广告数据与策略，saastool工具助您一臂之力！本文详细介绍saastool这一便捷命令行工具，它支持数据管理与策略管理，无需大量开发即可实现相应功能。还涵盖容器/服务模式、数据转换等特性，开发者可参考其源码定制逻辑，为程序化广告操作提供有力支持。
+keywords: [程序化广告, saastool工具, 数据管理, 策略管理, 命令行工具, 容器模式, 数据转换, 任务管理, 策略列表, 策略绑定]
 ---
 
 # 4 saastool工具

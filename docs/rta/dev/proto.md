@@ -2,8 +2,8 @@
 sidebar_position: 2
 toc_min_heading_level: 2
 toc_max_heading_level: 5
-description: 腾讯RTA全面而丰富的交互协议，并对交互字段作了注释。包含请求的设备、二次请求的广告列表；回复的策略字段及加权加价字段，二次回复广告及商品列表。
-keywords: [RTA, proto, protobuf, RTARequest, RTAResponse]
+description: 深度解析RTA交互协议，掌握程序化广告核心通信规范！本文全面呈现RTA实时交互协议的详细内容，包括请求与响应消息结构、必填与可选字段说明，以及协议代码示例。为程序化广告从业者提供精准的协议指南，助力实现高效的RTA通信与广告投放。
+keywords: [程序化广告, RTA交互协议, 请求消息结构, 响应消息结构, 必填字段, 可选字段, 协议代码, RTA通信, 广告投放]
 ---
 
 # RTA交互协议

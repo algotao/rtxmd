@@ -1,8 +1,8 @@
 ---
 draft: false
 sidebar_position: 5
-description: 解码工具，可解gdt clickid、 RTA Trace ID，并从中提取相关信息。
-keywords: [RTA, Clickid, RTA Trace ID, 解码, Decode]
+description: 解码工具用于解码处理，用户可以输入待解码内容并查看解码后的结果，帮助用户快速解码和分析数据。
+keywords: [码工具, 待解码, 解码后, 数据解码, 数据分析]
 ---
 
 import {DecodeTool} from "/js/devtool.jsx";

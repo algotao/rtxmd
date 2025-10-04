@@ -1,7 +1,7 @@
 ---
 sidebar_position: 1
-description: RTA调用方与被调方的基于http协议交互约定，包含请求与回复示例、状态码约定、超时上限等。
-keywords: [RTA, http, https, cookie, keep-alive]
+description: 深入解析程序化广告HTTP交互规范，掌握RTA通信核心要点！本文详细介绍了调用方与被调方基于HTTP协议的交互规范，包括支持的协议版本、传输加密、请求方法、响应状态等，还阐述了HTTP状态码、压缩、Cookie能力、分块传输等技术细节，以及并发请求、时延和质量等技术挑战，为程序化广告的HTTP通信提供全面指导。
+keywords: [程序化广告, HTTP交互规范, RTA, 协议版本, 传输加密, 请求方法, 响应状态, HTTP状态码, 压缩, Cookie能力, 分块传输, 技术挑战]
 ---
 
 # HTTP规范

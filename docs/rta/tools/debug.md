@@ -1,7 +1,7 @@
 ---
 sidebar_position: 1
-description: RTA在线联调工具，可模拟官方发出的RTA请求，模拟设备号与openid交互，并对测试DSP的回复检测格式正确性，分析耗时等。
-keywords: [RTA, 联调, 自助联调工具, 内网联调, 公网联调]
+description: 联调工具提供模拟调试和内网调试模式，适用于无法提供公网URL的开发环境。通过Docker环境实现内网联调，详细步骤包括启动调试容器、浏览器访问和选择发起地区，帮助开发者在隔离网络环境中进行调试。
+keywords: [联调工具, 模拟调试, 内网调试, Docker, 公网URL, 调试容器, 网络隔离, 开发环境]
 ---
 
 import {RTATool} from "/js/devtool.jsx";

@@ -2,8 +2,8 @@
 sidebar_position: 3
 toc_min_heading_level: 2
 toc_max_heading_level: 5
-description: 以SaaS的方式，让广告客户能够以低门槛、高灵活度的方式使用RTA能力。广告客户可以免除对接整套RTA时涉及到的工程投入、基建投入，专注在策略开发中；同时由于RTA-SaaS部署在平台域内，数据安全和合规性获得更强保障，进而可以衍生出更多玩法，解决更多业务问题。
-keywords: [RTA, sRTA, SaaS]
+description: 深入解析程序化广告数据管理协议，掌握RTA SaaS系统核心操作！本文详细介绍了数据交互的proto协议、API域名、请求与返回格式、加密规则及命令状态码，涵盖任务管理、策略绑定、实时读写等关键功能，为广告主提供高效、精准的数据管理指南。
+keywords: [程序化广告, 数据管理, RTA SaaS系统, proto协议, API域名, 加密规则, 命令状态码, 任务管理, 策略绑定, 实时读写]
 ---
 
 # 3 数据管理
