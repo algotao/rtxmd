@@ -36,6 +36,9 @@ Commands:
     target             Target commands
     bind               Bind commands
     script             Script commands
+    exp                Exp commands
+
+    daemon             Run in daemon mode
 
 "help" is the default command.
 
@@ -136,6 +139,24 @@ Commands:
 Use "saastool script COMMAND -help" for more information about a command.
 ```
 
+### 4.1.6 exp（实验）命令列表
+
+```sh
+saastool exp help
+```
+
+```
+Usage:  saastoola exp COMMAND [OPTIONS]
+
+Commands:
+    list                 List exps
+    get                  Get exp report
+
+"help" is the default command.
+
+Use "saastool exp COMMAND -help" for more information about a command.
+```
+
 ## 4.2 容器/服务模式
 
 saastool提供了容器版本。在容器中将默认启动为daemon并提供http接口供调用。使用容器版本可以简化配置及开发工作，在操作量不高时使用更通用的http交互形式提供数据读写。
@@ -150,7 +171,7 @@ saastool提供了容器版本。在容器中将默认启动为daemon并提供htt
 ```yml
 services:
   saastool:
-    image: registry.algo.com.cn/public/saastool:20250924
+    image: rta-docker.pkg.coding.net/public/docker/rtacaller:20251016
     restart: unless-stopped
     environment:
       - SRTA_ACCOUNT=2000
@@ -165,7 +186,7 @@ services:
 ```yml
 services:
   saastool:
-    image: registry.algo.com.cn/public/saastool:20250924
+    image: rta-docker.pkg.coding.net/public/docker/rtacaller:20251016
     restart: unless-stopped
     environment:
       - SRTA_ACCOUNT=2000

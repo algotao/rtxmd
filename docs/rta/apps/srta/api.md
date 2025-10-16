@@ -6,7 +6,7 @@ description: 深入解析程序化广告数据管理协议，掌握RTA SaaS系�
 keywords: [程序化广告, 数据管理, RTA SaaS系统, proto协议, API域名, 加密规则, 命令状态码, 任务管理, 策略绑定, 实时读写]
 ---
 
-# 3 数据管理
+# 3 API使用说明
 
 ## 3.1 交互协议proto
 
@@ -41,6 +41,9 @@ message SaasReq {
 
         ScriptRun script_run                     = 90;  // 运行脚本
         ScriptUpdate script_update               = 91;  // 脚本升级
+
+        ExpList exp_list                         = 100; // 列出实验
+        ExpGet exp_get                           = 101; // 获取实验报表
     }
 }
 
@@ -86,13 +89,13 @@ message Bytes {
 // Uint32s 写入uint32区域
 message Uint32s {
     repeated uint32 uint32s                      = 1;   // 写入的uint32
-    uint64 index_1                               = 2;   // 写入uint32的索引值(0..15) 最多 16 个
+    uint64 index_1                               = 2;   // 写入uint32的索引值(0..7) 最多 8 个
 }
 
 // FlagsWithExpire 写入标志位区域
 message FlagsWithExpire {
     repeated FlagWithExpire flags_with_expire    = 1;   // 写入的标志位
-    uint64 index_1                               = 2;   // 写入标志位的索引值
+    uint64 index_1                               = 2;   // 写入标志位的索引值(0..3) 最多 4 个
 }
 
 // FlagWithExpire 标志位
@@ -194,6 +197,29 @@ message ScriptRun {
 message ScriptUpdate {
 }
 
+// ExpList 列出实验
+message ExpList {
+
+}
+
+// ExpGet 获取实验报表
+// select base_fields, {EXT_FIELDS} 
+// where day between {WHERE_BEGIN_DAY} and {WHERE_END_DAY} 
+//    and expid in {WHERE_EXP_ID}
+//    and target = {WHERE_TARGET}
+//    and advertiser_id in {WHERE_ADVERTISER_ID}
+// group by {GROUP_BY}
+message ExpGet {
+    repeated string ext_fields                   = 1;   // 扩展字段（除基础字段必然输出外，其余字段需在这里填写，也可以使用*输出全部扩展字段）
+    uint64 where_begin_day                       = 10;  // 起始日期
+    uint64 where_end_day                         = 11;  // 结束日期
+    repeated uint32 where_bucket_id              = 12;  // 实验ID(1-10)
+    string where_target                          = 13;  // 策略ID
+    repeated uint64 where_advertiser_id          = 14;  // 广告主ID
+    repeated string group_by                     = 20;  // 当前支持广告主ID(advertiser_id)
+    uint32 total_flag                            = 30;  // 是否汇总，0=不汇总，1=汇总
+}
+
 // SaasRes 命令返回
 message SaasRes {
     ErrorCode code                               = 1;  // 返回码
@@ -217,12 +243,20 @@ message SaasRes {
 
         ScriptRunRes script_run_res              = 90;  // 运行脚本返回
         ScriptUpdateRes script_update_res        = 91;  // 升级脚本返回
+
+        ExpListRes exp_list_res                  = 100; // 实验列表返回
+        ExpGetRes exp_get_res                    = 101; // 实验报表返回
     }
+}
+
+message DataSpace {
+    repeated string did                          = 1;   // 设备ID区
+    repeated string wuid                         = 2;   // OpenID区
 }
 
 // InfoRes 账号信息返回
 message InfoRes {
-    repeated string dataspace_id                 = 1;  // 可用数据区列表
+    DataSpace dataspace                          = 1;  // 可用数据区列表
     repeated string target_id                    = 2;  // 策略ID列表
 
 }
@@ -268,49 +302,49 @@ message Binds {
 
 // Bind 绑定信息
 message Bind {
-    int64 bind_id                                = 1;  //绑定的ID
-    BindType bind_type                           = 2;  //绑定类型
-    string target_id                             = 3;  //策略ID
-    int64 account_id                             = 4;  //广告主ID
-    BindSourceType bind_source                   = 5;  //绑定操作来源
+    int64 bind_id                                = 1;  // 绑定的ID
+    BindType bind_type                           = 2;  // 绑定类型
+    string target_id                             = 3;  // 策略ID
+    int64 account_id                             = 4;  // 广告主ID
+    BindSourceType bind_source                   = 5;  // 绑定操作来源
 }
 
 
 // BindType 绑定类型
 enum BindType {
     UnknownBindType                              = 0;
-    AdgroupId                                    = 1;  //广告
-    AccountId                                    = 3;  //广告主
+    AdgroupId                                    = 1;  // 广告
+    AccountId                                    = 3;  // 广告主
 }
 
 // BindSourceType 绑定操作来源
 enum BindSourceType {
-    DefaultBindSourceType                        = 0;  //广告主或未填写
-    ThirdPartyApi                                = 1;  //第三方API
-    ADQ                                          = 2;  //ADQ平台
-    MP                                           = 3;  //MP平台
-    MktApi                                       = 4;  //MarketingAPI
+    DefaultBindSourceType                        = 0;  // 广告主或未填写
+    ThirdPartyApi                                = 1;  // 第三方API
+    ADQ                                          = 2;  // ADQ平台
+    MP                                           = 3;  // MP平台
+    MktApi                                       = 4;  // MarketingAPI
 }
 
 // BindSetRes 设置绑定返回
 message BindSetRes {
-    int32 success_num                            = 1;  //成功数
-    int32 error_num                              = 2;  //错误数
-    repeated BindError errors                    = 3;  //绑定错误的记录
+    int32 success_num                            = 1;  // 成功数
+    int32 error_num                              = 2;  // 错误数
+    repeated BindError errors                    = 3;  // 绑定错误的记录
 }
 
 // BindDeleteRes 删除绑定返回
 message BindDeleteRes {
-    int32 success_num                            = 1;  //成功数
-    int32 error_num                              = 2;  //错误数
-    repeated BindError errors                    = 3;  //绑定错误的记录
+    int32 success_num                            = 1;  // 成功数
+    int32 error_num                              = 2;  // 错误数
+    repeated BindError errors                    = 3;  // 绑定错误的记录
 }
 
 // BindError 绑定错误信息
 message BindError {
-    int64 bind_id                                = 1;  //错误绑定的绑定ID
-    int32 bind_type                              = 2;  //绑定类型
-    string reason                                = 3;  //错误绑定原因
+    int64 bind_id                                = 1;  // 错误绑定的绑定ID
+    int32 bind_type                              = 2;  // 绑定类型
+    string reason                                = 3;  // 错误绑定原因
 }
 
 
@@ -324,6 +358,44 @@ message ScriptRunRes {
 
 // ScriptUpdateRes 升级脚本返回
 message ScriptUpdateRes {
+}
+
+// ExpListRes 实验列表返回
+message ExpListRes {
+    repeated ExpBucket buckets                    = 1;  // 实验桶
+}
+
+message ExpBucket {
+    uint32 bucket_id                              = 1;  // 分桶号
+    uint32 pt_exp_id                              = 2;  // 平台实验ID
+    uint32 percent                                = 3;  // 流量百分比
+}
+
+// ExpGetRes 实验报表返回
+message ExpGetRes {
+    repeated ExpData exp_data                      = 1;  // 实验数据
+}
+
+message ExpData {
+    uint64 time                                    = 1;  // 日期
+    uint32 bucket_id                               = 2;  // 分桶ID
+    ExpBaseFields base_fields                      = 3;  // 基础字段
+    map <string, double> ext_fields                = 4;  // 扩展字段
+    map<string, uint64> group                      = 5;  // 分组
+}
+
+message ExpBaseFields {
+    double cost                                   = 1;  // 花费
+    int64 exposure                                = 2;  // 曝光量
+    int64 click                                   = 3;  // 点击量
+    double cpm                                    = 4;  // 千次曝光价格
+    double cpc                                    = 5;  // 单次点击价格
+    double cpa                                    = 6;  // 单次转化成本
+    double ctr                                    = 7;  // 点击率
+    double cvr                                    = 8;  // 浅层转化率
+    double cvr_second                             = 9;  // 深层转化率
+    int64 conversion                              = 10; // 浅层转化量
+    int64 conversion_second                       = 11; // 深层转化量
 }
 
 // ErrorCode 返回码
@@ -359,12 +431,15 @@ enum ErrorCode {
     CMD_ERROR                                    = 202; // 命令行执行错误
 
     API_ERROR                                    = 301; // 调用内部API错误
+
+    TARGET_ERROR                                 = 401; // Target参数错误
 }
 
 enum CmdErrorCode {
     OK                                           = 0;   // 成功
 }
 
+// TaskStatus 任务状态
 enum TaskStatus {
     ALL                                          = 0;   // 全部
     WAITING                                      = 1;   // 等待中
@@ -377,7 +452,7 @@ enum TaskStatus {
 }
 
 enum OS {
-    UNKNOWN                                      = 0;
+    OS_UNKNOWN                                   = 0;
     IOS                                          = 1; 
     ANDROID                                      = 2;
 }
@@ -469,6 +544,7 @@ API以protobuf格式返回，返回信息为SaasRes结构
 | 201 | DATA_ERROR | 数据错误 |
 | 202 | CMD_ERROR | 命令行执行错误 |
 | 301 | API_ERROR | 调用内部API错误 |
+| 401 | TARGET_ERROR | 策略ID错误 |
 
 ## 3.7 任务状态码/过滤码定义
 
@@ -518,6 +594,11 @@ API以protobuf格式返回，返回信息为SaasRes结构
 | SaasReq.target_list | [TargetList](#320-策略-列表-targetlist) | 唯一 | 列出策略及绑定 |
 | SaasReq.bind_set | [BindSet](#321-策略绑定-设置-bindset) | 唯一 | 设置绑定 |
 | SaasReq.bind_delete | [BindDelete](#321-策略绑定-解除-binddelete) | 唯一 | 解除绑定 |
+| SaasReq.script_run | [ScriptRun](#322-脚本-运行-scriptrun) | 唯一 | 调试运行脚本 |
+| SaasReq.script_update | [ScriptUpdate](#323-脚本-运行-scriptupdate) | 唯一 | 更新脚本 |
+| SaasReq.exp_list | [ExpList](#324-实验-列表-explist) | 唯一 | 实验列表 |
+| SaasReq.exp_get | [ExpGet](#325-实验-报表-expdata) | 唯一 | 实验报表 |
+
 
 **返回参数**：
 
@@ -538,7 +619,10 @@ API以protobuf格式返回，返回信息为SaasRes结构
 | SaasRes.target_list_res | [TargetListRes](#320-策略-列表-targetlist) | 唯一 | 列出策略及绑定返回状态 |
 | SaasRes.bind_set_res | [BindSetRes](#321-策略绑定-设置-bindset) | 唯一 | 任务详情返回状态 |
 | SaasRes.bind_delete_res | [BindDeleteRes](#321-策略绑定-解除-binddelete) | 唯一 | 设置绑定返回状态 |
-
+| SaasReq.script_run_res | [ScriptRun](#322-脚本-运行-scriptrun) | 唯一 | 调试运行脚本返回状态 |
+| SaasReq.script_update_res | [ScriptUpdate](#323-脚本-运行-scriptupdate) | 唯一 | 更新脚本返回状态 |
+| SaasReq.exp_list_res | [ExpList](#324-实验-列表-explist) | 唯一 | 实验列表返回状态 |
+| SaasReq.exp_get_res | [ExpGet](#325-实验-报表-expdata) | 唯一 | 实验报表返回状态 |
 
 ## 3.10 获取账号设置 Info
 
@@ -560,7 +644,9 @@ API以protobuf格式返回，返回信息为SaasRes结构
 
 | 字段名称 | 字段类型 | 必填 | 描述 |
 | :--- | :--- | :--- | :--- |
-| dataspace_id | array of string | 否 | 可用数据区列表 |
+| dataspace | array of DataSpace | 否 | 可用数据区列表 |
+| dataspace.did | array of string | 否 | 设备ID数据分区号 |
+| dataspace.wuid | array of string | 否 | OpenId数据分区号 |
 | target_id | array of string  | 否 | 策略ID列表 |
 
 ## 3.11 实时读 Read
@@ -1037,3 +1123,189 @@ API以protobuf格式返回，返回信息为SaasRes结构
 | error_output | string | 否 | LUA脚本运行错误 |
 | targets_output | string | 否 | 策略输出内容 |
 | dataspace_out | string | 否 | 数据区输出内容 |
+
+
+## 3.23 脚本-运行 ScriptUpdate
+:::warning
+当前禁用
+:::
+
+## 3.24 实验-列表 ExpList
+
+**说明**：该接口用于查询实验列表
+
+**接口**：/saas/exp/list
+
+**请求参数**：
+
+表格节点位于 SaasReq.exp_list
+
+| 字段名称 | 字段类型 | 必填 | 描述 |
+| :--- | :--- | :--- | :--- |
+| | | | 空 |
+
+**返回参数**：
+
+表格节点位于 SaasRes.exp_list_res
+
+| 字段名称 | 字段类型 | 必填 | 描述 |
+| :--- | :--- | :--- | :--- |
+| buckets | array of ExpBucket | 否 | 实验分桶列表 |
+| buckets.bucket_id | uint32 | 否 | 分桶号 |
+| buckets.pt_exp_id | uint32 | 否 | 平台实验ID |
+| buckets.percent | uint32  | 否 | 流量百分比 |
+
+## 3.25 实验-报表 ExpData
+
+**说明**：该接口用于查询实验数据报表
+
+**接口**：/saas/exp/get
+
+**请求参数**：
+
+表格节点位于 SaasReq.exp_get
+
+| 字段名称 | 字段类型 | 必填 | 描述 |
+| :--- | :--- | :--- | :--- |
+| ext_fields | array of string | 否 | 扩展字段（除基础字段必然输出外，其余字段需在这里填写，也可以使用*输出全部扩展字段） |
+| where_begin_day | uint64 | 是 | 起始日期 |
+| where_end_day | uint64 | 是 | 结束日期 |
+| where_bucket_id | array of uint32 | 否 | 实验分桶编号(1-10)。如该字段为空，则取全部分桶数据。 |
+| where_target | string | 是 | 策略ID |
+| where_advertiser_id | array of uint64 | 否 | 广告主ID。如该字段为空，则取策略下全部广告主数据。如指定广告主ID，则仅取指定数据。广告主ID必须与策略有绑定关系。 |
+| group_by | array of string | 否 | 分类汇总。当前支持广告主ID(advertiser_id) |
+| total_flag | uint32 | 否 | 是否汇总，0=不汇总，1=汇总 |
+
+**返回参数**：
+
+表格节点位于 SaasRes.exp_list_res
+
+| 字段名称 | 字段类型 | 必填 | 描述 |
+| :--- | :--- | :--- | :--- |
+| exp_data | array of ExpData | 否 | 实验分桶列表 |
+| exp_data.time | uint64 | 否 | 分桶号 |
+| exp_data.base_fields | object of ExpBaseFields | 否 | 常用实验指标 |
+| exp_data.base_fields.cost | float64 | 否 | 花费(元) |
+| exp_data.base_fields.exposure | int64 | 否 | 曝光量(次) |
+| exp_data.base_fields.click | int64 | 否 | 点击量(次) |
+| exp_data.base_fields.cpm | float64 | 否 | 千次曝光价格(元) |
+| exp_data.base_fields.cpc | float64 | 否 | 单次点击价格(元) |
+| exp_data.base_fields.cpa | float64 | 否 | 单次转化成本(元) |
+| exp_data.base_fields.ctr | float64 | 否 | 点击率 |
+| exp_data.base_fields.cvr | float64 | 否 | 浅层转化率 |
+| exp_data.base_fields.cvr_second | float64 | 否 | 深层转化率|
+| exp_data.base_fields.conversion | int64 | 否 | 浅层转化量 |
+| exp_data.base_fields.conversion_second | int64 | 否 | 深层转化量 |
+| exp_data.ext_fields | map of \<string, float64\>  | 否 | 扩展实验指标 |
+| exp_data.ext_fields.\<key\> | string  | 否 | 实验指标名称 |
+| exp_data.ext_fields.\<value\> | float64  | 否 | 指标值 |
+| exp_data.group | map of \<string, uint64\>  | 否 | 分组 |
+| exp_data.group.\<key\> | string  | 否 | 分组名称 |
+| exp_data.group.\<value\> | uint64  | 否 | 分组值 |
+
+### 3.25.1 扩展实验指标
+
+扩展实验指标字段仅在明确需要拉取时返回，如该字段值返回值为0，则返回字段不存在。
+
+:::tip
+扩展实验指标与广告优化目标类型及广告主回传强相关，数量庞杂。sRTA团队不提供相关指标的解释工作。
+:::
+
+| 字段名称 | 字段类型 | 描述 |
+| :--- | :--- | :--- |
+| og_6 | float64 | 优化目标-关注 |
+| og_7 | float64 | 优化目标-点击 |
+| og_10 | float64 | 优化目标-跳转按钮点击 |
+| og_105 | float64 | 优化目标- 注册(App) |
+| og_106 | float64 | 优化目标-次日留存 |
+| og_108 | float64 | 优化目标-完成购买数量 |
+| og_112 | float64 | 优化目标-快应用加桌面 |
+| og_114 | float64 | 优化目标-小游戏创角 |
+| og_115 | float64 | 优化目标-游戏授权 |
+| og_119 | float64 | 优化目标-授信 |
+| og_120 | float64 | 优化目标-提现 |
+| og_121 | float64 | 优化目标-广告变现 |
+| og_202 | float64 | 优化目标-商品收藏 |
+| og_204 | float64 | 优化目标-下单 |
+| og_205 | float64 | 优化目标-付费 |
+| og_301 | float64 | 优化目标-关键页面访问 |
+| og_302 | float64 | 优化目标-H5注册 |
+| og_307 | float64 | 优化目标-领券 |
+| og_315 | float64 | 优化目标-浏览量 |
+| og_316 | float64 | 优化目标-阅读文章 |
+| og_318 | float64 | 优化目标-预授信 |
+| og_403 | float64 | 优化目标-电话拨打 |
+| og_405 | float64 | 优化目标-表单预约 |
+| og_406 | float64 | 优化目标-完件 |
+| og_409 | float64 | 优化目标-有效线索 |
+| og_412 | float64 | 优化目标-加企微客户 |
+| og_413 | float64 | 优化目标-选课 |
+| og_418 | float64 | 优化目标-外链点击 |
+| og_419 | float64 | 优化目标-购券 |
+| og_421 | float64 | 优化目标-加群 |
+| og_501 | float64 | 优化目标-打开公众号 |
+| og_503 | float64 | 优化目标-关注后点击菜单栏 |
+| og_10000 | float64 | 优化目标-综合线索收集 |
+| og_10004 | float64 | 优化目标-首次购买会员 |
+| og_10006 | float64 | 优化目标-微信流量预约 |
+| og_10007 | float64 | 优化目标-首次下单 |
+| og_10008 | float64 | 优化目标-点赞 |
+| og_10009 | float64 | 优化目标-咨询留资 |
+| og_10601 | float64 | 优化目标-次留 |
+| og_10801 | float64 | 优化目标-首次付费 |
+| bo_6 | float64 | 推广目标-公众号关注数 |
+| bo_7 | float64 | 推广目标-公众号内下单人数 |
+| bo_23 | float64 | 推广目标-关键页面访问数 |
+| bo_25 | float64 | 推广目标-公众号注册数 |
+| bo_26 | float64 | 推广目标-公众号发消息数 |
+| bo_41 | float64 | 推广目标-公众号付费人数 |
+| 101_conversion_cost | float64 | 下单单价 |
+| 204_amount | float64 | 下单金额 |
+| 204_roi | float64 | 下单ROI |
+| 204_roi_fd | float64 | 首日下单ROI(T+1更新) |
+| 204_roi_tw | float64 | 3日下单ROI |
+| 204_roi_ow | float64 | 7日下单ROI |
+| 204_roi_td | float64 | 15日下单ROI |
+| 204_roi_om | float64 | 30日下单ROI |
+| order_cost | float64 | 下单成本 |
+| order_count | float64 | 下单数 |
+| roi | float64 | ROI |
+| md_mg_purchase_uv | float64 | 小游戏首次付费人数 |
+| md_mg_purchase_val1 | float64 | 小游戏首日付费金额（广告主回传）(分) |
+| md_mg_purchase_val | float64 | 小游戏付费金额(分) |
+| weapp_reg_uv | float64 | 小游戏注册人数 |
+| active_count | float64 | 激活数 |
+| install_count | float64 | 安装数 |
+| 107_count | float64 | 加入购物车数 |
+| 402_at_count | float64 | 开口数 |
+| send_goods_count | float64 | 发货数(次) |
+| sign | float64 | 签收数(次) |
+| 409_405_at_rate | float64 | 表单有效率 |
+| 409_at_cost | float64 | 有效销售线索成本 |
+| 409_at_count | float64 | 有效销售线索数 |
+| 415_at_cost | float64 | 试驾成本 |
+| 415_at_count | float64 | 试驾数 |
+| 405_at_cost | float64 | 表单预约成本(元) |
+| 405_at_count | float64 | 表单预约数 |
+| 108_at_cost | float64 | 完成购买成本(元) |
+| 108_at_count | float64 | 完成购买数 |
+| 119_aog_action | float64 | 授信数 |
+| 406_aog_action | float64 | 完件数 |
+| 119_cvr_click | float64 | 点击授信率 |
+| 406_cvr_click | float64 | 点击完件率 |
+| finance_credit_pcvr_after_cali_bias | float64 | pcvrbias金融pdcvr修正后授信(校正后) |
+| finance_credit_pcvr_before_cali_bias | float64 | pcvrbias金融pdcvr修正后授信(校正前) |
+| finance_apply_original_pcvr_bias | float64 | 原始pcvrbias（金融pdcvr完件） |
+| industry_finance_apply_pcvr_bias | float64 | pcvrbias(金融pdcvr完件) |
+| active_cost | float64 | 激活成本 |
+| active_register_rate | float64 | 激活注册率 |
+| md_acti_pur_val | float64 | 付费金额(激活口径) |
+| md_acti_pur_val_fd_roi |  float64| 首日付费金额(激活口径) |
+| md_pur_val_3 | float64 | 3日付费金额(激活口径) |
+| md_pur_val_3_roi | float64 | 3日ROI(激活口径) |
+| md_pur_val_7 | float64 | 7日付费金额(激活口径) |
+| md_pur_val_7_roi | float64 | 7日ROI(激活口径) |
+| md_pur_val_14 | float64 | 14日付费金额(激活口径) |
+| md_pur_val_14_roi | float64 | 14日ROI(激活口径) |
+| md_pur_val_30 | float64 | 30日付费金额(激活口径) |
+| md_pur_val_30_roi | float64 | 30日ROI(激活口径) |
