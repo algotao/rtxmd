@@ -20,6 +20,8 @@ message RtaRequest {
     OS_WINDOWS = 3;
     OS_SYMBIAN = 4;
     OS_JAVA = 5;
+    OS_MAC = 6;
+    OS_HARMONY = 7; // 纯血鸿蒙
   }
   
   message Device {                                             // 设备信息    
@@ -91,7 +93,7 @@ message RtaRequest {
 
     message CreativeInfo {                                     // 广告上的创意信息
       optional uint64 creative_id = 1;                         // 创意ID
-      optional uint32 crt_template_id = ;                      // 创意形式ID
+      optional uint32 crt_template_id = 2;                     // 创意形式ID
     }
     repeated CreativeInfo creative_infos = 2;
 

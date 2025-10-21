@@ -39,15 +39,17 @@ message RtaRequest {
     OS_WINDOWS = 3;
     OS_SYMBIAN = 4;
     OS_JAVA = 5;
+    OS_MAC = 6;
+    OS_HARMONY = 7; // 纯血鸿蒙
   }
   
   message Device {                                             // 设备信息    
     optional OperatingSystem os = 1;                           // 操作系统类型
     optional string idfa_md5sum = 2;                           // iOS设备的IDFA MD5值
-    optional string imei_md5sum = 3;                           // Android设备的IMEI MD5值
+    optional string imei_md5sum = 3;                           // Android/Harmony设备的IMEI MD5值
     optional string android_id_md5sum = 4;                     // Android设备的Android ID MD5值
     optional string mac_md5sum = 5;                            // 设备的MAC MD5值
-    optional string oaid_md5sum = 6;                           // Android设备的OAID MD5值
+    optional string oaid_md5sum = 6;                           // Android/Harmony设备的OAID MD5值
     optional string ip = 7;                                    // 用户IP
 
     enum DeviceIdTag {                                         // 不可信设备类型
@@ -274,7 +276,7 @@ message RtaResponse {
 ### Device对象
 | 字段名称 | 字段类型 | 必填 | 说明 |
 | ---- | ---- | ---- | ---- |
-| os | enum of OperatingSystem | 否 | 终端的操作系统类型。枚举值如下：<br/>OS_UNKNOWN<br/>OS_IOS<br/>OS_ANDROID<br/>OS_WINDOWS<br/>OS_SYMBIAN<br/>OS_JAVA|
+| os | enum of OperatingSystem | 否 | 终端的操作系统类型。枚举值如下：<br/>OS_UNKNOWN<br/>OS_IOS<br/>OS_ANDROID<br/>OS_WINDOWS<br/>OS_SYMBIAN<br/>OS_JAVA<br/>OS_MAC<br/>OS_HARMONY |
 | idfa_md5sum | string | 否 | IDFA的MD5值，计算过程为lower(md5(upper(IDFA)))。 |
 | imei_md5sum | string | 否 | IMEI的MD5值，计算过程为lower(md5(lower(imei)))。 |
 | android_id_md5sum | string | 否 | AndroidID的MD5值，计算过程为lower(md5(AndroidID))。 |

@@ -132,7 +132,7 @@ export function RTATool() {
   const [codeRecvHeader, setRecvHeader] = useState("");
   const [codeRecvBody, setRecvBody] = useState("");
   const [codeRecvCodeClass, setRecvCodeClass] = useState("protobuf");
-  const osInfoMap = new Map([[0, "未知"], [1, "iOS"], [2, "Android"]]);
+  const osInfoMap = new Map([[0, "未知"], [1, "iOS"], [2, "Android"], [7, "Harmony"]]);
   const didTypeMap = new Map([[0, "IDFA MD5"], [7, "CAID MD5"], [3, "OAID MD5"], [4, "AndroidID MD5"], [1, "IMEI MD5"], [5, "MAC MD5"], [10, "OpenID"]]);
   const hostAreaMap = new Map([[0, "上海"], [1, "北京"], [2, "广州"], [3, "本机"]]);
   const reqModeMap = new Map([[1, "一次"], [2, "二次"]]);
@@ -206,6 +206,9 @@ export function RTATool() {
       case 1:
         selectCachedDeviceType(0);
         break;
+      case 7:
+        selectCachedDeviceType(3);
+        break;
       case 0:
         selectCachedDeviceType(5);
         break;
@@ -260,28 +263,29 @@ export function RTATool() {
               <ul className="dropdown__menu">
                 <li><div className="dropdown__link" onClick={() => selectOS(2)} > {inputs.os == 2 ? "✓" : ""} {osInfoMap.get(2)}</div></li>
                 <li><div className="dropdown__link" onClick={() => selectOS(1)} > {inputs.os == 1 ? "✓" : ""} {osInfoMap.get(1)}</div></li>
+                <li><div className="dropdown__link" onClick={() => selectOS(7)} > {inputs.os == 7 ? "✓" : ""} {osInfoMap.get(7)}</div></li>
                 <li><div className="dropdown__link" onClick={() => selectOS(0)} > {inputs.os == 0 ? "✓" : ""} {osInfoMap.get(0)}</div></li>
               </ul>
             </div>
             <div className="dropdown dropdown--hoverable keepspace">
               <div className="button button--success">主设备 ({didTypeMap.get(inputs.didtype) || ""})</div>
               <ul className="dropdown__menu">
-                {(inputs.imode == 1) && inputs.os == 1 &&
+                {(inputs.imode == 1 && inputs.os == 1) &&
                   <li><div className="dropdown__link" onClick={() => selectCachedDeviceType(0)}> {inputs.didtype == 0 ? "✓" : ""} {didTypeMap.get(0)}</div></li>
                 }
-                {(inputs.imode == 1) && inputs.os == 1 &&
+                {(inputs.imode == 1 && inputs.os == 1) &&
                   <li><div className="dropdown__link" onClick={() => selectCachedDeviceType(7)}> {inputs.didtype == 7 ? "✓" : ""} {didTypeMap.get(7)}</div></li>
                 }
-                {(inputs.imode == 1) && inputs.os == 2 &&
+                {(inputs.imode == 1 && (inputs.os == 2 || inputs.os == 7)) &&
                   <li><div className="dropdown__link" onClick={() => selectCachedDeviceType(3)}> {inputs.didtype == 3 ? "✓" : ""} {didTypeMap.get(3)}</div></li>
                 }
-                {(inputs.imode == 1) && inputs.os == 2 &&
+                {(inputs.imode == 1 && inputs.os == 2) &&
                   <li><div className="dropdown__link" onClick={() => selectCachedDeviceType(4)}> {inputs.didtype == 4 ? "✓" : ""} {didTypeMap.get(4)}</div></li>
                 }
-                {(inputs.imode == 1) && inputs.os == 2 &&
+                {(inputs.imode == 1 && (inputs.os == 2 || inputs.os == 7)) &&
                   <li><div className="dropdown__link" onClick={() => selectCachedDeviceType(1)}>{inputs.didtype == 1 ? "✓" : ""} {didTypeMap.get(1)}</div></li>
                 }
-                {(inputs.imode == 1) &&
+                {(inputs.imode == 1 && (inputs.os == 2 || inputs.os == 1)) &&
                   <li><div className="dropdown__link" onClick={() => selectCachedDeviceType(5)}> {inputs.didtype == 5 ? "✓" : ""} {didTypeMap.get(5)}</div></li>
                 }
                 {inputs.imode == 2 &&
@@ -299,13 +303,13 @@ export function RTATool() {
                   {inputs.os == 1 &&
                     <li><div className="dropdown__link" onClick={() => selectDoubtfulType(1 << 7, 0)}> {(inputs.doubtfultype & (1 << 7)) == (1 << 7) ? "✓" : ""} {didTypeMap.get(7)}</div></li>
                   }
-                  {inputs.os == 2 &&
+                  {(inputs.os == 2 || inputs.os == 7) &&
                     <li><div className="dropdown__link" onClick={() => selectDoubtfulType(1 << 3, 0)}> {(inputs.doubtfultype & (1 << 3)) == (1 << 3) ? "✓" : ""} {didTypeMap.get(3)}</div></li>
                   }
                   {inputs.os == 2 &&
                     <li><div className="dropdown__link" onClick={() => selectDoubtfulType(1 << 4, 0)}> {(inputs.doubtfultype & (1 << 4)) == (1 << 4) ? "✓" : ""} {didTypeMap.get(4)}</div></li>
                   }
-                  {inputs.os == 2 &&
+                  {(inputs.os == 2 || inputs.os == 7) &&
                     <li><div className="dropdown__link" onClick={() => selectDoubtfulType(1 << 1, 0)}> {(inputs.doubtfultype & (1 << 1)) == (1 << 1) ? "✓" : ""} {didTypeMap.get(1)}</div></li>
                   }
                   <li><div className="dropdown__link" onClick={() => selectDoubtfulType(1 << 5, 0)}> {(inputs.doubtfultype & (1 << 5)) == (1 << 5) ? "✓" : ""} {didTypeMap.get(5)}</div></li>
@@ -328,11 +332,13 @@ export function RTATool() {
             <InputItem colwidth="col--4" prepend="CAID MD5" placeholder="选填。为便于验证，多版本MD5填相同值" name="caidmd5" defaultvalue={inputs.caidmd5 || ""} onchange={handleChange} />
           </div>
         }
-        {(inputs.imode == 1) && inputs.os == 2 &&
+        {(inputs.imode == 1) && (inputs.os == 2 || inputs.os == 7) &&
           <div className="row">
             <InputItem colwidth="col--4" prepend="OAID MD5" placeholder="选填" name="oaidmd5" defaultvalue={inputs.oaidmd5 || ""} onchange={handleChange} />
             <InputItem colwidth="col--4" prepend="IMEI MD5" placeholder="选填" name="imeimd5" defaultvalue={inputs.imeimd5 || ""} onchange={handleChange} />
-            <InputItem colwidth="col--4" prepend="A..ID MD5" placeholder="选填" name="androididmd5" defaultvalue={inputs.androididmd5 || ""} onchange={handleChange} />
+            {(inputs.imode == 1) && (inputs.os == 2) &&
+                <InputItem colwidth="col--4" prepend="A..ID MD5" placeholder="选填" name="androididmd5" defaultvalue={inputs.androididmd5 || ""} onchange={handleChange} />
+            }
           </div>
         }
         {inputs.imode == 2 &&
