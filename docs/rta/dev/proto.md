@@ -283,7 +283,7 @@ message RtaResponse {
 | mac_md5sum | string | 否 | MAC的MD5值，计算过程为lower(md5(MAC))。 |
 | oaid_md5sum | string | 否 | OAID的MD5值，计算过程为lower(md5(OAID))。 |
 | ip | string | 否 | 用户终端的IP地址，支持IPv4和IPv6，优先IPv4，明文字符串 |
-| doubtful_ids_list | enum of DeviceIdTag | 否 | 上述设备号是否被查为可疑设备号，例如空串、0值md5等。枚举值如下：<br/>IDFA_MD5_DOUBTFUL<br/>IMEI_MD5_DOUBTFUL<br/>ANDROIDID_MD5_DOUBTFUL<br/>MAC_MD5_DOUBTFUL<br/>OAID_MD5_DOUBTFUL<br/>OAID_DOUBTFUL<br/>QAID_DOUBTFUL |
+| doubtful_ids_list | array of DeviceIdTag | 否 | 上述设备号是否被查为可疑设备号，例如空串、0值md5等。枚举值如下：<br/>IDFA_MD5_DOUBTFUL<br/>IMEI_MD5_DOUBTFUL<br/>ANDROIDID_MD5_DOUBTFUL<br/>MAC_MD5_DOUBTFUL<br/>OAID_MD5_DOUBTFUL<br/>OAID_DOUBTFUL<br/>QAID_DOUBTFUL |
 | cached_device_type | enum of CacheDeviceIdType | 否 | 该字段标志了本次请求会用哪个设备号作为缓存key将外部返回结果写入缓存，空/可疑设备号不允许作为缓存key。枚举值如下<br/>IDFA_MD5<br/>IMEI_MD5<br/>OAID<br/>OAID_MD5<br/>ANDROIDID_MD5<br/>MAC_MD5<br/>QAID<br/>NIL //空设备号 |
 | qaid_infos | array of QaidInfo | 否 | 广协CAID。参阅 [QaidInfo对象](#qaidinfo对象) |
 | wx_openid | array of WxOpenid | 否 | 特定的公众号、小程序、小游戏等微信系产品对应的openid。参阅 [WxOpenid对象](#wxopenid对象) |
