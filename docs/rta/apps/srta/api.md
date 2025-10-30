@@ -404,7 +404,7 @@ enum ErrorCode {
     INVALID_ACCOUNT                              = 101; // Account不合法
     INVALID_TIMESTAMP                            = 102; // 头信息缺少时间戳或不正确
     INVALID_SIGNATURE                            = 103; // 头信息缺少签名
-    AUTH_FAIL                                    = 104; // 签名较验失败
+    AUTH_FAIL                                    = 104; // 签名校验失败
     DISABLED_ACCOUNT                             = 105; // 账号已禁用
     INVALID_CONTENT_TYPE                         = 110; // 非法的Content-Type
     READ_BODY                                    = 111; // 读取 http body 失败
@@ -522,7 +522,7 @@ API以protobuf格式返回，返回信息为SaasRes结构
 | 101 | INVALID_ACCOUNT | Account不合法 |
 | 102 | INVALID_TIMESTAMP | 头信息缺少时间戳或不正确 |
 | 103 | INVALID_SIGNATURE | 头信息缺少签名 |
-| 104 | AUTH_FAIL | 签名较验失败 |
+| 104 | AUTH_FAIL | 签名校验失败 |
 | 105 | DISABLED_ACCOUNT | 账号已禁用 |
 | 110 | INVALID_CONTENT_TYPE | 非法的Content-Type |
 | 111 | READ_BODY | 读取 http body 失败 |
@@ -593,11 +593,11 @@ API以protobuf格式返回，返回信息为SaasRes结构
 | SaasReq.task_info | [TaskInfo](#318-任务-详情-taskinfo) | 唯一 | 任务详情 |
 | SaasReq.target_list | [TargetList](#320-策略-列表-targetlist) | 唯一 | 列出策略及绑定 |
 | SaasReq.bind_set | [BindSet](#321-策略绑定-设置-bindset) | 唯一 | 设置绑定 |
-| SaasReq.bind_delete | [BindDelete](#321-策略绑定-解除-binddelete) | 唯一 | 解除绑定 |
-| SaasReq.script_run | [ScriptRun](#322-脚本-运行-scriptrun) | 唯一 | 调试运行脚本 |
-| SaasReq.script_update | [ScriptUpdate](#323-脚本-运行-scriptupdate) | 唯一 | 更新脚本 |
-| SaasReq.exp_list | [ExpList](#324-实验-列表-explist) | 唯一 | 实验列表 |
-| SaasReq.exp_get | [ExpGet](#325-实验-报表-expdata) | 唯一 | 实验报表 |
+| SaasReq.bind_delete | [BindDelete](#322-策略绑定-解除-binddelete) | 唯一 | 解除绑定 |
+| SaasReq.script_run | [ScriptRun](#323-脚本-运行-scriptrun) | 唯一 | 调试运行脚本 |
+| SaasReq.script_update | [ScriptUpdate](#324-脚本-运行-scriptupdate) | 唯一 | 更新脚本 |
+| SaasReq.exp_list | [ExpList](#325-实验-列表-explist) | 唯一 | 实验列表 |
+| SaasReq.exp_get | [ExpGet](#326-实验-报表-expdata) | 唯一 | 实验报表 |
 
 
 **返回参数**：
@@ -618,11 +618,11 @@ API以protobuf格式返回，返回信息为SaasRes结构
 | SaasRes.task_info_res | [Task](#318-任务-详情-taskinfo) | 唯一 | 任务详情返回状态 |
 | SaasRes.target_list_res | [TargetListRes](#320-策略-列表-targetlist) | 唯一 | 列出策略及绑定返回状态 |
 | SaasRes.bind_set_res | [BindSetRes](#321-策略绑定-设置-bindset) | 唯一 | 任务详情返回状态 |
-| SaasRes.bind_delete_res | [BindDeleteRes](#321-策略绑定-解除-binddelete) | 唯一 | 设置绑定返回状态 |
-| SaasReq.script_run_res | [ScriptRun](#322-脚本-运行-scriptrun) | 唯一 | 调试运行脚本返回状态 |
-| SaasReq.script_update_res | [ScriptUpdate](#323-脚本-运行-scriptupdate) | 唯一 | 更新脚本返回状态 |
-| SaasReq.exp_list_res | [ExpList](#324-实验-列表-explist) | 唯一 | 实验列表返回状态 |
-| SaasReq.exp_get_res | [ExpGet](#325-实验-报表-expdata) | 唯一 | 实验报表返回状态 |
+| SaasRes.bind_delete_res | [BindDeleteRes](#322-策略绑定-解除-binddelete) | 唯一 | 设置绑定返回状态 |
+| SaasRes.script_run_res | [ScriptRun](#323-脚本-运行-scriptrun) | 唯一 | 调试运行脚本返回状态 |
+| SaasRes.script_update_res | [ScriptUpdate](#324-脚本-运行-scriptupdate) | 唯一 | 更新脚本返回状态 |
+| SaasRes.exp_list_res | [ExpList](#325-实验-列表-explist) | 唯一 | 实验列表返回状态 |
+| SaasRes.exp_get_res | [ExpGet](#326-实验-报表-expdata) | 唯一 | 实验报表返回状态 |
 
 ## 3.10 获取账号设置 Info
 
@@ -672,7 +672,7 @@ API以protobuf格式返回，返回信息为SaasRes结构
 
 | 字段名称 | 字段类型 | 必填 | 描述 |
 | :--- | :--- | :--- | :--- |
-| succ_cmd_coun | uint32 | 是 | 成功的命令数量 |
+| succ_cmd_count | uint32 | 是 | 成功的命令数量 |
 | fail_cmd_count | uint32 | 是 | 失败的命令数量 |
 | cmd_res | array of ValueItem | 否 | 失败命令信息 |
 | value_item.cmd_index | uint32 | 是 | 命令编号，对应请求的数组编号 |
@@ -706,13 +706,13 @@ API以protobuf格式返回，返回信息为SaasRes结构
 | write_item.write_bytes.index_1 | uint64 | 是 | 写入byte的索引值(0..63)，位置使用bit位表示 |
 | write_item.write_uint32s | Uint32s | 否 | 写入的uint32类型数值 |
 | write_item.write_uint32s.uint32s | array of uint32 | 是 | 写入的uint32数组，每个uint32 的填写编号由下面index决定 |
-| write_item.write_uint32s.index_1 | uint64 | 是 | 写入uint32的索引值(0..15)，位置使用bit位表示 |
+| write_item.write_uint32s.index_1 | uint64 | 是 | 写入uint32的索引值(0..7)，位置使用bit位表示 |
 | write_item.write_flags_with_expire | FlagsWithExpire | 否 | 写入的标志位类型值 |
 | write_item.write_flags_with_expire.flags_with_expire | array of FlagWithExpire | 是 | 写入的标志位 |
 | write_item.write_flags_with_expire.flags_with_expire.flag | bool | 是 | 标志位。在读取时，标志位未过期则返回flag值，过期则返回default_flag值 |
 | write_item.write_flags_with_expire.flags_with_expire.default_flag | bool | 否 | 默认标志位。过期后则回到默认值 |
 | write_item.write_flags_with_expire.flags_with_expire.expire | uint32 | 否 | 过期时间，为 0 则永不过期 |
-| write_item.write_flags_with_expire.index_1 | uint64 | 是 | 写入flag的索引值(0..7)，位置使用bit位表示 |
+| write_item.write_flags_with_expire.index_1 | uint64 | 是 | 写入flag的索引值(0..3)，位置使用bit位表示 |
 
 **返回参数**：
 
@@ -720,7 +720,7 @@ API以protobuf格式返回，返回信息为SaasRes结构
 
 | 字段名称 | 字段类型 | 必填 | 描述 |
 | :--- | :--- | :--- | :--- |
-| faied_userid | array of string | 否 | 失败的用户ID |
+| failed_userid | array of string | 否 | 失败的用户ID |
 
 ## 3.13 全列覆盖写(暂不可用) ColumnWrite
 
@@ -749,13 +749,13 @@ API以protobuf格式返回，返回信息为SaasRes结构
 | write_bytes.index_1 | uint64 | 是 | 写入byte的索引值(0..63)，位置使用bit位表示 |
 | write_uint32s | Uint32s | 否 | 写入的uint32类型数值 |
 | write_uint32s.uint32s | array of uint32 | 是 | 写入的uint32数组，每个uint32 的填写编号由下面index决定 |
-| write_uint32s.index_1 | uint64 | 是 | 写入uint32的索引值(0..15)，位置使用bit位表示 |
+| write_uint32s.index_1 | uint64 | 是 | 写入uint32的索引值(0..7)，位置使用bit位表示 |
 | write_flags_with_expire | FlagsWithExpire | 否 | 写入的标志位类型值 |
 | write_flags_with_expire.flags_with_expire | array of FlagWithExpire | 是 | 写入的标志位 |
 | write_flags_with_expire.flags_with_expire.flag | bool | 是 | 标志位。在读取时，标志位未过期则返回flag值，过期则返回default_flag值 |
 | write_flags_with_expire.flags_with_expire.default_flag | bool | 否 | 默认标志位。过期后则回到默认值 |
 | write_flags_with_expire.flags_with_expire.expire | uint32 | 否 | 过期时间，为 0 则永不过期 |
-| write_flags_with_expire.index_1 | uint64 | 是 | 写入flag的索引值(0..7)，位置使用bit位表示 |
+| write_flags_with_expire.index_1 | uint64 | 是 | 写入flag的索引值(0..3)，位置使用bit位表示 |
 
 **返回参数**：
 
@@ -812,7 +812,7 @@ API以protobuf格式返回，返回信息为SaasRes结构
 | finish_time | string | 否 | 完成时间 |
 | running_block | uint32 | 否 | 当前运行块 |
 | total_block | uint32 | 否 | 总块数 |
-| status | TaskStatus | 是 | 任务状态<br/>WAITING = 1;// 等待中<br/>RUNNING = 2;// 运行中<br/>SUCCESS = 3;// 成功<br/>FAIL = 4;// 失败<br/>DELETED = 5; // 已删除，仅在执行删除成功时返回 |
+| status | TaskStatus | 是 | 任务状态<br/>WAITING = 1;// 等待中<br/>READY = 2;// 上传完毕<br/>RUNNING = 3;// 运行中<br/>SUCCESS = 4;// 成功<br/>FAIL = 5;// 失败<br/>DELETED = 10; // 已删除，仅在执行删除成功时返回 |
 
 ## 3.15 任务-列表 TaskList
 
@@ -826,7 +826,7 @@ API以protobuf格式返回，返回信息为SaasRes结构
 
 | 字段名称 | 字段类型 | 必填 | 描述 |
 | :--- | :--- | :--- | :--- |
-| status_filter | TaskStatus | 否 | 显示指定状态的任务<br/>WAITING = 1;// 等待中<br/>RUNNING = 2;// 运行中<br/>SUCCESS = 3;// 成功<br/>FAIL = 4;// 失败<br/>DELETED = 5; // 已删除，仅在执行删除成功时返回 |
+| status_filter | TaskStatus | 否 | 任务状态<br/>WAITING = 1;// 等待中<br/>READY = 2;// 上传完毕<br/>RUNNING = 3;// 运行中<br/>SUCCESS = 4;// 成功<br/>FAIL = 5;// 失败<br/>DELETED = 10; // 已删除，仅在执行删除成功时返回 |
 
 **返回参数**：
 
@@ -846,7 +846,7 @@ API以protobuf格式返回，返回信息为SaasRes结构
 | tasks.finish_time | string | 否 | 完成时间 |
 | tasks.running_block | uint32 | 否 | 当前运行块 |
 | tasks.total_block | uint32 | 否 | 总块数 |
-| tasks.status | TaskStatus | 是 | 任务状态<br/>WAITING = 1;// 等待中<br/>RUNNING = 2;// 运行中<br/>SUCCESS = 3;// 成功<br/>FAIL = 4;// 失败<br/>DELETED = 5; // 已删除，仅在执行删除成功时返回 |
+| tasks.status | TaskStatus | 是 | 任务状态<br/>WAITING = 1;// 等待中<br/>READY = 2;// 上传完毕<br/>RUNNING = 3;// 运行中<br/>SUCCESS = 4;// 成功<br/>FAIL = 5;// 失败<br/>DELETED = 10; // 已删除，仅在执行删除成功时返回 |
 
 ## 3.16 任务-执行 TaskRun
 
@@ -889,7 +889,7 @@ API以protobuf格式返回，返回信息为SaasRes结构
 | finish_time | string | 否 | 完成时间 |
 | running_block | uint32 | 否 | 当前运行块 |
 | total_block | uint32 | 否 | 总块数 |
-| status | TaskStatus | 是 | 任务状态<br/>WAITING = 1;// 等待中<br/>RUNNING = 2;// 运行中<br/>SUCCESS = 3;// 成功<br/>FAIL = 4;// 失败<br/>DELETED = 5; // 已删除，仅在执行删除成功时返回 |
+| status | TaskStatus | 是 | 任务状态<br/>WAITING = 1;// 等待中<br/>READY = 2;// 上传完毕<br/>RUNNING = 3;// 运行中<br/>SUCCESS = 4;// 成功<br/>FAIL = 5;// 失败<br/>DELETED = 10; // 已删除，仅在执行删除成功时返回 |
 
 ## 3.17 任务-删除 TaskDelete
 
@@ -932,7 +932,7 @@ API以protobuf格式返回，返回信息为SaasRes结构
 | finish_time | string | 否 | 完成时间 |
 | running_block | uint32 | 否 | 当前运行块 |
 | total_block | uint32 | 否 | 总块数 |
-| status | TaskStatus | 是 | 任务状态<br/>WAITING = 1;// 等待中<br/>RUNNING = 2;// 运行中<br/>SUCCESS = 3;// 成功<br/>FAIL = 4;// 失败<br/>DELETED = 5; // 已删除，仅在执行删除成功时返回 |
+| status | TaskStatus | 是 | 任务状态<br/>WAITING = 1;// 等待中<br/>READY = 2;// 上传完毕<br/>RUNNING = 3;// 运行中<br/>SUCCESS = 4;// 成功<br/>FAIL = 5;// 失败<br/>DELETED = 10; // 已删除，仅在执行删除成功时返回 |
 
 ## 3.18 任务-详情 TaskInfo
 
@@ -976,7 +976,7 @@ API以protobuf格式返回，返回信息为SaasRes结构
 | finish_time | string | 否 | 完成时间 |
 | running_block | uint32 | 否 | 当前运行块 |
 | total_block | uint32 | 否 | 总块数 |
-| status | TaskStatus | 是 | 任务状态<br/>WAITING = 1;// 等待中<br/>RUNNING = 2;// 运行中<br/>SUCCESS = 3;// 成功<br/>FAIL = 4;// 失败<br/>DELETED = 5; // 已删除，仅在执行删除成功时返回 |
+| status | TaskStatus | 是 | 任务状态<br/>WAITING = 1;// 等待中<br/>READY = 2;// 上传完毕<br/>RUNNING = 3;// 运行中<br/>SUCCESS = 4;// 成功<br/>FAIL = 5;// 失败<br/>DELETED = 10; // 已删除，仅在执行删除成功时返回 |
 
 ## 3.19 任务-上传数据文件分片 TaskUpload
 
@@ -1061,7 +1061,7 @@ API以protobuf格式返回，返回信息为SaasRes结构
 | errors.bind_type | BindType | 是 | 绑定类型<br/>AdgroupId = 1;//广告ID<br/>AccountId = 3;//广告主ID  |
 | errors.reason | string | 是 | 绑定错误原因 |
 
-## 3.21 策略绑定-解除 BindDelete
+## 3.22 策略绑定-解除 BindDelete
 
 **说明**：该接口用于将广告主ID或广告ID从策略解绑。解绑成功后相关广告将不再受RTA决策控制。
 
@@ -1093,7 +1093,7 @@ API以protobuf格式返回，返回信息为SaasRes结构
 | errors.reason | string | 是 | 错误解绑原因 |
 
 
-## 3.22 脚本-运行 ScriptRun
+## 3.23 脚本-运行 ScriptRun
 
 **说明**：该接口用于调试 LUA 脚本，LUA 将在服务端沙箱环境运行并返回结果。调试模式下 print 函数将生效，可用于输出中间状态。关于该函数使用的更多信息，请参阅[代码调试](./lua.md#56-代码调试)。
 
@@ -1125,12 +1125,12 @@ API以protobuf格式返回，返回信息为SaasRes结构
 | dataspace_out | string | 否 | 数据区输出内容 |
 
 
-## 3.23 脚本-运行 ScriptUpdate
+## 3.24 脚本-运行 ScriptUpdate
 :::warning
 当前禁用
 :::
 
-## 3.24 实验-列表 ExpList
+## 3.25 实验-列表 ExpList
 
 **说明**：该接口用于查询实验列表
 
@@ -1155,7 +1155,7 @@ API以protobuf格式返回，返回信息为SaasRes结构
 | buckets.pt_exp_id | uint32 | 否 | 平台实验ID |
 | buckets.percent | uint32  | 否 | 流量百分比 |
 
-## 3.25 实验-报表 ExpData
+## 3.26 实验-报表 ExpData
 
 **说明**：该接口用于查询实验数据报表
 
@@ -1203,7 +1203,7 @@ API以protobuf格式返回，返回信息为SaasRes结构
 | exp_data.group.\<key\> | string  | 否 | 分组名称 |
 | exp_data.group.\<value\> | uint64  | 否 | 分组值 |
 
-### 3.25.1 扩展实验指标
+### 3.26.1 扩展实验指标
 
 扩展实验指标字段仅在明确需要拉取时返回，如该字段值返回值为0，则返回字段不存在。
 

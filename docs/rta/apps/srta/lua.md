@@ -13,7 +13,7 @@ keywords: [LUA智能决策, RTA SaaS, 系统函数, 内置模块, srta, string, 
 出于安全及性能原因，RTA SaaS禁用了大量不必要的 LUA功能。以下为支持的全局函数列表。
 
 | 函数名 | 功能 |
-| :--- | :--- |
+| :-- | :-- |
 | next | 对table进行遍历 |
 | print | 打印信息（注：**在生产环境中该函数被设置为不输出**） |
 | tonumber | 转换为数字 |
@@ -28,20 +28,20 @@ keywords: [LUA智能决策, RTA SaaS, 系统函数, 内置模块, srta, string, 
 
 **数据区**
 | 常量名称 | 含义 | 适用函数或变量 |
-| :--- | :--- | :-- |
+| :-- | :-- | :-- |
 | srta.DS_DID | 默认设备数据空间编号 | srta.get_dsdata() |
 | srta.DS_WUID | 默认 WUID数据空间编号 | srta.get_dsdata() |
 
 **字段区**
 | 常量名称 | 含义 | 适用函数或变量 |
-| :--- | :--- | :-- |
+| :-- | :-- | :-- |
 | srta.U8 | UINT8字段区 | dsdata |
 | srta.U32 | UINT32字段区 | dsdata |
 | srta.FLAG | FLAG字段区 | dsdata |
 
 **操作系统**
 | 常量名称 | 含义 | 适用函数或变量 |
-| :--- | :--- | :-- |
+| :-- | :-- | :-- |
 | srta.OS_UNKNOWN | 未知操作系统 | srta.get_os() |
 | srta.OS_IOS |  iOS | srta.get_os() |
 | srta.OS_ANDROID | Android | srta.get_os() |
@@ -49,7 +49,7 @@ keywords: [LUA智能决策, RTA SaaS, 系统函数, 内置模块, srta, string, 
 
 **站点集**
 | 常量名称 | 含义 | 适用函数或变量 |
-| :--- | :--- | :-- |
+| :-- | :-- | :-- |
 | srta.SITESET_UNION | 优量汇 | srta.get_siteset() |
 | srta.SITESET_WECHAT | 微信| srta.get_siteset() |
 | srta.SITESET_XQ | XQ | srta.get_siteset() |
@@ -58,17 +58,17 @@ keywords: [LUA智能决策, RTA SaaS, 系统函数, 内置模块, srta, string, 
 
 **策略参数**
 | 常量名称 | 含义 | 适用函数或变量 |
-| :--- | :--- | :-- |
+| :-- | :-- | :-- |
 | srta.TARGETINFO_ENABLE | 策略参竞 | target_info |
 | srta.TARGETINFO_CPC_PRICE | CPC出价 | target_info |
 | srta.TARGETINFO_CPA_PRICE | CPA出价 | target_info |
 | srta.TARGETINFO_USER_WEIGHT_FACTOR | 用户权重系数 | target_info |
-| srta.TARGETINFO_CPC_FACTOR | CPC出价系统 | target_info |
+| srta.TARGETINFO_CPC_FACTOR | CPC出价系数 | target_info |
 
 ### 5.2.2 函数列表
 
 | 函数名 | 功能 |
-| :--- | :--- |
+| :-- | :-- |
 | srta.get_dsdata | 获取数据空间数据 |
 | srta.get_targets | 获取需决策的策略ID列表 |
 | srta.get_apps | 获取App安装态(需授权) |
@@ -121,7 +121,7 @@ app3 = nil
 一次可以获得多个模型打分，每个返回值为数字/nil(无权限或不可靠)中的一个状态
 
 ```lua
-score1, score2, score3 = srta.get_apps(model1, model2, model1) -- 获取模型分，可支持多个。
+score1, score2, score3 = srta.get_scores(model1, model2, model1) -- 获取模型分，可支持多个。
 -- 以下为字段返回值示例
 score1 = 0
 score2 = 80
@@ -168,7 +168,7 @@ string为字符串计算相关功能函数。
 ### 5.3.1 函数列表
 
 | 函数名 | 功能 |
-| :--- | :--- |
+| :-- | :-- |
 | string.split | 切割字符串 |
 
 ### 5.3.2 string.split函数
@@ -196,7 +196,7 @@ time为时间计算相关功能函数，系统使用uint32为基础格式，存�
 ### 5.4.1 函数列表
 
 | 函数名 | 功能 |
-| :--- | :--- |
+| :-- | :-- |
 | time.now | 获取当前时间 |
 | time.date | 获取日期，一次返回年月日 |
 | time.hour | 获取小时 |
@@ -298,7 +298,7 @@ newstamp = time.adddate(now, -1, 1, 1) -- 去年，再增加1月1天
 函数传入年月日时分秒，返回时间戳。
 
 ```lua
-newstamp = time.setdate(2025, 6, 18, 12，13,14) -- 2025:06:18 12:13:14
+newstamp = time.setdate(2025, 6, 18, 12, 13, 14) -- 2025:06:18 12:13:14
 ```
 
 ## 5.5 被调函数
@@ -326,7 +326,7 @@ end
 ```lua
 -- 客户自定义变量，便于理解
 IDXU8_NEWS = 1
-IDXU8_MUISIC = 2
+IDXU8_MUSIC = 2
 IDXU8_VIDEO = 3
 
 IDXFLAG_NEWS = 1
@@ -340,24 +340,24 @@ function main()
     for i, targetid in ipairs(targets) do -- 遍历待决策策略ID
         if targetid == "news" then -- 新闻拉活策略
             local is_news_installed = didData[srta.U8][IDXU8_NEWS] == 1 -- 是否新闻已安装
-            local is_news_touched = didData[srta.U8][IDXFLAG_NEWS] -- 是否新闻已完成当天唤起
-            if is_news_installed and is_news_touched then
-                result[targetid] = { [srta.TARGETINFO_ENABLE] = true } -- 已安装未拉活，可出拉活广告
+            local is_news_touched = didData[srta.FLAG][IDXFLAG_NEWS] -- 是否新闻已完成当天唤起
+            if is_news_installed and (not is_news_touched) then
+                results[targetid] = { [srta.TARGETINFO_ENABLE] = true } -- 已安装未拉活，可出拉活广告
             end
         end
 
         if targetid == "music" then -- 音乐拉活策略
             local is_music_installed = didData[srta.U8][IDXU8_MUSIC] == 1 -- 是否音乐已安装
-            local is_music_touched = didData[srta.U8][IDXFLAG_MUSIC] -- 是否音乐已完成当天唤起
-            if is_music_installed and is_music_touched then
-                result[targetid] = { [srta.TARGETINFO_ENABLE] = true } -- 已安装未拉活，可出拉活广告
+            local is_music_touched = didData[srta.FLAG][IDXFLAG_MUSIC] -- 是否音乐已完成当天唤起
+            if is_music_installed and (not is_music_touched) then
+                results[targetid] = { [srta.TARGETINFO_ENABLE] = true } -- 已安装未拉活，可出拉活广告
             end
         end
     
         if targetid == "video_for_new" then -- 视频拉新策略
             local is_video_not_installed = didData[srta.U8][IDXU8_VIDEO] == 0 -- 是否视频未安装
             if is_video_not_installed then
-                result[targetid] = { [srta.TARGETINFO_ENABLE] = true } -- 未安装，可出拉新广告
+                results[targetid] = { [srta.TARGETINFO_ENABLE] = true } -- 未安装，可出拉新广告
             end
         end
     end
@@ -371,7 +371,7 @@ end
 主函数返回一个结果，为table格式并可引用srta常量以设置以下成员编号
 
 | 成员 | 类型 | 功能 |
-| :--- | :--- | :-- |
+| :-- | :-- | :-- |
 | srta.TARGETINFO_ENABLE | bool | 策略是否参竞 |
 | srta.TARGETINFO_CPC_PRICE | int | 策略CPC出价 |
 | srta.TARGETINFO_CPA_PRICE | int | 策略CPA出价 |
@@ -382,16 +382,21 @@ end
 ### 5.5.2 二次请求second
 
 #### 5.5.2.1 调用
+
+待更新
+
 #### 5.5.2.2 返回
+
+待更新
 
 ## 5.6 代码调试
 
-sRTA 创建了完全独立的 LUA 运行时，有自己的生态库及机密数据依赖，所以`无法在IDE内调试`。需要通过 [API接口](./api.md#322-脚本-运行-scriptrun) 提交代码`在服务端沙箱运行并返回结果`。
+sRTA 创建了完全独立的 LUA 运行时，有自己的生态库及机密数据依赖，所以`无法在IDE内调试`。需要通过 [API接口](./api.md#323-脚本-运行-scriptrun) 提交代码`在服务端沙箱运行并返回结果`。
 
 根据数据源的不同，在沙箱运行有不同的限制。
 
 | 引用数据源 | 真实数据 | 沙箱数据 | 说明 |
-| :-------: | :--: | :--: | :-- |
+| :--: | :--: | :--: | :-- |
 | 一方 | 可 | 可 | 可通过 API 参数传递 did/openid 信息，沙箱在运行 srta.get_dsdata 时自动读取存储于服务端的用户数据。<br/>也可用hijack模拟 |
 | 二方 | 否 | 可 | 通过hijack模拟返回 |
 | 三方 | 否 | 可 | 通过hijack模拟返回 |

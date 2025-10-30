@@ -69,7 +69,7 @@ saastool task help
 ```
 
 ```
-Usage:  saastoola task COMMAND [OPTIONS]
+Usage:  saastool task COMMAND [OPTIONS]
 
 Commands:
     make                 Make file hash for upload task
@@ -258,7 +258,7 @@ userid=cfcd208495d565ef66e7dff9f98764da&u8.1=10&u8.2=20&u32.1=100000&flag.1=true
 | u32.[n] | 写入uint32数字区 | u32.1=1000000 |
 | flag.[n] | 写入flag区 | 支持多种格式<br />flag.1=true 或 flag.1=false（置位且不过期）<br/ >flag.1=1758686629（在2025-09-24 12:03:49前为true，之后为false）<br/ >flag.1=!3600（在当前时间+3600秒之前为true，之后为false） |
 
-### 4.2.2 单个读
+### 4.2.3 单个读
 
 使用HTTP GET方法发送read请求，读取单条数据。
 
@@ -272,7 +272,7 @@ curl "http://saastool/read?ds=did&userid=cfcd208495d565ef66e7dff9f98764da"
 curl "http://saastool/read?ds=wuid&userid=o_e3j4ggVPO2CP8iCPBLunzKL79n&appid=wx1111111111111111"
 ```
 
-### 4.2.2 单个写
+### 4.2.4 单个写
 
 使用HTTP GET方法发送write请求，写入单条数据
 
@@ -296,7 +296,7 @@ curl "http://saastool/write?ds=wuid&userid=o_e3j4ggVPO2CP8iCPBLunzKL79n&appid=wx
 curl "http://saastool/write?ds=wuid&userid=o_e3j4ggVPO2CP8iCPBLunzKL79n&appid=wx1111111111111111&u8.1=10&u32.1=100000&clear=true"
 ```
 
-### 4.2.2 批量写
+### 4.2.5 批量写
 
 在http POST模式下，sRTA daemon http服务使用 Query String 规范标记公共字段，并在Body中携带写入信息。Header中的 `Content-Type` 约定为 `text/plain`。
 
@@ -310,7 +310,7 @@ curl -X POST "http://saastool/write?ds=did" \
   -d "userid=9dd4e461268c8034f5c8564e155c67a6&u8.2=200&u32.6=1000000&flag.3=!3600" 
 ```
 
-### 4.2.3 容器中使用saastool
+### 4.2.6 容器中使用saastool
 
 在容器中的saastool命令行仍然可以使用，运行时其配置依赖config文件，而不受环境变量的影响。
 
