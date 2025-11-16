@@ -97,6 +97,8 @@ Usage:  saastoola target COMMAND [OPTIONS]
 
 Commands:
     list                 List targets
+    create               Create a new target
+    delete               Delete an existing target
 
 "help" is the default command.
 
@@ -133,7 +135,11 @@ Usage:  saastoola script COMMAND [OPTIONS]
 
 Commands:
     run                  Run lua script test on server
-
+    create               Create lua script on server
+    list                 List all scripts on server
+    delete               Delete a script from server
+    get                  Get script content from server
+    use                  Use a script as default
 "help" is the default command.
 
 Use "saastool script COMMAND -help" for more information about a command.
@@ -171,7 +177,7 @@ saastool提供了容器版本。在容器中将默认启动为daemon并提供htt
 ```yml
 services:
   saastool:
-    image: rta-docker.pkg.coding.net/public/docker/rtacaller:20251016
+    image: rta-docker.pkg.coding.net/public/docker/rtacaller:2025111015
     restart: unless-stopped
     environment:
       - SRTA_ACCOUNT=2000
@@ -186,7 +192,7 @@ services:
 ```yml
 services:
   saastool:
-    image: rta-docker.pkg.coding.net/public/docker/rtacaller:20251016
+    image: rta-docker.pkg.coding.net/public/docker/rtacaller:2025111015
     restart: unless-stopped
     environment:
       - SRTA_ACCOUNT=2000

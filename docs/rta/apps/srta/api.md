@@ -35,12 +35,22 @@ message SaasReq {
         TaskInfo task_info                       = 24;  // 任务详情
 
         TargetList target_list                   = 50;  // 列出策略及绑定
+        TargetCreate target_create               = 51;  // 创建策略
+        TargetDelete target_delete               = 52;  // 删除策略
 
         BindSet bind_set                         = 61;  // 设置绑定
         BindDelete bind_delete                   = 62;  // 解除绑定
 
+        GrantList grant_list                     = 70;  // 列出数据授权
+        Grant grant_add                          = 71;  // 增加数据授权
+        Grant grant_delete                       = 72;  // 删除数据授权
+
         ScriptRun script_run                     = 90;  // 运行脚本
-        ScriptUpdate script_update               = 91;  // 脚本升级
+        ScriptCreate script_create               = 91;  // 脚本创建
+        ScriptList script_list                   = 92;  // 列出脚本
+        ScriptDelete script_delete               = 93;  // 删除脚本
+        ScriptGet script_get                     = 94;  // 获取脚本内容
+        ScriptUse script_use                     = 95;  // 使用脚本
 
         ExpList exp_list                         = 100; // 列出实验
         ExpGet exp_get                           = 101; // 获取实验报表
@@ -174,6 +184,17 @@ message TargetList {
     bool list_bind                               = 2;   // 是否同时列出绑定信息
 }
 
+// TargetCreate 创建策略
+message TargetCreate {
+    string target_id                             = 1;   // 策略ID
+    string target_description                    = 2;   // 策略描述
+}
+
+// TargetDelete 删除策略
+message TargetDelete {
+    string target_id                             = 1;   // 策略ID
+}
+
 // BindSet 设置绑定
 message BindSet {
     repeated Bind binds                          = 2;   // 设置绑定内容
@@ -184,6 +205,17 @@ message BindDelete {
     repeated Bind binds                          = 2;   // 解除绑定内容
 }
 
+// GrantList 列出数据授权
+message GrantList {
+}
+
+// Grant 数据授权信息
+message Grant {
+    uint32 srta_account_id                      = 1;   // sRTA授权目标账号ID
+    string grant_index                          = 2;   // 授权索引。格式为 "index1, index2, index55-index64"，例如 "1, 2, 55-64"
+}
+
+
 // ScriptRun 运行脚本
 message ScriptRun {
     string lua_script                            = 1;   // 要调试的lua脚本
@@ -193,8 +225,30 @@ message ScriptRun {
     OS os                                        = 5;   // 操作系统
 }
 
-// ScriptUpdate 升级脚本
-message ScriptUpdate {
+// ScriptCreate 创建脚本
+message ScriptCreate {
+    string lua_name                              = 1;   // 要上传的脚本名称
+    string lua_script                            = 2;   // 要调试的lua脚本
+}
+
+// ScriptList 列出脚本
+message ScriptList {
+
+}
+
+// ScriptDelete 删除脚本
+message ScriptDelete {
+    string lua_name                              = 1;   // 要删除的脚本名称
+}
+
+// ScriptGet 获取脚本
+message ScriptGet {
+    string lua_name                              = 1;   // 要获取的脚本名称
+}
+
+// ScriptUse 使用脚本
+message ScriptUse {
+    string lua_name                              = 1;   // 要使用的脚本名称
 }
 
 // ExpList 列出实验
@@ -237,12 +291,22 @@ message SaasRes {
         Task task_info_res                       = 24;  // 任务详情返回状态
 
         TargetListRes target_list_res            = 50;  // 列出策略及绑定返回状态
-
+        TargetCreateRes target_create_res        = 51;  // 创建策略返回状态
+        TargetDeleteRes target_delete_res        = 52;  // 删除策略返回状态
+    
         BindSetRes bind_set_res                  = 61;  // 设置绑定返回状态
         BindDeleteRes bind_delete_res            = 62;  // 删除绑定返回状态
 
+        GrantListRes grant_list_res              = 70; // 列出数据授权返回状态
+        Grant grant_add_res                      = 71; // 增加数据授权返回状态
+        Grant grant_delete_res                   = 72; // 删除数据授权返回状态
+
         ScriptRunRes script_run_res              = 90;  // 运行脚本返回
-        ScriptUpdateRes script_update_res        = 91;  // 升级脚本返回
+        ScriptCreateRes script_create_res        = 91;  // 创建脚本返回
+        ScriptListRes script_list_res            = 92;  // 列出脚本返回
+        ScriptDeleteRes script_delete_res        = 93;  // 删除脚本返回
+        ScriptGetRes script_get_res              = 94;  // 获取脚本返回
+        ScriptUseRes script_use_res              = 95;  // 使用脚本返回
 
         ExpListRes exp_list_res                  = 100; // 实验列表返回
         ExpGetRes exp_get_res                    = 101; // 实验报表返回
@@ -296,8 +360,20 @@ message TargetListRes {
     map<string, Binds> target_list               = 1;  // 绑定列表
 }
 
+// TargetCreateRes 策略创建返回
+message TargetCreateRes {
+    string target_id                             = 1;  // 策略ID
+    string target_description                    = 2;  // 策略描述
+}
+
+// TargetDeleteRes 策略创建返回
+message TargetDeleteRes {
+    string target_id                             = 1;  // 策略ID
+    string target_description                    = 2;  // 策略描述
+}
+
 message Binds {
-    repeated Bind binds                          = 1; 
+    repeated Bind binds                          = 1;  // 绑定列表
 }
 
 // Bind 绑定信息
@@ -347,6 +423,11 @@ message BindError {
     string reason                                = 3;  // 错误绑定原因
 }
 
+// GrantListRes 授权列表返回
+message GrantListRes {
+    repeated Grant from                         = 1;  // 被授权列表
+    repeated Grant to                           = 2;  // 向外授权列表
+}
 
 // ScriptRunRes 运行脚本返回
 message ScriptRunRes {
@@ -356,8 +437,36 @@ message ScriptRunRes {
     string dataspace_out                          = 4;  // 数据区输出
 }
 
-// ScriptUpdateRes 升级脚本返回
-message ScriptUpdateRes {
+message ScriptInfo {
+    string lua_name                              = 1;  // 脚本名称
+    string lua_script                            = 2;  // 脚本内容
+    bool lua_checked                             = 3;  // 脚本校验结果
+    bool lua_used                                = 4;  // 脚本是否被使用
+}
+
+// ScriptCreateRes 创建脚本返回
+message ScriptCreateRes {
+    ScriptInfo script_info                        = 1;  // 脚本信息
+}
+
+// ScriptListRes 脚本列表返回
+message ScriptListRes {
+    repeated ScriptInfo script_info              = 1;  // 脚本信息
+}
+
+// ScriptGetRes 获取脚本返回
+message ScriptGetRes {
+    ScriptInfo script_info                      = 1;  // 脚本信息
+}
+
+// ScriptDeleteRes 删除脚本返回
+message ScriptDeleteRes {
+    ScriptInfo script_info                      = 1;  // 脚本信息
+}
+
+// ScriptUseRes 使用脚本返回
+message ScriptUseRes {
+    ScriptInfo script_info                      = 1;  // 脚本信息
 }
 
 // ExpListRes 实验列表返回
@@ -455,6 +564,7 @@ enum OS {
     OS_UNKNOWN                                   = 0;
     IOS                                          = 1; 
     ANDROID                                      = 2;
+    HARMONY                                      = 7;  //纯血鸿蒙
 }
 
 // MAX 最大限定
@@ -586,18 +696,24 @@ API以protobuf格式返回，返回信息为SaasRes结构
 | SaasReq.info | [Info](#310-获取账号设置-info) | 唯一 | 获取账号设置 |
 | SaasReq.read | [Read](#311-实时读-read) | 唯一 | 实时读取数据 |
 | SaasReq.write | [Write](#312-实时写-write) | 唯一 | 实时写入数据 |
-| SaasReq.task_create | [TaskCreate](#314-任务-创建-taskcreate) | 唯一 | 任务创建 |
-| SaasReq.task_list | [TaskList](#315-任务-列表-tasklist) | 唯一 | 任务列表 |
-| SaasReq.task_run | [TaskRun](#316-任务-执行-taskrun) | 唯一 | 任务执行 |
-| SaasReq.task_delete | [TaskDelete](#317-任务-删除-taskdelete) | 唯一 | 任务删除 |
-| SaasReq.task_info | [TaskInfo](#318-任务-详情-taskinfo) | 唯一 | 任务详情 |
-| SaasReq.target_list | [TargetList](#320-策略-列表-targetlist) | 唯一 | 列出策略及绑定 |
-| SaasReq.bind_set | [BindSet](#321-策略绑定-设置-bindset) | 唯一 | 设置绑定 |
-| SaasReq.bind_delete | [BindDelete](#322-策略绑定-解除-binddelete) | 唯一 | 解除绑定 |
-| SaasReq.script_run | [ScriptRun](#323-脚本-运行-scriptrun) | 唯一 | 调试运行脚本 |
-| SaasReq.script_update | [ScriptUpdate](#324-脚本-运行-scriptupdate) | 唯一 | 更新脚本 |
-| SaasReq.exp_list | [ExpList](#325-实验-列表-explist) | 唯一 | 实验列表 |
-| SaasReq.exp_get | [ExpGet](#326-实验-报表-expdata) | 唯一 | 实验报表 |
+| SaasReq.task_create | [TaskCreate](#3141-创建-taskcreate) | 唯一 | 任务创建 |
+| SaasReq.task_list | [TaskList](#3142-列表-tasklist) | 唯一 | 任务列表 |
+| SaasReq.task_run | [TaskRun](#3143-执行-taskrun) | 唯一 | 任务执行 |
+| SaasReq.task_delete | [TaskDelete](#3144-删除-taskdelete) | 唯一 | 任务删除 |
+| SaasReq.task_info | [TaskInfo](#3145-详情-taskinfo) | 唯一 | 任务详情 |
+| SaasReq.target_list | [TargetList](#3151-列表-targetlist) | 唯一 | 列出策略及绑定 |
+| SaasReq.target_create | [TargetCreate](#3152-创建-targetcreate️) | 唯一 | 创建策略 |
+| SaasReq.target_delete | [TargetDelete](#3153-删除-targetdelete️) | 唯一 | 删除策略 |
+| SaasReq.bind_set | [BindSet](#3161-设置-bindset) | 唯一 | 设置绑定 |
+| SaasReq.bind_delete | [BindDelete](#3162-解除-binddelete) | 唯一 | 解除绑定 |
+| SaasReq.script_run | [ScriptRun](#3171-调试运行-scriptrun) | 唯一 | 调试运行脚本 |
+| SaasReq.script_create | [ScriptCreate](#3172-创建-scriptcreate️) | 唯一 | 创建脚本 |
+| SaasReq.script_list | [ScriptList](#3173-列表-scriptlist️) | 唯一 | 脚本列表 |
+| SaasReq.script_delete | [ScriptDelete](#3174-删除-scriptdelete️) | 唯一 | 删除脚本 |
+| SaasReq.script_get | [ScriptGet](#3175-获取-scriptget️) | 唯一 | 获取脚本 |
+| SaasReq.script_use | [ScriptUse](#3176-使用-scriptuse️) | 唯一 | 使用脚本 |
+| SaasReq.exp_list | [ExpList](#3181-列表-explist) | 唯一 | 实验列表 |
+| SaasReq.exp_get | [ExpGet](#3182-报表-expdata) | 唯一 | 实验报表 |
 
 
 **返回参数**：
@@ -611,18 +727,24 @@ API以protobuf格式返回，返回信息为SaasRes结构
 | SaasRes.info | [InfoRes](#310-获取账号设置-info) | 唯一 | 账号信息返回 |
 | SaasRes.read_res | [ReadRes](#311-实时读-read) | 唯一 | 实时读取数据返回状态 |
 | SaasRes.write_res | [WriteRes](#312-实时写-write) | 唯一 | 实时写入数据返回状态 |
-| SaasRes.task_create_res | [Task](#314-任务-创建-taskcreate) | 唯一 | 任务创建返回状态 |
-| SaasRes.task_list_res | [TaskListRes](#315-任务-列表-tasklist) | 唯一 | 任务列表返回状态 |
-| SaasRes.task_run_res | [Task](#316-任务-执行-taskrun) | 唯一 | 任务执行返回状态 |
-| SaasRes.task_delete_res | [Task](#317-任务-删除-taskdelete) | 唯一 | 任务删除返回状态 |
-| SaasRes.task_info_res | [Task](#318-任务-详情-taskinfo) | 唯一 | 任务详情返回状态 |
-| SaasRes.target_list_res | [TargetListRes](#320-策略-列表-targetlist) | 唯一 | 列出策略及绑定返回状态 |
-| SaasRes.bind_set_res | [BindSetRes](#321-策略绑定-设置-bindset) | 唯一 | 任务详情返回状态 |
-| SaasRes.bind_delete_res | [BindDeleteRes](#322-策略绑定-解除-binddelete) | 唯一 | 设置绑定返回状态 |
-| SaasRes.script_run_res | [ScriptRun](#323-脚本-运行-scriptrun) | 唯一 | 调试运行脚本返回状态 |
-| SaasRes.script_update_res | [ScriptUpdate](#324-脚本-运行-scriptupdate) | 唯一 | 更新脚本返回状态 |
-| SaasRes.exp_list_res | [ExpList](#325-实验-列表-explist) | 唯一 | 实验列表返回状态 |
-| SaasRes.exp_get_res | [ExpGet](#326-实验-报表-expdata) | 唯一 | 实验报表返回状态 |
+| SaasRes.task_create_res | [Task](#3141-创建-taskcreate) | 唯一 | 任务创建返回状态 |
+| SaasRes.task_list_res | [TaskListRes](#3142-列表-tasklist) | 唯一 | 任务列表返回状态 |
+| SaasRes.task_run_res | [Task](#3143-执行-taskrun) | 唯一 | 任务执行返回状态 |
+| SaasRes.task_delete_res | [Task](#3144-删除-taskdelete) | 唯一 | 任务删除返回状态 |
+| SaasRes.task_info_res | [Task](#3145-详情-taskinfo) | 唯一 | 任务详情返回状态 |
+| SaasRes.target_list_res | [TargetListRes](#3151-列表-targetlist) | 唯一 | 列出策略及绑定返回状态 |
+| SaasReq.target_create_res | [TargetCreateRes](#3152-创建-targetcreate️) | 唯一 | 创建策略返回状态 |
+| SaasReq.target_delete_res | [TargetDeleteRes](#3153-删除-targetdelete️) | 唯一 | 删除策略返回状态 |
+| SaasRes.bind_set_res | [BindSetRes](#3161-设置-bindset) | 唯一 | 任务详情返回状态 |
+| SaasRes.bind_delete_res | [BindDeleteRes](#3162-解除-binddelete) | 唯一 | 设置绑定返回状态 |
+| SaasRes.script_run_res | [ScriptRunRes](#3171-调试运行-scriptrun) | 唯一 | 调试运行脚本返回状态 |
+| SaasReq.script_create_res | [ScriptCreateRes](#3172-创建-scriptcreate️) | 唯一 | 创建脚本返回状态 |
+| SaasReq.script_list_res | [ScriptListRes](#3173-列表-scriptlist️) | 唯一 | 脚本列表返回状态 |
+| SaasReq.script_delete_res | [ScriptDeleteRes](#3174-删除-scriptdelete️) | 唯一 | 删除脚本返回状态 |
+| SaasReq.script_get_res | [ScriptGetRes](#3175-获取-scriptget️) | 唯一 | 获取脚本返回状态 |
+| SaasReq.script_use_res | [ScriptUseRes](#3176-使用-scriptuse️) | 唯一 | 使用脚本返回状态 |
+| SaasRes.exp_list_res | [ExpList](#3181-列表-explist) | 唯一 | 实验列表返回状态 |
+| SaasRes.exp_get_res | [ExpGet](#3182-报表-expdata) | 唯一 | 实验报表返回状态 |
 
 ## 3.10 获取账号设置 Info
 
@@ -761,7 +883,9 @@ API以protobuf格式返回，返回信息为SaasRes结构
 
 仅使用顶层节点 SaasRes.code/SaasRes.status 表达操作成功/失败状态
 
-## 3.14 任务-创建 TaskCreate
+## 3.14 任务
+
+### 3.14.1 创建 TaskCreate
 
 **说明**：任务用于大批量集中上传写入。适用于对亿级用户的一个或多列进行（byte、uint32、flag）变更，具有并发写入量大，批量集中执行的特点。该接口用于创建一个任务，通过描述待上传数据的摘要信息，允许后续任务数据的分块分批上传。新创建的任务将在 7 天内有效并等待分块上传，待任务数据全部上传完毕后，再通过运行接口执行写入任务。超过 7 天的任务自动删除。
 
@@ -814,7 +938,7 @@ API以protobuf格式返回，返回信息为SaasRes结构
 | total_block | uint32 | 否 | 总块数 |
 | status | TaskStatus | 是 | 任务状态<br/>WAITING = 1;// 等待中<br/>READY = 2;// 上传完毕<br/>RUNNING = 3;// 运行中<br/>SUCCESS = 4;// 成功<br/>FAIL = 5;// 失败<br/>DELETED = 10; // 已删除，仅在执行删除成功时返回 |
 
-## 3.15 任务-列表 TaskList
+### 3.14.2 列表 TaskList
 
 **说明**：该接口用于列出任务，查看各任务的状态。
 
@@ -848,7 +972,7 @@ API以protobuf格式返回，返回信息为SaasRes结构
 | tasks.total_block | uint32 | 否 | 总块数 |
 | tasks.status | TaskStatus | 是 | 任务状态<br/>WAITING = 1;// 等待中<br/>READY = 2;// 上传完毕<br/>RUNNING = 3;// 运行中<br/>SUCCESS = 4;// 成功<br/>FAIL = 5;// 失败<br/>DELETED = 10; // 已删除，仅在执行删除成功时返回 |
 
-## 3.16 任务-执行 TaskRun
+### 3.14.3 执行 TaskRun
 
 **说明**：该接口用于执行指定任务。将已处于全部分块上传完毕且未执行过的任务写入数据区。同一时间只能执行一个任务，当前有任务执行时，通过该接口调用多的其它任务将进入串行等待执行状态。
 
@@ -891,7 +1015,7 @@ API以protobuf格式返回，返回信息为SaasRes结构
 | total_block | uint32 | 否 | 总块数 |
 | status | TaskStatus | 是 | 任务状态<br/>WAITING = 1;// 等待中<br/>READY = 2;// 上传完毕<br/>RUNNING = 3;// 运行中<br/>SUCCESS = 4;// 成功<br/>FAIL = 5;// 失败<br/>DELETED = 10; // 已删除，仅在执行删除成功时返回 |
 
-## 3.17 任务-删除 TaskDelete
+### 3.14.4 删除 TaskDelete
 
 **说明**：该接口用于删除指定任务。对于处于等待上传、成功、失败的任务，直接删除。对于处于运行中的任务，先中断运行状态后进行删除。
 
@@ -934,7 +1058,7 @@ API以protobuf格式返回，返回信息为SaasRes结构
 | total_block | uint32 | 否 | 总块数 |
 | status | TaskStatus | 是 | 任务状态<br/>WAITING = 1;// 等待中<br/>READY = 2;// 上传完毕<br/>RUNNING = 3;// 运行中<br/>SUCCESS = 4;// 成功<br/>FAIL = 5;// 失败<br/>DELETED = 10; // 已删除，仅在执行删除成功时返回 |
 
-## 3.18 任务-详情 TaskInfo
+### 3.14.5 详情 TaskInfo
 
 **说明**：该接口用于查看指定任务的详细信息。包括分块上传完成情况。
 
@@ -978,7 +1102,7 @@ API以protobuf格式返回，返回信息为SaasRes结构
 | total_block | uint32 | 否 | 总块数 |
 | status | TaskStatus | 是 | 任务状态<br/>WAITING = 1;// 等待中<br/>READY = 2;// 上传完毕<br/>RUNNING = 3;// 运行中<br/>SUCCESS = 4;// 成功<br/>FAIL = 5;// 失败<br/>DELETED = 10; // 已删除，仅在执行删除成功时返回 |
 
-## 3.19 任务-上传数据文件分片 TaskUpload
+### 3.14.6 上传数据文件分片 TaskUpload
 
 **说明**：该接口用于上传文件分块内容。注意该接口并不需要protobuf 的命令请求，而是以POST body 的方式直接上传文件内容分块，内容分块在上传时 `必须使用gzip压缩`。返回结果仍遵循protobuf协议。如上传大小超限，则会直接以 HTTP 413 状态码返回。
 
@@ -996,7 +1120,9 @@ API以protobuf格式返回，返回信息为SaasRes结构
 
 顶层节点 SaasRes.code/SaasRes.status 表达操作成功/失败状态
 
-## 3.20 策略-列表 TargetList
+## 3.15 策略
+
+### 3.15.1 列表 TargetList
 
 **说明**：该接口用于查看策略列表，以及获取完整绑定列表。
 
@@ -1028,7 +1154,66 @@ API以protobuf格式返回，返回信息为SaasRes结构
 | target_list.binds.account_id | int64 | 否 | 广告主ID |
 | target_list.binds.bind_source | BindSourceType | 否 | 绑定操作来源<br/>DefaultBindSourceType = 0;  //广告主或未填写<br/>ThirdPartyApi = 1;//第三方API<br/>ADQ = 2;//ADQ平台<br/>MP = 3;//MP平台<br/>MktApi = 4;//MarketingAPI |
 
-## 3.21 策略绑定-设置 BindSet
+### 3.15.2 创建 TargetCreate⚠️
+
+:::tip
+最多能创建10个策略ID。当出现策略ID不够时，请及时清理不再使用或使用率低的策略。
+:::
+
+**说明**：该接口用于创建策略ID。
+
+**接口**：/saas/target/create
+
+**请求参数**：
+
+表格节点位于 SaasReq.target_create
+
+| 字段名称 | 字段类型 | 必填 | 描述 |
+| :--- | :--- | :--- | :--- |
+| target_id | string | 是 | 策略ID。策略ID度度3-20字符，只允许字母、数字、中划线。 |
+| target_description | string | 是 | 策略备注 |
+
+
+**返回参数**：
+
+顶层节点 SaasRes.code/SaasRes.status 表达操作成功/失败状态
+
+表格节点位于 SaasRes.target_create_res
+
+
+| 字段名称 | 字段类型 | 必填 | 描述 |
+| :--- | :--- | :--- | :--- |
+| target_id | string | 否 | 策略ID |
+| target_description | string | 否 | 策略备注 |
+
+### 3.15.3 删除 TargetDelete⚠️
+
+**说明**：该接口用于删除策略。
+
+**接口**：/saas/target/delete
+
+**请求参数**：
+
+表格节点位于 SaasReq.target_delete
+
+| 字段名称 | 字段类型 | 必填 | 描述 |
+| :--- | :--- | :--- | :--- |
+| target_id | string | 是 | 策略ID。策略ID度度3-20字符，只允许字母、数字、中划线。 |
+| target_description | string | 是 | 策略备注 |
+
+**返回参数**：
+
+顶层节点 SaasRes.code/SaasRes.status 表达操作成功/失败状态
+
+表格节点位于 SaasRes.target_delete_res
+
+| 字段名称 | 字段类型 | 必填 | 描述 |
+| :--- | :--- | :--- | :--- |
+| target_id | string | 否 | 策略ID |
+| target_description | string | 否 | 策略备注 |
+
+## 3.16 绑定
+### 3.16.1 设置 BindSet
 
 **说明**：该接口用于将广告主ID或广告ID绑定至策略。如相关ID已绑定至其它策略，使用本功能将覆盖原绑定。
 
@@ -1061,7 +1246,7 @@ API以protobuf格式返回，返回信息为SaasRes结构
 | errors.bind_type | BindType | 是 | 绑定类型<br/>AdgroupId = 1;//广告ID<br/>AccountId = 3;//广告主ID  |
 | errors.reason | string | 是 | 绑定错误原因 |
 
-## 3.22 策略绑定-解除 BindDelete
+### 3.16.2 解除 BindDelete
 
 **说明**：该接口用于将广告主ID或广告ID从策略解绑。解绑成功后相关广告将不再受RTA决策控制。
 
@@ -1093,7 +1278,8 @@ API以protobuf格式返回，返回信息为SaasRes结构
 | errors.reason | string | 是 | 错误解绑原因 |
 
 
-## 3.23 脚本-运行 ScriptRun
+## 3.17 脚本
+### 3.17.1 调试运行 ScriptRun
 
 **说明**：该接口用于调试 LUA 脚本，LUA 将在服务端沙箱环境运行并返回结果。调试模式下 print 函数将生效，可用于输出中间状态。关于该函数使用的更多信息，请参阅[代码调试](./lua.md#56-代码调试)。
 
@@ -1124,13 +1310,150 @@ API以protobuf格式返回，返回信息为SaasRes结构
 | targets_output | string | 否 | 策略输出内容 |
 | dataspace_out | string | 否 | 数据区输出内容 |
 
+### 3.17.2 创建 ScriptCreate⚠️
 
-## 3.24 脚本-运行 ScriptUpdate
-:::warning
-当前禁用
-:::
+**说明**：该接口用于在服务端创建 LUA 脚本，创建的脚本并不会直接替换当前 LUA 的运行代码。脚本在经过检查后（checked = true），方可通过 API 置为当前运行。
 
-## 3.25 实验-列表 ExpList
+**接口**：/saas/script/create
+
+**请求参数**：
+
+表格节点位于 SaasReq.script_create
+
+| 字段名称 | 字段类型 | 必填 | 描述 |
+| :--- | :--- | :--- | :--- |
+| lua_name | string | 是 | LUA脚本名称。建议该名称使用有意义的标识（例如版本），以便于后续维护。 |
+| lua_script | string | 是 | LUA脚本 |
+
+**返回参数**：
+
+顶层节点 SaasRes.code/SaasRes.status 表达全局的操作成功/失败状态。
+
+表格节点位于 SaasRes.script_create_res
+
+| 字段名称 | 字段类型 | 必填 | 描述 |
+| :--- | :--- | :--- | :--- |
+| script_info | object of ScriptInfo | 否 | 脚本信息 |
+| script_info.lua_name | string | 是 | LUA脚本名称 |
+| script_info.lua_script | string | 是 | LUA脚本 |
+| script_info.lua_checked | bool | 否 | 是否已检查 |
+| script_info.lua_used | bool | 否 | 是否在使用 |
+
+### 3.17.3 列表 ScriptList⚠️
+
+**说明**：该接口用于列出服务端的 LUA 脚本。
+
+**接口**：/saas/script/list
+
+**请求参数**：
+
+表格节点位于 SaasReq.script_list
+
+| 字段名称 | 字段类型 | 必填 | 描述 |
+| :--- | :--- | :--- | :--- |
+
+**返回参数**：
+
+顶层节点 SaasRes.code/SaasRes.status 表达全局的操作成功/失败状态。
+
+表格节点位于 SaasRes.script_list_res
+
+| 字段名称 | 字段类型 | 必填 | 描述 |
+| :--- | :--- | :--- | :--- |
+| script_info | array of ScriptInfo | 否 | 脚本信息 |
+| script_info.lua_name | string | 是 | LUA脚本名称 |
+| script_info.lua_script | string | 是 | LUA脚本 |
+| script_info.lua_checked | bool | 否 | 是否已检查 |
+| script_info.lua_used | bool | 否 | 是否在使用 |
+
+### 3.17.4 删除 ScriptDelete⚠️
+
+**说明**：该接口用于删除服务端的 LUA 脚本。正在使用中的脚本无法删除。
+
+**接口**：/saas/script/delete
+
+**请求参数**：
+
+表格节点位于 SaasReq.script_delete
+
+| 字段名称 | 字段类型 | 必填 | 描述 |
+| :--- | :--- | :--- | :--- |
+| lua_name | string | 是 | LUA脚本名称 |
+
+**返回参数**：
+
+顶层节点 SaasRes.code/SaasRes.status 表达全局的操作成功/失败状态。
+
+表格节点位于 SaasRes.script_delete_res
+
+| 字段名称 | 字段类型 | 必填 | 描述 |
+| :--- | :--- | :--- | :--- |
+| script_info | object of ScriptInfo | 否 | 脚本信息 |
+| script_info.lua_name | string | 是 | LUA脚本名称 |
+| script_info.lua_script | string | 是 | LUA脚本 |
+| script_info.lua_checked | bool | 否 | 是否已检查 |
+| script_info.lua_used | bool | 否 | 是否在使用 |
+
+### 3.17.5 获取 ScriptGet⚠️
+
+**说明**：该接口用于获取 LUA 脚本内容。
+
+**接口**：/saas/script/get
+
+**请求参数**：
+
+表格节点位于 SaasReq.script_get
+
+| 字段名称 | 字段类型 | 必填 | 描述 |
+| :--- | :--- | :--- | :--- |
+| lua_name | string | 是 | LUA脚本名称 |
+
+**返回参数**：
+
+顶层节点 SaasRes.code/SaasRes.status 表达全局的操作成功/失败状态。
+
+表格节点位于 SaasRes.script_get_res
+
+| 字段名称 | 字段类型 | 必填 | 描述 |
+| :--- | :--- | :--- | :--- |
+| script_info | object of ScriptInfo | 否 | 脚本信息 |
+| script_info.lua_name | string | 是 | LUA脚本名称 |
+| script_info.lua_script | string | 是 | LUA脚本 |
+| script_info.lua_checked | bool | 否 | 是否已检查 |
+| script_info.lua_used | bool | 否 | 是否在使用 |
+
+### 3.17.6 使用 ScriptUse⚠️
+
+**说明**：该接口用于指定服务端当前执行的 LUA 脚本（升级/降级）。
+
+**接口**：/saas/script/use
+
+**请求参数**：
+
+表格节点位于 SaasReq.script_use
+
+| 字段名称 | 字段类型 | 必填 | 描述 |
+| :--- | :--- | :--- | :--- |
+| lua_name | string | 是 | LUA脚本名称 |
+
+**返回参数**：
+
+顶层节点 SaasRes.code/SaasRes.status 表达全局的操作成功/失败状态。
+
+表格节点位于 SaasRes.script_use_res
+
+| 字段名称 | 字段类型 | 必填 | 描述 |
+| :--- | :--- | :--- | :--- |
+| script_info | object of ScriptInfo | 否 | 脚本信息 |
+| script_info.lua_name | string | 是 | LUA脚本名称 |
+| script_info.lua_script | string | 是 | LUA脚本 |
+| script_info.lua_checked | bool | 否 | 是否已检查 |
+| script_info.lua_used | bool | 否 | 是否在使用 |
+
+
+## 3.18 实验
+
+### 3.18.1 列表 ExpList
 
 **说明**：该接口用于查询实验列表
 
@@ -1155,7 +1478,7 @@ API以protobuf格式返回，返回信息为SaasRes结构
 | buckets.pt_exp_id | uint32 | 否 | 平台实验ID |
 | buckets.percent | uint32  | 否 | 流量百分比 |
 
-## 3.26 实验-报表 ExpData
+### 3.18.2 报表 ExpData
 
 **说明**：该接口用于查询实验数据报表
 
@@ -1203,7 +1526,7 @@ API以protobuf格式返回，返回信息为SaasRes结构
 | exp_data.group.\<key\> | string  | 否 | 分组名称 |
 | exp_data.group.\<value\> | uint64  | 否 | 分组值 |
 
-### 3.26.1 扩展实验指标
+#### 3.18.2.1 扩展实验指标
 
 扩展实验指标字段仅在明确需要拉取时返回，如该字段值返回值为0，则返回字段不存在。
 
