@@ -1370,7 +1370,7 @@ API以protobuf格式返回，返回信息为SaasRes结构
 
 <span id="grantlist"></span>
 
-### 3.17.1 列表 GrantList
+### 3.17.1 列表 GrantList⚠️
 
 **说明**：该接口用于查看数据授权列表。
 
@@ -1403,7 +1403,7 @@ API以protobuf格式返回，返回信息为SaasRes结构
 
 <span id="grantadd"></span>
 
-### 3.17.2 增加 GrantAdd
+### 3.17.2 增加 GrantAdd⚠️
 
 **说明**：该接口用于增加数据授权，可以指定具体索引位置或索引区间。
 
@@ -1433,7 +1433,7 @@ API以protobuf格式返回，返回信息为SaasRes结构
 
 <span id="grantdelete"></span>
 
-### 3.17.3 删除 GrantDelete
+### 3.17.3 删除 GrantDelete⚠️
 
 **说明**：该接口用于删除数据授权，可以指定具体索引位置或索引区间。
 
