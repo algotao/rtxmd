@@ -54,6 +54,9 @@ message SaasReq {
 
         ExpList exp_list                         = 100; // 列出实验
         ExpGet exp_get                           = 101; // 获取实验报表
+        ExpGrantList exp_grant_list              = 102; // 列出访问实验报表授权
+        ExpGrant exp_grant_add                   = 103; // 授权他人访问实验报表
+        ExpGrant exp_grant_delete                = 104; // 取消他人访问实验报表
     }
 }
 
@@ -85,9 +88,12 @@ message Write {
 // WriteItem 写入命令
 message WriteItem {
     string userid                                = 1;   // 用户ID
-    Bytes write_bytes                            = 2;   // byte区域
-    Uint32s write_uint32s                        = 3;   // uint32区域
-    FlagsWithExpire write_flags_with_expire      = 4;   // 标志位区域
+    Bytes write_bytes                            = 2 [deprecated = true];   // byte区域。!!!弃用，请使用bytes_kv
+    Uint32s write_uint32s                        = 3 [deprecated = true];   // uint32区域。!!!弃用，请使用uint32s_kv
+    FlagsWithExpire write_flags_with_expire      = 4 [deprecated = true];   // 标志位区域。!!!弃用，请使用flags_with_expire_kv
+    map<uint32, uint32> bytes_kv                 = 5;   // 写入uint8，key为1-64索引值，value为0-255数值。index/value超限会丢弃
+    map<uint32, uint32> uint32s_kv               = 6;   // 写入uint32，key为1-8索引值，value为uint32数值。index超限会丢弃
+    map<uint32, FlagWithExpire> flags_with_expire_kv    = 7;   // 写入标志位，key为1-4索引值，index超限会丢弃
 }
 
 // Bytes 写入byte区域
@@ -211,8 +217,9 @@ message GrantList {
 
 // Grant 数据授权信息
 message Grant {
-    uint32 srta_account_id                      = 1;   // sRTA授权目标账号ID
+    uint32 target_account_id                    = 1;   // sRTA授权目标账号ID
     string grant_index                          = 2;   // 授权索引。格式为 "index1, index2, index55-index64"，例如 "1, 2, 55-64"
+    uint32 dataspace_id                         = 3;   // 授权数据空间ID（数字型）
 }
 
 
@@ -274,6 +281,14 @@ message ExpGet {
     uint32 total_flag                            = 30;  // 是否汇总，0=不汇总，1=汇总
 }
 
+message ExpGrantList {
+    
+}
+
+message ExpGrant {
+    uint32 target_account_id                    = 1;   // sRTA授权目标账号ID
+}
+
 // SaasRes 命令返回
 message SaasRes {
     ErrorCode code                               = 1;  // 返回码
@@ -310,12 +325,16 @@ message SaasRes {
 
         ExpListRes exp_list_res                  = 100; // 实验列表返回
         ExpGetRes exp_get_res                    = 101; // 实验报表返回
+        ExpGrantListRes exp_grant_list_res       = 102; // 实验授权列表返回
+        ExpGrant exp_grant_add_res               = 103; // 增加实验授权返回
+        ExpGrant exp_grant_delete_res            = 104; // 实验解除授权返回
     }
 }
 
 message DataSpace {
     repeated string did                          = 1;   // 设备ID区
     repeated string wuid                         = 2;   // OpenID区
+    repeated string geo                          = 7;   // GEO区
 }
 
 // InfoRes 账号信息返回
@@ -329,7 +348,7 @@ message InfoRes {
 message ReadRes {
     uint32 succ_cmd_count                        = 1;  // 成功的命令数量
     uint32 fail_cmd_count                        = 2;  // 失败的命令数量
-    repeated ValueItem cmd_res                   = 3;  // 返回的命令
+    repeated ValueItem cmd_res                   = 3 ;  // 返回的命令
 }
 
 // WriteRes 写记录返回
@@ -343,11 +362,14 @@ message WriteRes {
 message ValueItem {
     uint32 cmd_index                             = 1;  // 命令索引
     CmdErrorCode cmd_code                        = 2;  // 状态
-    bytes bytes                                  = 3;  // byte区域
-    repeated uint32 uint32s                      = 4;  // uint32区域
-    repeated FlagWithExpire flags_with_expire    = 5;  // 标志位区域
+    bytes bytes                                  = 3 [deprecated = true];  // byte区域。!!!弃用
+    repeated uint32 uint32s                      = 4 [deprecated = true];  // uint32区域。!!!弃用
+    repeated FlagWithExpire flags_with_expire    = 5 [deprecated = true];  // 标志位区域。!!!弃用
     uint32 last_modify_time                      = 6;  // 最后修改时间
     uint32 version                               = 7;  // 存储版本
+    map<uint32, uint32> bytes_kv                 = 8;  // byte区域
+    map<uint32, uint32> uint32s_kv               = 9;  // uint32区域
+    map<uint32, FlagWithExpire> flags_with_expire_kv    = 10;  // 标志位区域
 }
 
 // TaskListRes 任务列表返回
@@ -485,6 +507,7 @@ message ExpGetRes {
     repeated ExpData exp_data                      = 1;  // 实验数据
 }
 
+// ExpData 实验数据
 message ExpData {
     uint64 time                                    = 1;  // 日期
     uint32 bucket_id                               = 2;  // 分桶ID
@@ -493,6 +516,7 @@ message ExpData {
     map<string, uint64> group                      = 5;  // 分组
 }
 
+// ExpBaseFields 基础实验字段
 message ExpBaseFields {
     double cost                                   = 1;  // 花费
     int64 exposure                                = 2;  // 曝光量
@@ -505,6 +529,12 @@ message ExpBaseFields {
     double cvr_second                             = 9;  // 深层转化率
     int64 conversion                              = 10; // 浅层转化量
     int64 conversion_second                       = 11; // 深层转化量
+}
+
+// ExpGrantListRes 授权列表返回
+message ExpGrantListRes {
+    repeated ExpGrant from                         = 1;  // 被授权列表
+    repeated ExpGrant to                           = 2;  // 向外授权列表
 }
 
 // ErrorCode 返回码
@@ -541,7 +571,7 @@ enum ErrorCode {
 
     API_ERROR                                    = 301; // 调用内部API错误
 
-    TARGET_ERROR                                 = 401; // Target参数错误
+    PARAM_ERROR                                  = 401; // 参数错误
 }
 
 enum CmdErrorCode {
@@ -654,7 +684,7 @@ API以protobuf格式返回，返回信息为SaasRes结构
 | 201 | DATA_ERROR | 数据错误 |
 | 202 | CMD_ERROR | 命令行执行错误 |
 | 301 | API_ERROR | 调用内部API错误 |
-| 401 | TARGET_ERROR | 策略ID错误 |
+| 401 | PARAM_ERROR | 参数错误 |
 
 ## 3.7 任务状态码/过滤码定义
 
@@ -693,27 +723,30 @@ API以protobuf格式返回，返回信息为SaasRes结构
 | :--- | :--- | :--- | :--- |
 | SaasReq | SaasReq | 是 | 请求消息结构 |
 |  |  |  | 以下字段根据操作选择 **唯一** 的一个 |
-| SaasReq.info | [Info](#310-获取账号设置-info) | 唯一 | 获取账号设置 |
-| SaasReq.read | [Read](#311-实时读-read) | 唯一 | 实时读取数据 |
-| SaasReq.write | [Write](#312-实时写-write) | 唯一 | 实时写入数据 |
-| SaasReq.task_create | [TaskCreate](#3141-创建-taskcreate) | 唯一 | 任务创建 |
-| SaasReq.task_list | [TaskList](#3142-列表-tasklist) | 唯一 | 任务列表 |
-| SaasReq.task_run | [TaskRun](#3143-执行-taskrun) | 唯一 | 任务执行 |
-| SaasReq.task_delete | [TaskDelete](#3144-删除-taskdelete) | 唯一 | 任务删除 |
-| SaasReq.task_info | [TaskInfo](#3145-详情-taskinfo) | 唯一 | 任务详情 |
-| SaasReq.target_list | [TargetList](#3151-列表-targetlist) | 唯一 | 列出策略及绑定 |
-| SaasReq.target_create | [TargetCreate](#3152-创建-targetcreate️) | 唯一 | 创建策略 |
-| SaasReq.target_delete | [TargetDelete](#3153-删除-targetdelete️) | 唯一 | 删除策略 |
-| SaasReq.bind_set | [BindSet](#3161-设置-bindset) | 唯一 | 设置绑定 |
-| SaasReq.bind_delete | [BindDelete](#3162-解除-binddelete) | 唯一 | 解除绑定 |
-| SaasReq.script_run | [ScriptRun](#3171-调试运行-scriptrun) | 唯一 | 调试运行脚本 |
-| SaasReq.script_create | [ScriptCreate](#3172-创建-scriptcreate️) | 唯一 | 创建脚本 |
-| SaasReq.script_list | [ScriptList](#3173-列表-scriptlist️) | 唯一 | 脚本列表 |
-| SaasReq.script_delete | [ScriptDelete](#3174-删除-scriptdelete️) | 唯一 | 删除脚本 |
-| SaasReq.script_get | [ScriptGet](#3175-获取-scriptget️) | 唯一 | 获取脚本 |
-| SaasReq.script_use | [ScriptUse](#3176-使用-scriptuse️) | 唯一 | 使用脚本 |
-| SaasReq.exp_list | [ExpList](#3181-列表-explist) | 唯一 | 实验列表 |
-| SaasReq.exp_get | [ExpGet](#3182-报表-expdata) | 唯一 | 实验报表 |
+| SaasReq.info | [Info](#info) | 唯一 | 获取账号设置 |
+| SaasReq.read | [Read](#read) | 唯一 | 实时读取数据 |
+| SaasReq.write | [Write](#write) | 唯一 | 实时写入数据 |
+| SaasReq.task_create | [TaskCreate](#taskcreate) | 唯一 | 任务创建 |
+| SaasReq.task_list | [TaskList](#tasklist) | 唯一 | 任务列表 |
+| SaasReq.task_run | [TaskRun](#taskrun) | 唯一 | 任务执行 |
+| SaasReq.task_delete | [TaskDelete](#taskdelete) | 唯一 | 任务删除 |
+| SaasReq.task_info | [TaskInfo](#taskinfo) | 唯一 | 任务详情 |
+| SaasReq.target_list | [TargetList](#targetlist) | 唯一 | 列出策略及绑定 |
+| SaasReq.target_create | [TargetCreate](#targetcreate) | 唯一 | 创建策略 |
+| SaasReq.target_delete | [TargetDelete](#targetdelete) | 唯一 | 删除策略 |
+| SaasReq.bind_set | [BindSet](#bindset) | 唯一 | 设置绑定 |
+| SaasReq.bind_delete | [BindDelete](#binddelete) | 唯一 | 解除绑定 |
+| SaasReq.grant_list | [GrantList](#grantlist) | 唯一 | 授权列表 |
+| SaasReq.grant_add | [GrantAdd](#grantadd) | 唯一 | 增加授权 |
+| SaasReq.grant_delete | [GrantDelete](#grantdelete) | 唯一 | 取消授权 |
+| SaasReq.script_run | [ScriptRun](#scriptrun) | 唯一 | 调试运行脚本 |
+| SaasReq.script_create | [ScriptCreate](#scriptcreate) | 唯一 | 创建脚本 |
+| SaasReq.script_list | [ScriptList](#scriptlist) | 唯一 | 脚本列表 |
+| SaasReq.script_delete | [ScriptDelete](#scriptdelete) | 唯一 | 删除脚本 |
+| SaasReq.script_get | [ScriptGet](#scriptget) | 唯一 | 获取脚本 |
+| SaasReq.script_use | [ScriptUse](#scriptuse) | 唯一 | 使用脚本 |
+| SaasReq.exp_list | [ExpList](#explist) | 唯一 | 实验列表 |
+| SaasReq.exp_get | [ExpGet](#expdata) | 唯一 | 实验报表 |
 
 
 **返回参数**：
@@ -724,27 +757,32 @@ API以protobuf格式返回，返回信息为SaasRes结构
 | SaasRes.code | ErrorCode | 是 | 返回状态码，请查阅[命令状态码定义](#36命令状态码定义) |
 | SaasRes.status | string | 否 | 返回状态描述 |
 |  |  |  | 以下字段根据操作返回 **唯一** 的一个 |
-| SaasRes.info | [InfoRes](#310-获取账号设置-info) | 唯一 | 账号信息返回 |
-| SaasRes.read_res | [ReadRes](#311-实时读-read) | 唯一 | 实时读取数据返回状态 |
-| SaasRes.write_res | [WriteRes](#312-实时写-write) | 唯一 | 实时写入数据返回状态 |
-| SaasRes.task_create_res | [Task](#3141-创建-taskcreate) | 唯一 | 任务创建返回状态 |
-| SaasRes.task_list_res | [TaskListRes](#3142-列表-tasklist) | 唯一 | 任务列表返回状态 |
-| SaasRes.task_run_res | [Task](#3143-执行-taskrun) | 唯一 | 任务执行返回状态 |
-| SaasRes.task_delete_res | [Task](#3144-删除-taskdelete) | 唯一 | 任务删除返回状态 |
-| SaasRes.task_info_res | [Task](#3145-详情-taskinfo) | 唯一 | 任务详情返回状态 |
-| SaasRes.target_list_res | [TargetListRes](#3151-列表-targetlist) | 唯一 | 列出策略及绑定返回状态 |
-| SaasReq.target_create_res | [TargetCreateRes](#3152-创建-targetcreate️) | 唯一 | 创建策略返回状态 |
-| SaasReq.target_delete_res | [TargetDeleteRes](#3153-删除-targetdelete️) | 唯一 | 删除策略返回状态 |
-| SaasRes.bind_set_res | [BindSetRes](#3161-设置-bindset) | 唯一 | 任务详情返回状态 |
-| SaasRes.bind_delete_res | [BindDeleteRes](#3162-解除-binddelete) | 唯一 | 设置绑定返回状态 |
-| SaasRes.script_run_res | [ScriptRunRes](#3171-调试运行-scriptrun) | 唯一 | 调试运行脚本返回状态 |
-| SaasReq.script_create_res | [ScriptCreateRes](#3172-创建-scriptcreate️) | 唯一 | 创建脚本返回状态 |
-| SaasReq.script_list_res | [ScriptListRes](#3173-列表-scriptlist️) | 唯一 | 脚本列表返回状态 |
-| SaasReq.script_delete_res | [ScriptDeleteRes](#3174-删除-scriptdelete️) | 唯一 | 删除脚本返回状态 |
-| SaasReq.script_get_res | [ScriptGetRes](#3175-获取-scriptget️) | 唯一 | 获取脚本返回状态 |
-| SaasReq.script_use_res | [ScriptUseRes](#3176-使用-scriptuse️) | 唯一 | 使用脚本返回状态 |
-| SaasRes.exp_list_res | [ExpList](#3181-列表-explist) | 唯一 | 实验列表返回状态 |
-| SaasRes.exp_get_res | [ExpGet](#3182-报表-expdata) | 唯一 | 实验报表返回状态 |
+| SaasRes.info | [InfoRes](#info) | 唯一 | 账号信息返回 |
+| SaasRes.read_res | [ReadRes](#read) | 唯一 | 实时读取数据返回状态 |
+| SaasRes.write_res | [WriteRes](#write) | 唯一 | 实时写入数据返回状态 |
+| SaasRes.task_create_res | [Task](#taskcreate) | 唯一 | 任务创建返回状态 |
+| SaasRes.task_list_res | [TaskListRes](#tasklist) | 唯一 | 任务列表返回状态 |
+| SaasRes.task_run_res | [Task](#taskrun) | 唯一 | 任务执行返回状态 |
+| SaasRes.task_delete_res | [Task](#taskdelete) | 唯一 | 任务删除返回状态 |
+| SaasRes.task_info_res | [Task](#taskinfo) | 唯一 | 任务详情返回状态 |
+| SaasRes.target_list_res | [TargetListRes](#targetlist) | 唯一 | 列出策略及绑定返回状态 |
+| SaasReq.target_create_res | [TargetCreateRes](#targetcreate) | 唯一 | 创建策略返回状态 |
+| SaasReq.target_delete_res | [TargetDeleteRes](#targetdelete) | 唯一 | 删除策略返回状态 |
+| SaasRes.bind_set_res | [BindSetRes](#bindset) | 唯一 | 任务详情返回状态 |
+| SaasRes.bind_delete_res | [BindDeleteRes](#binddelete) | 唯一 | 设置绑定返回状态 |
+| SaasReq.grant_list_res | [GrantListRes](#grantlist) | 唯一 | 授权列表返回状态 |
+| SaasReq.grant_add_res | [GrantAddRes](#grantadd) | 唯一 | 增加授权返回状态 |
+| SaasReq.grant_delete_res | [GrantDeleteRes](#grantdelete) | 唯一 | 取消授权返回状态 |
+| SaasRes.script_run_res | [ScriptRunRes](#scriptrun) | 唯一 | 调试运行脚本返回状态 |
+| SaasReq.script_create_res | [ScriptCreateRes](#scriptcreate) | 唯一 | 创建脚本返回状态 |
+| SaasReq.script_list_res | [ScriptListRes](#scriptlist) | 唯一 | 脚本列表返回状态 |
+| SaasReq.script_delete_res | [ScriptDeleteRes](#scriptdelete) | 唯一 | 删除脚本返回状态 |
+| SaasReq.script_get_res | [ScriptGetRes](#scriptget) | 唯一 | 获取脚本返回状态 |
+| SaasReq.script_use_res | [ScriptUseRes](#scriptuse) | 唯一 | 使用脚本返回状态 |
+| SaasRes.exp_list_res | [ExpList](#explist) | 唯一 | 实验列表返回状态 |
+| SaasRes.exp_get_res | [ExpGet](#expdata) | 唯一 | 实验报表返回状态 |
+
+<span id="info"></span>
 
 ## 3.10 获取账号设置 Info
 
@@ -770,6 +808,8 @@ API以protobuf格式返回，返回信息为SaasRes结构
 | dataspace.did | array of string | 否 | 设备ID数据分区号 |
 | dataspace.wuid | array of string | 否 | OpenId数据分区号 |
 | target_id | array of string  | 否 | 策略ID列表 |
+
+<span id="read"></span>
 
 ## 3.11 实时读 Read
 
@@ -799,12 +839,25 @@ API以protobuf格式返回，返回信息为SaasRes结构
 | cmd_res | array of ValueItem | 否 | 失败命令信息 |
 | value_item.cmd_index | uint32 | 是 | 命令编号，对应请求的数组编号 |
 | value_item.cmd_code | CmdErrorCode | 是 | 子命令状态 |
-| value_item.bytes | array of uint8 | 是 | uint8区域数值 |
-| value_item.uint32s | array of uint32 | 是 | uint32区域数值 |
-| value_item.flags_with_expire | array of FlagWithExpire | 是 | 标志位区域内容 |
-| value_item.flags_with_expire.flag | bool | 是 | 标志位。在读取时，标志位未过期则返回flag值，过期则返回default_flag值 |
-| value_item.flags_with_expire.default_flag | bool | 否 | 默认标志位。过期后则回到默认值 |
-| value_item.flags_with_expire.expire | uint32 | 否 | 过期时间，为 0 则永不过期 |
+| value_item.bytes_kv | map of uint32 | 否 | uint8区域数值 |
+| value_item.bytes_kv.\<key\> | uint32 | 是 | uint8区域编号 |
+| value_item.bytes_kv.\<value\> | uint32 | 是 | uint8区域数值 |
+| value_item.uint32s_kv | map of uint32| 否 | uint32区域数值 |
+| value_item.uint32s_kv.\<key\> | uint32 | 是 | uint32区域编号 |
+| value_item.uint32s_kv.\<value\> | uint32 | 是 | uint32区域数值 |
+| value_item.flags_with_expire_kv | map of FlagWithExpire | 否 | 标志位区域内容 |
+| value_item.flags_with_expire_kv.\<key\> | uint32 | 否 | 标志位区域编号 |
+| value_item.flags_with_expire_kv.flag | bool | 是 | 标志位。在读取时，标志位未过期则返回flag值，过期则返回default_flag值 |
+| value_item.flags_with_expire_kv.default_flag | bool | 否 | 默认标志位。过期后则回到默认值 |
+| value_item.flags_with_expire_kv.expire | uint32 | 否 | 过期时间，为 0 则永不过期 |
+| ~~value_item.bytes~~ 弃用 | array of uint8 | 是 | uint8区域数值 |
+| ~~value_item.uint32s~~ 弃用 | array of uint32 | 是 | uint32区域数值 |
+| ~~value_item.flags_with_expire~~ 弃用 | array of FlagWithExpire | 是 | 标志位区域内容 |
+| ~~value_item.flags_with_expire.flag~~ 弃用 | bool | 是 | 标志位。在读取时，标志位未过期则返回flag值，过期则返回default_flag值 |
+| ~~value_item.flags_with_expire.default_flag~~ 弃用 | bool | 否 | 默认标志位。过期后则回到默认值 |
+| ~~value_item.flags_with_expire.expire~~ 弃用 | uint32 | 否 | 过期时间，为 0 则永不过期 |
+
+<span id="write"></span>
 
 ## 3.12 实时写 Write
 
@@ -823,18 +876,29 @@ API以protobuf格式返回，返回信息为SaasRes结构
 | is_clear_all_first | bool	| 否 | 是否先清空该用户的所有数据 |
 | write_items | array of WriteItem | 是 | 批量写入命令 |
 | write_item.userid | string | 是 | 用户 ID（设备号 or OpenID） |
-| write_item.write_bytes | Bytes | 否 | 写入的uint8类型数值 |
-| write_item.write_bytes.bytes | array of byte/bytes | 是 | 写入的byte数组，每个byte 的填写编号由下面index决定 |
-| write_item.write_bytes.index_1 | uint64 | 是 | 写入byte的索引值(0..63)，位置使用bit位表示 |
-| write_item.write_uint32s | Uint32s | 否 | 写入的uint32类型数值 |
-| write_item.write_uint32s.uint32s | array of uint32 | 是 | 写入的uint32数组，每个uint32 的填写编号由下面index决定 |
-| write_item.write_uint32s.index_1 | uint64 | 是 | 写入uint32的索引值(0..7)，位置使用bit位表示 |
-| write_item.write_flags_with_expire | FlagsWithExpire | 否 | 写入的标志位类型值 |
-| write_item.write_flags_with_expire.flags_with_expire | array of FlagWithExpire | 是 | 写入的标志位 |
-| write_item.write_flags_with_expire.flags_with_expire.flag | bool | 是 | 标志位。在读取时，标志位未过期则返回flag值，过期则返回default_flag值 |
-| write_item.write_flags_with_expire.flags_with_expire.default_flag | bool | 否 | 默认标志位。过期后则回到默认值 |
-| write_item.write_flags_with_expire.flags_with_expire.expire | uint32 | 否 | 过期时间，为 0 则永不过期 |
-| write_item.write_flags_with_expire.index_1 | uint64 | 是 | 写入flag的索引值(0..3)，位置使用bit位表示 |
+| write_item.bytes_kv | map of uint32 | 否 | 写入uint8，key为1-64索引值，value为0-255数值。index/value超限会丢弃 |
+| write_item.bytes_kv.\<key\>| uint32 | 是 | uint8区域编号 |
+| write_item.bytes_kv.\<value\>| uint32 | 是 | uint8区域数值 |
+| write_item.uint32s_kv | map of uint32 | 否 | 写入uint32，key为1-4索引值，value为uint32数值。index超限会丢弃 |
+| write_item.uint32s_kv.\<key\>| uint32 | 是 | uint32区域编号 |
+| write_item.uint32s_kv.\<value\>| uint32 | 是 | uint32区域数值 |
+| write_item.flags_with_expire_kv | map of FlagWithExpire | 否 | 写入标志位，key为1-4索引值，index超限会丢弃 |
+| write_item.flags_with_expire_kv.\<key\>| uint32 | 是 | 标志位区域编号 |
+| write_item.flags_with_expire_kv.flags_with_expire.flag | bool | 是 | 标志位。在读取时，标志位未过期则返回flag值，过期则返回default_flag值 |
+| write_item.flags_with_expire_kv.flags_with_expire.default_flag | bool | 否 | 默认标志位。过期后则回到默认值 |
+| write_item.flags_with_expire_kv.flags_with_expire.expire | uint32 | 否 | 过期时间，为 0 则永不过期 |
+| ~~write_item.write_bytes~~ 弃用 | Bytes | 否 | 写入的uint8类型数值 |
+| ~~write_item.write_bytes.bytes~~ 弃用 | array of byte/bytes | 是 | 写入的byte数组，每个byte 的填写编号由下面index决定 |
+| ~~write_item.write_bytes.index_1~~ 弃用 | uint64 | 是 | 写入byte的索引值(0..63)，位置使用bit位表示 |
+| ~~write_item.write_uint32s~~ 弃用 | Uint32s | 否 | 写入的uint32类型数值 |
+| ~~write_item.write_uint32s.uint32s~~ 弃用 | array of uint32 | 是 | 写入的uint32数组，每个uint32 的填写编号由下面index决定 |
+| ~~write_item.write_uint32s.index_1~~ 弃用 | uint64 | 是 | 写入uint32的索引值(0..7)，位置使用bit位表示 |
+| ~~write_item.write_flags_with_expire~~ 弃用 | FlagsWithExpire | 否 | 写入的标志位类型值 |
+| ~~write_item.write_flags_with_expire.flags_with_expire~~ 弃用 | array of FlagWithExpire | 是 | 写入的标志位 |
+| ~~write_item.write_flags_with_expire.flags_with_expire.flag~~ 弃用 | bool | 是 | 标志位。在读取时，标志位未过期则返回flag值，过期则返回default_flag值 |
+| ~~write_item.write_flags_with_expire.flags_with_expire.default_flag~~ 弃用 | bool | 否 | 默认标志位。过期后则回到默认值 |
+| ~~write_item.write_flags_with_expire.flags_with_expire.expire~~ 弃用 | uint32 | 否 | 过期时间，为 0 则永不过期 |
+| ~~write_item.write_flags_with_expire.index_1~~ 弃用 | uint64 | 是 | 写入flag的索引值(0..3)，位置使用bit位表示 |
 
 **返回参数**：
 
@@ -844,6 +908,7 @@ API以protobuf格式返回，返回信息为SaasRes结构
 | :--- | :--- | :--- | :--- |
 | failed_userid | array of string | 否 | 失败的用户ID |
 
+<span id="columnwrite"></span>
 ## 3.13 全列覆盖写(暂不可用) ColumnWrite
 
 **说明**：该接口用于设置全量用户的一个或多个列（byte、uint32、flag）状态。例如在拉活场景中，当天发生过唤起的用户会逐步从可设放变为不可投放（在 UV级将某列标记为不可投放），在跨天时全量用户又需变成可设放状态。在常规思路下需要记录变更用户集，跨天时将该用户集全部改写一遍，存在着数据量大且可能有遗漏的情形。通过此接口可快速设置全量用户的状态，即时生效。
@@ -884,6 +949,8 @@ API以protobuf格式返回，返回信息为SaasRes结构
 仅使用顶层节点 SaasRes.code/SaasRes.status 表达操作成功/失败状态
 
 ## 3.14 任务
+
+<span id="taskcreate"></span>
 
 ### 3.14.1 创建 TaskCreate
 
@@ -938,6 +1005,8 @@ API以protobuf格式返回，返回信息为SaasRes结构
 | total_block | uint32 | 否 | 总块数 |
 | status | TaskStatus | 是 | 任务状态<br/>WAITING = 1;// 等待中<br/>READY = 2;// 上传完毕<br/>RUNNING = 3;// 运行中<br/>SUCCESS = 4;// 成功<br/>FAIL = 5;// 失败<br/>DELETED = 10; // 已删除，仅在执行删除成功时返回 |
 
+<span id="tasklist"></span>
+
 ### 3.14.2 列表 TaskList
 
 **说明**：该接口用于列出任务，查看各任务的状态。
@@ -971,6 +1040,8 @@ API以protobuf格式返回，返回信息为SaasRes结构
 | tasks.running_block | uint32 | 否 | 当前运行块 |
 | tasks.total_block | uint32 | 否 | 总块数 |
 | tasks.status | TaskStatus | 是 | 任务状态<br/>WAITING = 1;// 等待中<br/>READY = 2;// 上传完毕<br/>RUNNING = 3;// 运行中<br/>SUCCESS = 4;// 成功<br/>FAIL = 5;// 失败<br/>DELETED = 10; // 已删除，仅在执行删除成功时返回 |
+
+<span id="taskrun"></span>
 
 ### 3.14.3 执行 TaskRun
 
@@ -1015,6 +1086,8 @@ API以protobuf格式返回，返回信息为SaasRes结构
 | total_block | uint32 | 否 | 总块数 |
 | status | TaskStatus | 是 | 任务状态<br/>WAITING = 1;// 等待中<br/>READY = 2;// 上传完毕<br/>RUNNING = 3;// 运行中<br/>SUCCESS = 4;// 成功<br/>FAIL = 5;// 失败<br/>DELETED = 10; // 已删除，仅在执行删除成功时返回 |
 
+<span id="taskdelete"></span>
+
 ### 3.14.4 删除 TaskDelete
 
 **说明**：该接口用于删除指定任务。对于处于等待上传、成功、失败的任务，直接删除。对于处于运行中的任务，先中断运行状态后进行删除。
@@ -1057,6 +1130,8 @@ API以protobuf格式返回，返回信息为SaasRes结构
 | running_block | uint32 | 否 | 当前运行块 |
 | total_block | uint32 | 否 | 总块数 |
 | status | TaskStatus | 是 | 任务状态<br/>WAITING = 1;// 等待中<br/>READY = 2;// 上传完毕<br/>RUNNING = 3;// 运行中<br/>SUCCESS = 4;// 成功<br/>FAIL = 5;// 失败<br/>DELETED = 10; // 已删除，仅在执行删除成功时返回 |
+
+<span id="taskinfo"></span>
 
 ### 3.14.5 详情 TaskInfo
 
@@ -1102,6 +1177,8 @@ API以protobuf格式返回，返回信息为SaasRes结构
 | total_block | uint32 | 否 | 总块数 |
 | status | TaskStatus | 是 | 任务状态<br/>WAITING = 1;// 等待中<br/>READY = 2;// 上传完毕<br/>RUNNING = 3;// 运行中<br/>SUCCESS = 4;// 成功<br/>FAIL = 5;// 失败<br/>DELETED = 10; // 已删除，仅在执行删除成功时返回 |
 
+<span id="taskupload"></span>
+
 ### 3.14.6 上传数据文件分片 TaskUpload
 
 **说明**：该接口用于上传文件分块内容。注意该接口并不需要protobuf 的命令请求，而是以POST body 的方式直接上传文件内容分块，内容分块在上传时 `必须使用gzip压缩`。返回结果仍遵循protobuf协议。如上传大小超限，则会直接以 HTTP 413 状态码返回。
@@ -1121,6 +1198,8 @@ API以protobuf格式返回，返回信息为SaasRes结构
 顶层节点 SaasRes.code/SaasRes.status 表达操作成功/失败状态
 
 ## 3.15 策略
+
+<span id="targetlist"></span>
 
 ### 3.15.1 列表 TargetList
 
@@ -1154,7 +1233,9 @@ API以protobuf格式返回，返回信息为SaasRes结构
 | target_list.binds.account_id | int64 | 否 | 广告主ID |
 | target_list.binds.bind_source | BindSourceType | 否 | 绑定操作来源<br/>DefaultBindSourceType = 0;  //广告主或未填写<br/>ThirdPartyApi = 1;//第三方API<br/>ADQ = 2;//ADQ平台<br/>MP = 3;//MP平台<br/>MktApi = 4;//MarketingAPI |
 
-### 3.15.2 创建 TargetCreate⚠️
+<span id="targetcreate"></span>
+
+### 3.15.2 创建 TargetCreate
 
 :::tip
 最多能创建10个策略ID。当出现策略ID不够时，请及时清理不再使用或使用率低的策略。
@@ -1170,7 +1251,7 @@ API以protobuf格式返回，返回信息为SaasRes结构
 
 | 字段名称 | 字段类型 | 必填 | 描述 |
 | :--- | :--- | :--- | :--- |
-| target_id | string | 是 | 策略ID。策略ID度度3-20字符，只允许字母、数字、中划线。 |
+| target_id | string | 是 | 策略ID。策略ID长度3-20字符，只允许字母、数字、中划线。 |
 | target_description | string | 是 | 策略备注 |
 
 
@@ -1186,7 +1267,9 @@ API以protobuf格式返回，返回信息为SaasRes结构
 | target_id | string | 否 | 策略ID |
 | target_description | string | 否 | 策略备注 |
 
-### 3.15.3 删除 TargetDelete⚠️
+<span id="targetdelete"></span>
+
+### 3.15.3 删除 TargetDelete
 
 **说明**：该接口用于删除策略。
 
@@ -1198,7 +1281,7 @@ API以protobuf格式返回，返回信息为SaasRes结构
 
 | 字段名称 | 字段类型 | 必填 | 描述 |
 | :--- | :--- | :--- | :--- |
-| target_id | string | 是 | 策略ID。策略ID度度3-20字符，只允许字母、数字、中划线。 |
+| target_id | string | 是 | 策略ID。策略ID长度3-20字符，只允许字母、数字、中划线。 |
 | target_description | string | 是 | 策略备注 |
 
 **返回参数**：
@@ -1213,6 +1296,9 @@ API以protobuf格式返回，返回信息为SaasRes结构
 | target_description | string | 否 | 策略备注 |
 
 ## 3.16 绑定
+
+<span id="bindset"></span>
+
 ### 3.16.1 设置 BindSet
 
 **说明**：该接口用于将广告主ID或广告ID绑定至策略。如相关ID已绑定至其它策略，使用本功能将覆盖原绑定。
@@ -1246,6 +1332,8 @@ API以protobuf格式返回，返回信息为SaasRes结构
 | errors.bind_type | BindType | 是 | 绑定类型<br/>AdgroupId = 1;//广告ID<br/>AccountId = 3;//广告主ID  |
 | errors.reason | string | 是 | 绑定错误原因 |
 
+<span id="binddelete"></span>
+
 ### 3.16.2 解除 BindDelete
 
 **说明**：该接口用于将广告主ID或广告ID从策略解绑。解绑成功后相关广告将不再受RTA决策控制。
@@ -1278,8 +1366,106 @@ API以protobuf格式返回，返回信息为SaasRes结构
 | errors.reason | string | 是 | 错误解绑原因 |
 
 
-## 3.17 脚本
-### 3.17.1 调试运行 ScriptRun
+## 3.17 数据授权 Grant
+
+<span id="grantlist"></span>
+
+### 3.17.1 列表 GrantList
+
+**说明**：该接口用于查看数据授权列表。
+
+**接口**：/saas/grant/list
+
+**请求参数**：
+
+表格节点位于 SaasReq.grant_list
+
+| 字段名称 | 字段类型 | 必填 | 描述 |
+| :--- | :--- | :--- | :--- |
+
+**返回参数**：
+
+顶层节点 SaasRes.code/SaasRes.status 表达操作成功/失败状态
+
+表格节点位于 SaasRes.grant_list_res
+
+
+| 字段名称 | 字段类型 | 必填 | 描述 |
+| :--- | :--- | :--- | :--- |
+| from | object of Grant | 否 | 他人授权给我 |
+| from.grant_index | string | 否 | 授权索引。格式为 "index1, index2, index55-index64"，例如 "1, 2, 55-64" |
+| from.dataspace_id | uint64 | 否 | 授权数据空间ID（数字型） |
+| to | object of Grant | 否 | 我授权给他人 |
+| to.target_account_id | uint32 | 否 | sRTA授权目标账号ID |
+| to.grant_index | string | 否 | 授权索引。格式为 "index1, index2, index55-index64"，例如 "1, 2, 55-64" |
+| to.dataspace_id | uint64 | 否 | 授权数据空间ID（数字型） |
+
+
+<span id="grantadd"></span>
+
+### 3.17.2 增加 GrantAdd
+
+**说明**：该接口用于增加数据授权，可以指定具体索引位置或索引区间。
+
+**接口**：/saas/grant/add
+
+**请求参数**：
+
+表格节点位于 SaasReq.grant_add
+
+| 字段名称 | 字段类型 | 必填 | 描述 |
+| :--- | :--- | :--- | :--- |
+| target_account_id | uint32 | 否 | sRTA授权目标账号ID |
+| grant_index | string | 否 | 授权索引。格式为 "index1, index2, index55-index64"，例如 "1, 2, 55-64" |
+| dataspace_id | uint64 | 否 | 授权数据空间ID（数字型） |
+
+**返回参数**：
+
+顶层节点 SaasRes.code/SaasRes.status 表达操作成功/失败状态
+
+表格节点位于 SaasRes.grant_add_res
+
+| 字段名称 | 字段类型 | 必填 | 描述 |
+| :--- | :--- | :--- | :--- |
+| target_account_id | uint32 | 否 | sRTA授权目标账号ID |
+| grant_index | string | 否 | 授权索引。格式为 "index1, index2, index55-index64"，例如 "1, 2, 55-64" |
+| dataspace_id | uint64 | 否 | 授权数据空间ID（数字型） |
+
+<span id="grantdelete"></span>
+
+### 3.17.3 删除 GrantDelete
+
+**说明**：该接口用于删除数据授权，可以指定具体索引位置或索引区间。
+
+**接口**：/saas/grant/delete
+
+**请求参数**：
+
+表格节点位于 SaasReq.grant_delete
+
+| 字段名称 | 字段类型 | 必填 | 描述 |
+| :--- | :--- | :--- | :--- |
+| target_account_id | uint32 | 否 | sRTA授权目标账号ID |
+| grant_index | string | 否 | 授权索引。格式为 "index1, index2, index55-index64"，例如 "1, 2, 55-64" |
+| dataspace_id | uint64 | 否 | 授权数据空间ID（数字型） |
+
+**返回参数**：
+
+顶层节点 SaasRes.code/SaasRes.status 表达操作成功/失败状态
+
+表格节点位于 SaasRes.grant_delete_res
+
+| 字段名称 | 字段类型 | 必填 | 描述 |
+| :--- | :--- | :--- | :--- |
+| target_account_id | uint32 | 否 | sRTA授权目标账号ID |
+| grant_index | string | 否 | 授权索引。格式为 "index1, index2, index55-index64"，例如 "1, 2, 55-64" |
+| dataspace_id | uint64 | 否 | 授权数据空间ID（数字型） |
+
+## 3.18 脚本
+
+<span id="scriptrun"></span>
+
+### 3.18.1 调试运行 ScriptRun
 
 **说明**：该接口用于调试 LUA 脚本，LUA 将在服务端沙箱环境运行并返回结果。调试模式下 print 函数将生效，可用于输出中间状态。关于该函数使用的更多信息，请参阅[代码调试](./lua.md#56-代码调试)。
 
@@ -1310,7 +1496,9 @@ API以protobuf格式返回，返回信息为SaasRes结构
 | targets_output | string | 否 | 策略输出内容 |
 | dataspace_out | string | 否 | 数据区输出内容 |
 
-### 3.17.2 创建 ScriptCreate⚠️
+<span id="scriptcreate"></span>
+
+### 3.18.2 创建 ScriptCreate
 
 **说明**：该接口用于在服务端创建 LUA 脚本，创建的脚本并不会直接替换当前 LUA 的运行代码。脚本在经过检查后（checked = true），方可通过 API 置为当前运行。
 
@@ -1339,7 +1527,9 @@ API以protobuf格式返回，返回信息为SaasRes结构
 | script_info.lua_checked | bool | 否 | 是否已检查 |
 | script_info.lua_used | bool | 否 | 是否在使用 |
 
-### 3.17.3 列表 ScriptList⚠️
+<span id="scriptlist"></span>
+
+### 3.18.3 列表 ScriptList
 
 **说明**：该接口用于列出服务端的 LUA 脚本。
 
@@ -1366,7 +1556,9 @@ API以protobuf格式返回，返回信息为SaasRes结构
 | script_info.lua_checked | bool | 否 | 是否已检查 |
 | script_info.lua_used | bool | 否 | 是否在使用 |
 
-### 3.17.4 删除 ScriptDelete⚠️
+<span id="scriptdelete"></span>
+
+### 3.18.4 删除 ScriptDelete
 
 **说明**：该接口用于删除服务端的 LUA 脚本。正在使用中的脚本无法删除。
 
@@ -1394,7 +1586,9 @@ API以protobuf格式返回，返回信息为SaasRes结构
 | script_info.lua_checked | bool | 否 | 是否已检查 |
 | script_info.lua_used | bool | 否 | 是否在使用 |
 
-### 3.17.5 获取 ScriptGet⚠️
+<span id="scriptget"></span>
+
+### 3.18.5 获取 ScriptGet
 
 **说明**：该接口用于获取 LUA 脚本内容。
 
@@ -1422,7 +1616,9 @@ API以protobuf格式返回，返回信息为SaasRes结构
 | script_info.lua_checked | bool | 否 | 是否已检查 |
 | script_info.lua_used | bool | 否 | 是否在使用 |
 
-### 3.17.6 使用 ScriptUse⚠️
+<span id="scriptuse"></span>
+
+### 3.18.6 使用 ScriptUse
 
 **说明**：该接口用于指定服务端当前执行的 LUA 脚本（升级/降级）。
 
@@ -1451,9 +1647,11 @@ API以protobuf格式返回，返回信息为SaasRes结构
 | script_info.lua_used | bool | 否 | 是否在使用 |
 
 
-## 3.18 实验
+## 3.19 实验
 
-### 3.18.1 列表 ExpList
+<span id="explist"></span>
+
+### 3.19.1 列表 ExpList
 
 **说明**：该接口用于查询实验列表
 
@@ -1478,7 +1676,9 @@ API以protobuf格式返回，返回信息为SaasRes结构
 | buckets.pt_exp_id | uint32 | 否 | 平台实验ID |
 | buckets.percent | uint32  | 否 | 流量百分比 |
 
-### 3.18.2 报表 ExpData
+<span id="expdata"></span>
+
+### 3.19.2 报表 ExpData
 
 **说明**：该接口用于查询实验数据报表
 
@@ -1501,12 +1701,13 @@ API以protobuf格式返回，返回信息为SaasRes结构
 
 **返回参数**：
 
-表格节点位于 SaasRes.exp_list_res
+表格节点位于 SaasRes.exp_get_res
 
 | 字段名称 | 字段类型 | 必填 | 描述 |
 | :--- | :--- | :--- | :--- |
-| exp_data | array of ExpData | 否 | 实验分桶列表 |
-| exp_data.time | uint64 | 否 | 分桶号 |
+| exp_data | array of ExpData | 否 | 实验数据列表 |
+| exp_data.time | uint64 | 否 | 日期 |
+| exp_data.bucket_id | uint32 | 否 | 分桶ID |
 | exp_data.base_fields | object of ExpBaseFields | 否 | 常用实验指标 |
 | exp_data.base_fields.cost | float64 | 否 | 花费(元) |
 | exp_data.base_fields.exposure | int64 | 否 | 曝光量(次) |
@@ -1526,7 +1727,7 @@ API以protobuf格式返回，返回信息为SaasRes结构
 | exp_data.group.\<key\> | string  | 否 | 分组名称 |
 | exp_data.group.\<value\> | uint64  | 否 | 分组值 |
 
-#### 3.18.2.1 扩展实验指标
+#### 3.19.2.1 扩展实验指标
 
 扩展实验指标字段仅在明确需要拉取时返回，如该字段值返回值为0，则返回字段不存在。
 

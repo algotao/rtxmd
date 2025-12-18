@@ -35,6 +35,7 @@ Commands:
     task               Task commands    
     target             Target commands
     bind               Bind commands
+    grant              Grant commands
     script             Script commands
     exp                Exp commands
 
@@ -124,7 +125,26 @@ Commands:
 Use "saastool bind COMMAND -help" for more information about a command.
 ```
 
-### 4.1.5 script（脚本）命令列表
+### 4.1.5 grant（数据授权）命令列表
+
+```sh
+saastool grant help
+```
+
+```
+Usage:  saastool grant COMMAND [OPTIONS]
+
+Commands:
+    list                 List data grants
+    add                  Add data grant
+    delete               Delete data grant
+
+"help" is the default command.
+
+Use "saastool grant COMMAND -help" for more information about a command.
+```
+
+### 4.1.6 script（脚本）命令列表
 
 ```sh
 saastool script help
@@ -145,7 +165,7 @@ Commands:
 Use "saastool script COMMAND -help" for more information about a command.
 ```
 
-### 4.1.6 exp（实验）命令列表
+### 4.1.7 exp（实验）命令列表
 
 ```sh
 saastool exp help
@@ -177,7 +197,7 @@ saastool提供了容器版本。在容器中将默认启动为daemon并提供htt
 ```yml
 services:
   saastool:
-    image: rta-docker.pkg.coding.net/public/docker/rtacaller:2025111015
+    image: rta-docker.pkg.coding.net/public/docker/saastool:2025121617
     restart: unless-stopped
     environment:
       - SRTA_ACCOUNT=2000
@@ -192,7 +212,7 @@ services:
 ```yml
 services:
   saastool:
-    image: rta-docker.pkg.coding.net/public/docker/rtacaller:2025111015
+    image: rta-docker.pkg.coding.net/public/docker/saastool:2025121617
     restart: unless-stopped
     environment:
       - SRTA_ACCOUNT=2000
