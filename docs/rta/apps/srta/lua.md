@@ -45,6 +45,7 @@ keywords: [LUA智能决策, RTA SaaS, 系统函数, 内置模块, srta, string, 
 | srta.OS_UNKNOWN | 未知操作系统 | srta.get_os() |
 | srta.OS_IOS |  iOS | srta.get_os() |
 | srta.OS_ANDROID | Android | srta.get_os() |
+| srta.OS_HARMONY | 鸿蒙 | srta.get_os() |
 | srta.OS_OTHER | 其它操作系统 | srta.get_os() |
 
 **站点集**
@@ -426,10 +427,11 @@ hijack函数返回一个沙箱结果集合。
 function hijack()
     print("hijack run")
     local sandbox = {
-    srta_get_dsdata = {
-        [srta.DS_DID] = {[srta.U8] = {[1] = 100},
-            [srta.U32] = {[2] = 99},
-            [srta.FLAG] = {[1] = true}}
+        srta_get_dsdata = {
+            [srta.DS_DID] = {[srta.U8] = {[1] = 100},
+                [srta.U32] = {[2] = 99},
+                [srta.FLAG] = {[1] = true}
+            }
         },
         srta_get_targets = {"t1", "t2", "t3"},
         srta_get_apps = {
