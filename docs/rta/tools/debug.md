@@ -9,7 +9,7 @@ import {RTATool} from "/js/devtool.jsx";
 # 联调工具
 
 联调工具发起源IP： 
-+ 广州 &emsp;`IPv4` 1.12.234.124    &emsp;`IPv6`2402:4e00:c011:4400:7cdc:a9b4:4660:0
++ 广州 &emsp;`IPv4` 129.204.180.193    &emsp;`IPv6`2402:4e00:c011:4400:7cdc:a9b4:4660:1
 + 上海 &emsp;`IPv4` 101.43.71.125    &emsp;`IPv6`2402:4e00:1420:1400:7cdc:a9b4:4660:1
 + 北京 &emsp;`IPv4` 152.136.19.211    &emsp;`IPv6`2402:4e00:c050:1f00:7cdc:a9b4:4660:1
 
