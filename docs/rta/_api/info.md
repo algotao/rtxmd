@@ -79,7 +79,7 @@ import TabItem from '@theme/TabItem';
         "info_get": {
             "enable": 1,
             "rta_name": "TestDSP",
-            "company_name": "腾讯科技（深圳）有限公司",
+            "company_name": "XX有限公司",
             "qps_limit": 10000,
             "bid_url": "https://test.com/path/cgi",
             "cache_second": 3600,

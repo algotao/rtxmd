@@ -10,7 +10,7 @@ keywords: [程序化广告, RTA交互协议, 请求消息结构, 响应消息结
 
 本协议在官方协议的基础上做了整理，去除了**不建议使用**或**已下线**的字段。常规客户只使用其中的部分功能，可根据投放目标及优化方向，按照http交互、策略圈选、调权调价、实验对比、DPA/DCA应用的推荐进阶过程学习。
 
-参阅：[腾讯RTA官方接口文档](https://docs.qq.com/doc/DVUN6U2NJektwa2ZF)
+参阅：RTA官方接口文档](https://docs.qq.com/doc/DVUN6U2NJektwa2ZF)
 
 或者：[下载 proto](./rta.proto)
 

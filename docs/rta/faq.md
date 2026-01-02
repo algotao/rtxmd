@@ -10,7 +10,7 @@ keywords: [RTA接入, 常见问题, 新客接入, 接入流程, 服务质量指�
 ## 新客接入
 
 #### 接入流程是怎么样的，需要准备哪些材料？
-请参阅文档[准入申请](/docs/rta/rule/apply.md)
+请参阅文档[RTA&ADX对接指引与要求](https://support.e.qq.com/detail?cid=5055&pid=12615)
 
 #### 正式启用前会经历哪些阶段？
 * 客户开发：客户根据交互[协议内容](/rta/dev/proto.md)开发RTA服务。<br />

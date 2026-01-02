@@ -1,7 +1,7 @@
 ---
 sidebar_position: 1
 draft: false
-description: 此API是在 腾讯RTA官方接口文档的基础上进行二次封装，以弥补官方API资料分散及设计不一等问题，并对部分功能进行扩充。
+description: 此API是在 RTA官方接口文档的基础上进行二次封装，以弥补官方API资料分散及设计不一等问题，并对部分功能进行扩充。
 keywords: [RTA, 策略, 通用API]
 ---
 import Tabs from '@theme/Tabs';
@@ -9,7 +9,7 @@ import TabItem from '@theme/TabItem';
 
 # 通用交互
 
-此API是在 [腾讯RTA官方接口文档](https://docs.qq.com/doc/DVUN6U2NJektwa2ZF) 的基础上进行二次封装，以弥补官方API`资料分散`及`设计不一`等问题，并对部分功能进行扩充。
+此API是在 [RTA官方接口文档](https://docs.qq.com/doc/DVUN6U2NJektwa2ZF) 的基础上进行二次封装，以弥补官方API`资料分散`及`设计不一`等问题，并对部分功能进行扩充。
 
 **基础功能** `在官方API的基础上进行交互优化`
 - **信息管理**：RTA基本信息的获取、实时交互签名的查询与修改
