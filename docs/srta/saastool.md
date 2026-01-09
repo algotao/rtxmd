@@ -12,7 +12,7 @@ saastool 是提供给客户的便捷命令行工具，使客户在不开发或�
 
 开发者也可以参考该工具的功能源码(golang)，实现贴合自身业务的处理逻辑。
 
-源码：[saastool](https://rta.coding.net/p/public/d/saasapi/git/tree/master/cmd/saastool) 
+源码：[saastool](https://git.algo.com.cn/public/saasapi/src/branch/master/cmd/saastool) 
 
 ## 4.1 命令行模式
 
