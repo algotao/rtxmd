@@ -31,6 +31,9 @@ keywords: [LUA智能决策, RTA SaaS, 系统函数, 内置模块, srta, string, 
 | :-- | :-- | :-- |
 | srta.DS_DID | 默认设备数据空间编号 | srta.get_dsdata() |
 | srta.DS_WUID | 默认 WUID数据空间编号 | srta.get_dsdata() |
+| srta.DS_GEO | 默认 就近数据空间编号 | srta.get_dsdata() |
+| srta.DS_GEOIP | 默认 IP城市数据空间编号 | srta.get_dsdata() |
+| srta.DS_GEOFAC | 默认 常住城市数据空间编号 | srta.get_dsdata() |
 
 **字段区**
 | 常量名称 | 含义 | 适用函数或变量 |
