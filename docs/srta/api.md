@@ -27,6 +27,7 @@ message SaasReq {
         Read read                                = 10;  // 批量读取
         Write write                              = 11;  // 批量写入
         ColumnWrite column_write                 = 12;  // 全量列式写入
+        ResetDs reset_ds                         = 13;  // 清空数据区
 
         Task task_create                         = 20;  // 任务创建
         TaskList task_list                       = 21;  // 列出任务
@@ -45,7 +46,7 @@ message SaasReq {
         Grant grant_add                          = 71;  // 增加数据授权
         Grant grant_delete                       = 72;  // 删除数据授权
 
-        ScriptRun script_run                     = 90;  // 运行脚本
+        ScriptDebug script_debug                 = 90;  // 调试脚本
         ScriptCreate script_create               = 91;  // 脚本创建
         ScriptList script_list                   = 92;  // 列出脚本
         ScriptDelete script_delete               = 93;  // 删除脚本
@@ -96,10 +97,10 @@ message WriteItem {
     map<uint32, FlagWithExpire> flags_with_expire_kv    = 7;   // 写入标志位，key为1-4索引值，index超限会丢弃
 }
 
-// Bytes 写入byte区域
+// Bytes 写入uint8区域
 message Bytes {
-    bytes bytes                                  = 1;   // 写入的byte
-    uint64 index_1                               = 2;   // 写入byte的索引值(0..63)
+    bytes bytes                                  = 1;   // 写入的uint8
+    uint64 index_1                               = 2;   // 写入uint8的索引值(0..63)
 }
 
 // Uint32s 写入uint32区域
@@ -128,6 +129,11 @@ message ColumnWrite {
     Bytes write_bytes                            = 3;   // byte区域
     Uint32s write_uint32s                        = 4;   // uint32区域
     FlagsWithExpire write_flags_with_expire      = 5;   // 标志位区域
+}
+
+// ResetDs 清空数据区命令
+message ResetDs {
+    string dataspace_id                          = 1;   // 数据空间ID
 }
 
 message Task {
@@ -223,8 +229,8 @@ message Grant {
 }
 
 
-// ScriptRun 运行脚本
-message ScriptRun {
+// ScriptDebug 调试脚本
+message ScriptDebug {
     string lua_script                            = 1;   // 要调试的lua脚本
     string server_did                            = 2;   // 将从服务端读取该DID下的数据
     string appid                                 = 3;   // 小程序/小游戏/公众号/视频号的appid
@@ -298,6 +304,7 @@ message SaasRes {
 
         ReadRes read_res                         = 10;  // 读取命令返回
         WriteRes write_res                       = 11;  // 写入命令返回
+        ResetDsRes reset_ds_res                  = 13;  // 清空数据区命令返回
 
         Task task_create_res                     = 20;  // 创建任务返回状态
         TaskListRes task_list_res                = 21;  // 任务列表返回状态
@@ -316,7 +323,7 @@ message SaasRes {
         Grant grant_add_res                      = 71; // 增加数据授权返回状态
         Grant grant_delete_res                   = 72; // 删除数据授权返回状态
 
-        ScriptRunRes script_run_res              = 90;  // 运行脚本返回
+        ScriptDebugRes script_debug_res          = 90;  // 调试脚本返回
         ScriptCreateRes script_create_res        = 91;  // 创建脚本返回
         ScriptListRes script_list_res            = 92;  // 列出脚本返回
         ScriptDeleteRes script_delete_res        = 93;  // 删除脚本返回
@@ -335,6 +342,8 @@ message DataSpace {
     repeated string did                          = 1;   // 设备ID区
     repeated string wuid                         = 2;   // OpenID区
     repeated string geo                          = 7;   // GEO区
+    repeated string geoip                        = 8;   // GEOIP区
+    repeated string geofac                       = 9;   // GEOFAC区(经常活动城市)
 }
 
 // InfoRes 账号信息返回
@@ -370,6 +379,11 @@ message ValueItem {
     map<uint32, uint32> bytes_kv                 = 8;  // byte区域
     map<uint32, uint32> uint32s_kv               = 9;  // uint32区域
     map<uint32, FlagWithExpire> flags_with_expire_kv    = 10;  // 标志位区域
+}
+
+// ResetDsRes 清空数据区返回
+message ResetDsRes {
+    string dataspace_id                          = 1;  // 数据空间ID
 }
 
 // TaskListRes 任务列表返回
@@ -451,8 +465,8 @@ message GrantListRes {
     repeated Grant to                           = 2;  // 向外授权列表
 }
 
-// ScriptRunRes 运行脚本返回
-message ScriptRunRes {
+// ScriptDebugRes 调试脚本返回
+message ScriptDebugRes {
     string print_output                           = 1;  // print输出
     string error_output                           = 2;  // 错误信息
     string targets_output                         = 3;  // 策略输出
@@ -739,7 +753,7 @@ API以protobuf格式返回，返回信息为SaasRes结构
 | SaasReq.grant_list | [GrantList](#grantlist) | 唯一 | 授权列表 |
 | SaasReq.grant_add | [GrantAdd](#grantadd) | 唯一 | 增加授权 |
 | SaasReq.grant_delete | [GrantDelete](#grantdelete) | 唯一 | 取消授权 |
-| SaasReq.script_run | [ScriptRun](#scriptrun) | 唯一 | 调试运行脚本 |
+| SaasReq.script_debug | [ScriptDebug](#scriptdebug) | 唯一 | 调试脚本 |
 | SaasReq.script_create | [ScriptCreate](#scriptcreate) | 唯一 | 创建脚本 |
 | SaasReq.script_list | [ScriptList](#scriptlist) | 唯一 | 脚本列表 |
 | SaasReq.script_delete | [ScriptDelete](#scriptdelete) | 唯一 | 删除脚本 |
@@ -773,7 +787,7 @@ API以protobuf格式返回，返回信息为SaasRes结构
 | SaasReq.grant_list_res | [GrantListRes](#grantlist) | 唯一 | 授权列表返回状态 |
 | SaasReq.grant_add_res | [GrantAddRes](#grantadd) | 唯一 | 增加授权返回状态 |
 | SaasReq.grant_delete_res | [GrantDeleteRes](#grantdelete) | 唯一 | 取消授权返回状态 |
-| SaasRes.script_run_res | [ScriptRunRes](#scriptrun) | 唯一 | 调试运行脚本返回状态 |
+| SaasRes.script_debug_res | [ScriptDebugRes](#scriptdebug) | 唯一 | 调试脚本返回状态 |
 | SaasReq.script_create_res | [ScriptCreateRes](#scriptcreate) | 唯一 | 创建脚本返回状态 |
 | SaasReq.script_list_res | [ScriptListRes](#scriptlist) | 唯一 | 脚本列表返回状态 |
 | SaasReq.script_delete_res | [ScriptDeleteRes](#scriptdelete) | 唯一 | 删除脚本返回状态 |
@@ -948,11 +962,46 @@ API以protobuf格式返回，返回信息为SaasRes结构
 
 仅使用顶层节点 SaasRes.code/SaasRes.status 表达操作成功/失败状态
 
-## 3.14 任务
+## 3.14 清空数据区 ResetDs
+
+**说明**：该接口用于清空指定数据空间中账号下的所有数据。支持清空 `geo`、`geoip`、`geofac` 数据空间。清空后数据不可恢复，请谨慎操作。
+
+**调用限制**：
+  + 当有任务处于"运行"状态时，不可调用。
+  + 每自然天调用上限为 5 次。
+
+**接口**：/saas/resetds
+
+**请求参数**：
+
+表格节点位于 SaasReq.reset_ds
+
+| 字段名称 | 字段类型 | 必填 | 描述 |
+| :--- | :--- | :--- | :--- |
+| dataspace_id | string | 是 | 数据空间ID，支持：geo、geoip、geofac |
+
+**返回参数**：
+
+仅使用顶层节点 SaasRes.code/SaasRes.status 表达操作成功/失败状态
+
+**使用示例**
+
+```sh
+# 使用 saastool 清空 geo 数据空间
+saastool resetds -ds geo
+
+# 清空 geoip 数据空间
+saastool resetds -ds geoip
+
+# 清空 geofac 数据空间
+saastool resetds -ds geofac
+```
+
+## 3.15 任务
 
 <span id="taskcreate"></span>
 
-### 3.14.1 创建 TaskCreate
+### 3.15.1 创建 TaskCreate
 
 **说明**：任务用于大批量集中上传写入。适用于对亿级用户的一个或多列进行（byte、uint32、flag）变更，具有并发写入量大，批量集中执行的特点。该接口用于创建一个任务，通过描述待上传数据的摘要信息，允许后续任务数据的分块分批上传。新创建的任务将在 7 天内有效并等待分块上传，待任务数据全部上传完毕后，再通过运行接口执行写入任务。超过 7 天的任务自动删除。
 
@@ -1007,7 +1056,7 @@ API以protobuf格式返回，返回信息为SaasRes结构
 
 <span id="tasklist"></span>
 
-### 3.14.2 列表 TaskList
+### 3.15.2 列表 TaskList
 
 **说明**：该接口用于列出任务，查看各任务的状态。
 
@@ -1041,9 +1090,31 @@ API以protobuf格式返回，返回信息为SaasRes结构
 | tasks.total_block | uint32 | 否 | 总块数 |
 | tasks.status | TaskStatus | 是 | 任务状态<br/>WAITING = 1;// 等待中<br/>READY = 2;// 上传完毕<br/>RUNNING = 3;// 运行中<br/>SUCCESS = 4;// 成功<br/>FAIL = 5;// 失败<br/>DELETED = 10; // 已删除，仅在执行删除成功时返回 |
 
+
+<span id="taskupload"></span>
+
+### 3.15.3 上传数据文件分片 TaskUpload
+
+**说明**：该接口用于上传文件分块内容。注意该接口并不需要protobuf 的命令请求，而是以POST body 的方式直接上传文件内容分块，内容分块在上传时 `必须使用gzip压缩`。返回结果仍遵循protobuf协议。如上传大小超限，则会直接以 HTTP 413 状态码返回。
+
+此项请求与其他不同，请参阅 [API请求](#33-api请求)
+
+**接口**：/saas/task/upload
+
+**请求参数**：（以url param 的形式填写）
+
+| 字段名称 | 字段类型 | 必填 | 描述 |
+| :--- | :--- | :--- | :--- |
+| block_sha256 | string | 是 | 块的sha256 |
+
+**返回参数**：
+
+顶层节点 SaasRes.code/SaasRes.status 表达操作成功/失败状态
+
+
 <span id="taskrun"></span>
 
-### 3.14.3 执行 TaskRun
+### 3.15.4 执行 TaskRun
 
 **说明**：该接口用于执行指定任务。将已处于全部分块上传完毕且未执行过的任务写入数据区。同一时间只能执行一个任务，当前有任务执行时，通过该接口调用多的其它任务将进入串行等待执行状态。
 
@@ -1088,7 +1159,7 @@ API以protobuf格式返回，返回信息为SaasRes结构
 
 <span id="taskdelete"></span>
 
-### 3.14.4 删除 TaskDelete
+### 3.15.5 删除 TaskDelete
 
 **说明**：该接口用于删除指定任务。对于处于等待上传、成功、失败的任务，直接删除。对于处于运行中的任务，先中断运行状态后进行删除。
 
@@ -1133,7 +1204,7 @@ API以protobuf格式返回，返回信息为SaasRes结构
 
 <span id="taskinfo"></span>
 
-### 3.14.5 详情 TaskInfo
+### 3.15.6 详情 TaskInfo
 
 **说明**：该接口用于查看指定任务的详细信息。包括分块上传完成情况。
 
@@ -1177,31 +1248,11 @@ API以protobuf格式返回，返回信息为SaasRes结构
 | total_block | uint32 | 否 | 总块数 |
 | status | TaskStatus | 是 | 任务状态<br/>WAITING = 1;// 等待中<br/>READY = 2;// 上传完毕<br/>RUNNING = 3;// 运行中<br/>SUCCESS = 4;// 成功<br/>FAIL = 5;// 失败<br/>DELETED = 10; // 已删除，仅在执行删除成功时返回 |
 
-<span id="taskupload"></span>
-
-### 3.14.6 上传数据文件分片 TaskUpload
-
-**说明**：该接口用于上传文件分块内容。注意该接口并不需要protobuf 的命令请求，而是以POST body 的方式直接上传文件内容分块，内容分块在上传时 `必须使用gzip压缩`。返回结果仍遵循protobuf协议。如上传大小超限，则会直接以 HTTP 413 状态码返回。
-
-此项请求与其他不同，请参阅 [API请求](#33-api请求)
-
-**接口**：/saas/task/upload
-
-**请求参数**：（以url param 的形式填写）
-
-| 字段名称 | 字段类型 | 必填 | 描述 |
-| :--- | :--- | :--- | :--- |
-| block_sha256 | string | 是 | 块的sha256 |
-
-**返回参数**：
-
-顶层节点 SaasRes.code/SaasRes.status 表达操作成功/失败状态
-
-## 3.15 策略
+## 3.16 策略
 
 <span id="targetlist"></span>
 
-### 3.15.1 列表 TargetList
+### 3.16.1 列表 TargetList
 
 **说明**：该接口用于查看策略列表，以及获取完整绑定列表。
 
@@ -1235,7 +1286,7 @@ API以protobuf格式返回，返回信息为SaasRes结构
 
 <span id="targetcreate"></span>
 
-### 3.15.2 创建 TargetCreate
+### 3.16.2 创建 TargetCreate
 
 :::tip
 最多能创建10个策略ID。当出现策略ID不够时，请及时清理不再使用或使用率低的策略。
@@ -1269,7 +1320,7 @@ API以protobuf格式返回，返回信息为SaasRes结构
 
 <span id="targetdelete"></span>
 
-### 3.15.3 删除 TargetDelete
+### 3.16.3 删除 TargetDelete
 
 **说明**：该接口用于删除策略。
 
@@ -1295,11 +1346,11 @@ API以protobuf格式返回，返回信息为SaasRes结构
 | target_id | string | 否 | 策略ID |
 | target_description | string | 否 | 策略备注 |
 
-## 3.16 绑定
+## 3.17 绑定
 
 <span id="bindset"></span>
 
-### 3.16.1 设置 BindSet
+### 3.17.1 设置 BindSet
 
 **说明**：该接口用于将广告主ID或广告ID绑定至策略。如相关ID已绑定至其它策略，使用本功能将覆盖原绑定。
 
@@ -1334,7 +1385,7 @@ API以protobuf格式返回，返回信息为SaasRes结构
 
 <span id="binddelete"></span>
 
-### 3.16.2 解除 BindDelete
+### 3.17.2 解除 BindDelete
 
 **说明**：该接口用于将广告主ID或广告ID从策略解绑。解绑成功后相关广告将不再受RTA决策控制。
 
@@ -1366,11 +1417,11 @@ API以protobuf格式返回，返回信息为SaasRes结构
 | errors.reason | string | 是 | 错误解绑原因 |
 
 
-## 3.17 数据授权 Grant
+## 3.18 数据授权 Grant
 
 <span id="grantlist"></span>
 
-### 3.17.1 列表 GrantList⚠️
+### 3.18.1 列表 GrantList⚠️
 
 **说明**：该接口用于查看数据授权列表。
 
@@ -1403,7 +1454,7 @@ API以protobuf格式返回，返回信息为SaasRes结构
 
 <span id="grantadd"></span>
 
-### 3.17.2 增加 GrantAdd⚠️
+### 3.18.2 增加 GrantAdd⚠️
 
 **说明**：该接口用于增加数据授权，可以指定具体索引位置或索引区间。
 
@@ -1433,7 +1484,7 @@ API以protobuf格式返回，返回信息为SaasRes结构
 
 <span id="grantdelete"></span>
 
-### 3.17.3 删除 GrantDelete⚠️
+### 3.18.3 删除 GrantDelete⚠️
 
 **说明**：该接口用于删除数据授权，可以指定具体索引位置或索引区间。
 
@@ -1461,19 +1512,19 @@ API以protobuf格式返回，返回信息为SaasRes结构
 | grant_index | string | 否 | 授权索引。格式为 "index1, index2, index55-index64"，例如 "1, 2, 55-64" |
 | dataspace_id | uint64 | 否 | 授权数据空间ID（数字型） |
 
-## 3.18 脚本
+## 3.19 脚本
 
-<span id="scriptrun"></span>
+<span id="scriptdebug"></span>
 
-### 3.18.1 调试运行 ScriptRun
+### 3.19.1 调试 ScriptDebug
 
 **说明**：该接口用于调试 LUA 脚本，LUA 将在服务端沙箱环境运行并返回结果。调试模式下 print 函数将生效，可用于输出中间状态。关于该函数使用的更多信息，请参阅[代码调试](./lua.md#56-代码调试)。
 
-**接口**：/saas/script/run
+**接口**：/saas/script/debug
 
 **请求参数**：
 
-表格节点位于 SaasReq.script_run
+表格节点位于 SaasReq.script_debug
 
 | 字段名称 | 字段类型 | 必填 | 描述 |
 | :--- | :--- | :--- | :--- |
@@ -1498,7 +1549,7 @@ API以protobuf格式返回，返回信息为SaasRes结构
 
 <span id="scriptcreate"></span>
 
-### 3.18.2 创建 ScriptCreate
+### 3.19.2 创建 ScriptCreate
 
 **说明**：该接口用于在服务端创建 LUA 脚本，创建的脚本并不会直接替换当前 LUA 的运行代码。脚本在经过检查后（checked = true），方可通过 API 置为当前运行。
 
@@ -1529,7 +1580,7 @@ API以protobuf格式返回，返回信息为SaasRes结构
 
 <span id="scriptlist"></span>
 
-### 3.18.3 列表 ScriptList
+### 3.19.3 列表 ScriptList
 
 **说明**：该接口用于列出服务端的 LUA 脚本。
 
@@ -1558,7 +1609,7 @@ API以protobuf格式返回，返回信息为SaasRes结构
 
 <span id="scriptdelete"></span>
 
-### 3.18.4 删除 ScriptDelete
+### 3.19.4 删除 ScriptDelete
 
 **说明**：该接口用于删除服务端的 LUA 脚本。正在使用中的脚本无法删除。
 
@@ -1588,7 +1639,7 @@ API以protobuf格式返回，返回信息为SaasRes结构
 
 <span id="scriptget"></span>
 
-### 3.18.5 获取 ScriptGet
+### 3.19.5 获取 ScriptGet
 
 **说明**：该接口用于获取 LUA 脚本内容。
 
@@ -1618,7 +1669,7 @@ API以protobuf格式返回，返回信息为SaasRes结构
 
 <span id="scriptuse"></span>
 
-### 3.18.6 使用 ScriptUse
+### 3.19.6 使用 ScriptUse
 
 **说明**：该接口用于指定服务端当前执行的 LUA 脚本（升级/降级）。
 
@@ -1647,11 +1698,11 @@ API以protobuf格式返回，返回信息为SaasRes结构
 | script_info.lua_used | bool | 否 | 是否在使用 |
 
 
-## 3.19 实验
+## 3.20 实验
 
 <span id="explist"></span>
 
-### 3.19.1 列表 ExpList
+### 3.20.1 列表 ExpList
 
 **说明**：该接口用于查询实验列表
 
@@ -1678,7 +1729,7 @@ API以protobuf格式返回，返回信息为SaasRes结构
 
 <span id="expdata"></span>
 
-### 3.19.2 报表 ExpData
+### 3.20.2 报表 ExpData
 
 **说明**：该接口用于查询实验数据报表
 
@@ -1727,7 +1778,7 @@ API以protobuf格式返回，返回信息为SaasRes结构
 | exp_data.group.\<key\> | string  | 否 | 分组名称 |
 | exp_data.group.\<value\> | uint64  | 否 | 分组值 |
 
-#### 3.19.2.1 扩展实验指标
+#### 3.20.2.1 扩展实验指标
 
 扩展实验指标字段仅在明确需要拉取时返回，如该字段值返回值为0，则返回字段不存在。
 
