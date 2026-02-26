@@ -117,7 +117,7 @@ function main()
     for _, targetid in ipairs(targets) do
         print("installed", installed) -- 打印已安装状态。在手工调试时会输出，在正式运行时自动被禁止。
 
-        if targetid == "dau" and installed then -- 日活策略
+        if targetid == "active" and installed then -- 拉活策略
             if userLevel == 3 then
                 results[targetid] = {
                     [srta.TARGETINFO_ENABLE] = true,
