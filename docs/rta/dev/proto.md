@@ -228,6 +228,8 @@ message RtaResponse {
     repeated ProductResult product_results = 5;
   
     optional uint32 cpa_price = 6;                             // 广告级CPA改价，改价优先级：创意＞广告级，单位：分
+
+    optional float raise_factor_to_tencent = 12;               // 广告主补贴系数，系数值大于1.0时有效
   }
   repeated AdResult ad_results = 14;
 
@@ -419,6 +421,7 @@ message RtaResponse {
 | cpc_price | uint32 | 否 | 广告级CPC改价，改价优先级：创意＞广告级，单位：分。 |
 | ignore | bool | 否 | 是否跳过二次请求相关改价和校验逻辑，由媒体决定广告出单。 |
 | cpa_price | uint32 | 否 | 广告级CPA改价，改价优先级：创意＞广告级，单位：分。 |
+| raise_factor_to_tencent | float | 否 | 广告主补贴系数，系数值大于1.0时有效。 |
 
 #### CreativeResult对象
 | 字段名称 | 字段类型 | 必填 | 说明 |
