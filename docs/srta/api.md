@@ -58,6 +58,8 @@ message SaasReq {
         ExpGrantList exp_grant_list              = 102; // 列出访问实验报表授权
         ExpGrant exp_grant_add                   = 103; // 授权他人访问实验报表
         ExpGrant exp_grant_delete                = 104; // 取消他人访问实验报表
+
+        AdminCodeList admincode_list             = 1000; // 列出行政区划代码
     }
 }
 
@@ -71,6 +73,8 @@ message Read {
     string dataspace_id                          = 1;   // 数据空间ID
     string appid                                 = 2;   // 小程序/小游戏/公众号/视频号的appid
     repeated ReadItem read_items                 = 3;   // 批量获取命令
+    int64 account_id                             = 4;   // 广告主ID，在appid不为空时需要填写
+    HashType hash_type                           = 5;   // 用户ID类型，在用户ID为手机号MD5/手机号SHA256时需要填写
 }
 
 // ReadItem 读取命令
@@ -84,6 +88,8 @@ message Write {
     string appid                                 = 2;   // 小程序/小游戏/公众号/视频号的appid
     bool is_clear_all_first                      = 3;   // 是否先清空该用户所有数据
     repeated WriteItem write_items               = 4;   // 批量写入命令
+    int64 account_id                             = 5;   // 广告主ID，在appid不为空时需要填写
+    HashType hash_type                           = 6;   // 用户ID类型，在用户ID为手机号MD5/手机号SHA256时需要填写
 }
 
 // WriteItem 写入命令
@@ -154,6 +160,9 @@ message Task {
     uint32 total_block                           = 14;   // 总块数
 
     TaskStatus status                            = 15;   // 任务状态
+
+    int64 account_id                             = 20;   // 广告主ID，在appid不为空时需要填写
+    HashType hash_type                           = 21;   // 用户ID类型，在用户ID为手机号MD5/手机号SHA256时需要填写
 }
 
 // TaskList 任务列表
@@ -295,6 +304,11 @@ message ExpGrant {
     uint32 target_account_id                    = 1;   // sRTA授权目标账号ID
 }
 
+// AdminCodeList 列出行政区划代码
+message AdminCodeList {
+
+}
+
 // SaasRes 命令返回
 message SaasRes {
     ErrorCode code                               = 1;  // 返回码
@@ -335,6 +349,8 @@ message SaasRes {
         ExpGrantListRes exp_grant_list_res       = 102; // 实验授权列表返回
         ExpGrant exp_grant_add_res               = 103; // 增加实验授权返回
         ExpGrant exp_grant_delete_res            = 104; // 实验解除授权返回
+        
+        AdminCodeListRes admin_code_list_res     = 1000; // 行政区划代码列表返回
     }
 }
 
@@ -547,8 +563,21 @@ message ExpBaseFields {
 
 // ExpGrantListRes 授权列表返回
 message ExpGrantListRes {
-    repeated ExpGrant from                         = 1;  // 被授权列表
-    repeated ExpGrant to                           = 2;  // 向外授权列表
+    repeated ExpGrant from                        = 1;  // 被授权列表
+    repeated ExpGrant to                          = 2;  // 向外授权列表
+}
+
+// AdminCodeListRes 行政区划代码列表返回
+
+message AdminCodeListRes {
+    repeated AdminCode admin_codes                = 1;  // 行政区划代码
+}
+
+message AdminCode {
+    string code                                   = 1;  // 行政区划代码
+    string province                               = 2;  // 省
+    string city                                   = 3;  // 市
+
 }
 
 // ErrorCode 返回码
@@ -609,6 +638,12 @@ enum OS {
     IOS                                          = 1; 
     ANDROID                                      = 2;
     HARMONY                                      = 7;  //纯血鸿蒙
+}
+
+enum HashType {
+    HASH_TYPE_DEFAULT                            = 0;  // 默认
+    PHONE_MD5                                    = 1;  // 手机号MD5
+    PHONE_SHA256                                 = 2;  // 手机号SHA256
 }
 
 // MAX 最大限定
@@ -761,6 +796,7 @@ API以protobuf格式返回，返回信息为SaasRes结构
 | SaasReq.script_use | [ScriptUse](#scriptuse) | 唯一 | 使用脚本 |
 | SaasReq.exp_list | [ExpList](#explist) | 唯一 | 实验列表 |
 | SaasReq.exp_get | [ExpGet](#expdata) | 唯一 | 实验报表 |
+| SaasReq.admincode_list | [AdminCodeList](#admincodelist) | 唯一 | 列出行政区划代码 |
 
 
 **返回参数**：
@@ -795,6 +831,7 @@ API以protobuf格式返回，返回信息为SaasRes结构
 | SaasReq.script_use_res | [ScriptUseRes](#scriptuse) | 唯一 | 使用脚本返回状态 |
 | SaasRes.exp_list_res | [ExpList](#explist) | 唯一 | 实验列表返回状态 |
 | SaasRes.exp_get_res | [ExpGet](#expdata) | 唯一 | 实验报表返回状态 |
+| SaasRes.admin_code_list_res | [AdminCodeListRes](#admincodelist) | 唯一 | 行政区划代码列表返回状态 |
 
 <span id="info"></span>
 
@@ -1884,3 +1921,32 @@ saastool resetds -ds geofac
 | md_pur_val_14_roi | float64 | 14日ROI(激活口径) |
 | md_pur_val_30 | float64 | 30日付费金额(激活口径) |
 | md_pur_val_30_roi | float64 | 30日ROI(激活口径) |
+
+<span id="admincodelist"></span>
+
+## 3.21 行政区划代码
+
+### 3.21.1 列表 AdminCodeList
+
+**说明**：该接口用于获取中国行政区划代码列表，包括省、市级别的行政区划代码。
+
+**接口**：/saas/admincode/list
+
+**请求参数**：
+
+表格节点位于 SaasReq.admincode_list
+
+| 字段名称 | 字段类型 | 必填 | 描述 |
+| :--- | :--- | :--- | :--- |
+| | | | 空 |
+
+**返回参数**：
+
+表格节点位于 SaasRes.admin_code_list_res
+
+| 字段名称 | 字段类型 | 必填 | 描述 |
+| :--- | :--- | :--- | :--- |
+| admin_codes | array of AdminCode | 否 | 行政区划代码列表 |
+| admin_codes.code | string | 否 | 行政区划代码 |
+| admin_codes.province | string | 否 | 省份名称 |
+| admin_codes.city | string | 否 | 城市名称 |

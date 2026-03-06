@@ -39,8 +39,10 @@ Commands:
     grant              Grant commands
     script             Script commands
     exp                Exp commands
+    admincode          Admin code commands
 
     daemon             Run in daemon mode
+    web                Run web management console
 
 "help" is the default command.
 
@@ -51,7 +53,7 @@ Use "saastool COMMAND -help" for more information about a command.
 
 saastool需要一个配置文件，其中可填写自己的Account、Token。使用配置文件可实现多账号多环境的区分。
 
-该配置文件默认名称为 `cfg.toml`，请置于saastool 同目录下。也可以通过 -cfg 参数指定别的配置文件，例如 `saastool -cfg my.toml`。
+该配置文件默认名称为 `cfg.toml`，请置于saastool 同目录下。也可以通过 -cfg 参数指定别的配置文件，例如 `saastool -config my.toml`。
 
 ```toml
 # 样例
@@ -1427,6 +1429,95 @@ Usage of delete:
 saastool exp grant delete -account 12345
 ```
 
+### 4.1.15 admincode（行政区划代码）命令列表
+
+用于查询中国行政区划代码信息，包括省、市级别的行政区划代码。
+
+```sh
+saastool admincode help
+```
+
+```
+Usage: saastool admincode <command> [options]
+
+Commands:
+  list           List all admin codes
+
+Examples:
+  saastool admincode list -c cfg.toml
+```
+
+#### 4.1.15.1 admincode list（查询行政区划代码列表）
+
+查询所有中国行政区划代码，包括省、市级别的代码信息。
+
+```sh
+saastool admincode list -help
+```
+
+```
+Usage of list:
+  -config string
+        Config file. (default "cfg.toml")
+```
+
+**参数说明**
+
+| 参数 | 必填 | 含义 | 样例 |
+| --- | --- | --- | --- |
+| -config | 否 | 配置文件路径 | cfg.toml（默认） |
+
+**使用示例**
+
+```sh
+# 查询所有行政区划代码
+saastool admincode list
+
+# 使用指定配置文件
+saastool admincode list -config my.toml
+```
+
+**返回数据示例**
+
+```json
+{
+  "adminCodes": [
+    {
+      "code": "110000",
+      "province": "北京市",
+      "city": ""
+    },
+    {
+      "code": "110100",
+      "province": "北京市",
+      "city": "市辖区"
+    },
+    {
+      "code": "120000",
+      "province": "天津市",
+      "city": ""
+    },
+    {
+      "code": "310000",
+      "province": "上海市",
+      "city": ""
+    }
+  ]
+}
+```
+
+**行政区划代码说明**
+
+行政区划代码采用国家标准6位数字编码：
+- 前2位：省级（省、自治区、直辖市）
+- 中间2位：地级（市、地区、自治州）
+- 后2位：县级（县、区、县级市）
+
+示例：
+- `110000`：北京市（省级）
+- `110100`：北京市市辖区（地级）
+- `310000`：上海市（省级）
+
 ## 4.2 容器/服务模式
 
 saastool提供了容器版本。在容器中将默认启动为daemon并提供http接口供调用。使用容器版本可以简化配置及开发工作，在操作量不高时使用更通用的http交互形式提供数据读写。
@@ -1441,7 +1532,7 @@ saastool提供了容器版本。在容器中将默认启动为daemon并提供htt
 ```yml
 services:
   saastool:
-    image: rta-docker.pkg.coding.net/public/docker/saastool:2025121617
+    image: rta-docker.pkg.coding.net/public/docker/saastool:2026030318
     restart: unless-stopped
     environment:
       - SRTA_ACCOUNT=2000
@@ -1456,7 +1547,7 @@ services:
 ```yml
 services:
   saastool:
-    image: rta-docker.pkg.coding.net/public/docker/saastool:2025121617
+    image: rta-docker.pkg.coding.net/public/docker/saastool:2026030318
     restart: unless-stopped
     environment:
       - SRTA_ACCOUNT=2000

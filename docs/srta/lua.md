@@ -69,6 +69,7 @@ keywords: [LUA智能决策, RTA SaaS, 系统函数, 内置模块, srta, string, 
 | srta.TARGETINFO_USER_WEIGHT_FACTOR | 用户权重系数 | target_info |
 | srta.TARGETINFO_CPC_FACTOR | CPC出价系数 | target_info |
 
+
 ### 5.2.2 函数列表
 
 | 函数名 | 功能 |
@@ -80,6 +81,7 @@ keywords: [LUA智能决策, RTA SaaS, 系统函数, 内置模块, srta, string, 
 | srta.get_os | 获取终端操作系统 |
 | srta.get_siteset | 获取站点集ID |
 | srta.get_expid | 获取实验分桶ID |
+| srta.get_geo_nearest | 获取地理位置最近的数据 |
 
 
 ### 5.2.3 srta.get_dsdata函数
@@ -164,6 +166,37 @@ expid = srta.get_expid() -- 获取实验分桶号
 -- 以下为返回值示例
 5 -- 代表5号分桶
 ```
+
+### 5.2.10 srta.get_geo_nearest函数
+
+获取地理位置最近的数据。传入搜索半径（单位：公里），返回距离（单位：米）和对应的数据表。
+
+该函数用于查询用户常住地理位置附近的数据，例如查找附近门店、附近广告等场景。
+
+```lua
+distance, geoData = srta.get_geo_nearest(3) -- 查询3公里范围内最近的数据
+
+-- 以下为返回值示例
+distance = 1500 -- 距离为1500米
+geoData = {
+    [1] = {10, 20, 30, ...}, -- U8 字段区
+    [2] = {100, 200, ...},   -- U32 字段区
+    [3] = {true, false, ...} -- FLAG 字段区
+}
+```
+
+**参数说明**：
+- 参数1：搜索半径，单位为公里（km），类型为整数
+
+**返回值说明**：
+- 返回值1：距离，单位为米（m），类型为整数。如果未找到数据，返回最大uint32值 4294967295（0xFFFFFFFF）
+- 返回值2：数据表，结构与 `srta.get_dsdata` 返回的表结构相同。如果未找到数据，返回空表
+
+**使用场景**：
+- 基于LBS的广告投放：根据用户常住位置推送附近商家广告
+- 地域性活动推广：向特定区域用户推送本地活动信息
+- 门店引流：向门店附近用户推送优惠信息
+
 
 ## 5.3 内置模块string
 
@@ -448,6 +481,14 @@ function hijack()
         srta_get_os = srta.OS_IOS,
         srta_get_expid = 1,
         srta_get_siteset = srta.SITESET_WECHAT,
+        srta_get_geo_nearest = {
+            [1] = 1500, -- 距离(米)
+            [2] = {
+                [srta.U8] = {[1] = 10, [2] = 20},
+                [srta.U32] = {[1] = 100},
+                [srta.FLAG] = {[1] = true}
+            }
+        },
         time_now = 1755414905
     }
 
@@ -472,4 +513,5 @@ end
 | srta_get_os | 使用ScriptRun接口调用的 os 字段，如调用接口未指定则为 srta.OS_ANDROID |
 | srta_get_expid | 0 |
 | srta_get_siteset | 0 |
+| srta_get_geo_nearest | 返回距离为4294967295（0xFFFFFFFF）和空表 |
 | time_now | 使用time.now获取真实的系统时间 |
