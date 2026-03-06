@@ -1734,13 +1734,17 @@ saastool task delete -sha256 <task_sha256>
 
 ### 2.3.4 门店数据写入(GEO区)
 
-先使用saastool info命令检查是否有对应数据区。
+GEO 数据区用于存储 **门店**(POI)相关的用户数据。与 DID 数据区不同，GEO 数据区的 `userid` 为客户自定义的门店 ID，无需哈希转换。本节介绍门店数据写入的完整流程。
+
+#### 2.3.4.1 检查数据区开通状态
+
+在写入数据前，先使用 `saastool info` 命令检查是否已开通 GEO 数据区。
 
 ```sh
 saastool info
 ```
 
-如显示的dataspace节点下有`GEO`区，则可以使用`GEO`数据区。所不存在，则表明未开通`GEO`区。
+如显示的 `dataspace` 节点下有 `geo` 字段，则表明已开通 GEO 数据区；若不存在，需联系管理员开通。
 
 ```json
 Info res: {
@@ -1749,19 +1753,499 @@ Info res: {
       "geo",
       "20010701"
     ]
+  },
+  "targetId": []
+}
+```
+
+- `"geo"`: 数据空间别名
+- `"20010701"`: 数据空间数字ID
+
+:::warning 重要：GEO 区经纬度存储规范
+
+GEO 区有特殊的数据存储约定：
+
+**经纬度存储规则**：
+- **UINT32 字段索引 1**：存储**经度**（Longitude）
+- **UINT32 字段索引 2**：存储**纬度**（Latitude）
+- **数值处理**：经纬度需**乘以 1,000,000** 后存入 UINT32
+
+**示例**：
+- 原始经度：`116.397128`
+- 存储值：`116.397128 × 1000000 = 116397128`
+- 原始纬度：`39.916527`
+- 存储值：`39.916527 × 1000000 = 39916527`
+
+**计算公式**：
+```
+UINT32[1] = int(longitude × 1000000)  # 经度
+UINT32[2] = int(latitude × 1000000)   # 纬度
+```
+
+**后果说明**：
+- 如果不按此约定存储，地理位置定向功能可能无法正常工作
+- 系统 Lua 脚本中可能依赖此约定进行距离计算
+- **务必遵循此约定，其他 UINT32 字段（索引 3-8）可自由使用**
+
+:::
+
+#### 2.3.4.2 数据准备
+
+准备符合格式要求的 JSONL（JSON Lines）文件，每行一个 JSON 对象。
+
+**数据格式示例**：
+
+```jsonl
+{"userid":"store_001","uint32sKv":{"1":116397128,"2":39916527},"bytesKv":{"1":3,"2":150}}
+{"userid":"store_002","uint32sKv":{"1":121473701,"2":31230416},"bytesKv":{"1":2,"2":200},"flagsWithExpireKv":{"1":{"flag":true}}}
+{"userid":"poi_bj_hd_001","uint32sKv":{"1":116311500,"2":39978000},"bytesKv":{"3":100},"uint32sKv":{"3":5000000}}
+```
+
+**字段说明**：
+
+| 字段 | 类型 | 说明 | 示例 |
+| --- | --- | --- | --- |
+| `userid` | string | **门店ID**，客户自定义，建议使用数字或字母 | `"store_001"`, `"poi_bj_001"` |
+| `bytesKv` | map | UINT8 字段（索引 1-64，值 0-255） | `{"1":3,"2":150}` |
+| `uint32sKv` | map | UINT32 字段（索引 1-8，值 0-4294967295） | `{"1":116397128,"2":39916527}` |
+| `flagsWithExpireKv` | map | FLAG 字段（索引 1-4，布尔型+可选过期） | `{"1":{"flag":true,"expire":1758686629}}` |
+
+**userid 格式说明**：
+- ✅ **任意字符串**，无需哈希或加密
+- ✅ 建议使用有业务意义的 ID（如门店编码、POI ID）
+- ✅ 推荐格式：`store_001`, `poi_bj_hd_001`, `shop12345`
+- ✅ 长度建议：不超过 64 字节
+- ❌ 避免使用特殊字符（虽然技术上支持）
+
+**经纬度写入示例**：
+
+假设门店经纬度为：
+- 经度：`116.397128`
+- 纬度：`39.916527`
+
+写入数据：
+```json
+{
+  "userid": "store_tianmen",
+  "uint32sKv": {
+    "1": 116397128,  // 经度 × 1000000
+    "2": 39916527,   // 纬度 × 1000000
+    "3": 1000,       // 其他业务字段（如：客流量）
+    "4": 5           // 其他业务字段（如：评分）
+  },
+  "bytesKv": {
+    "1": 3,   // 门店等级
+    "2": 150  // 门店面积(平米)
+  },
+  "flagsWithExpireKv": {
+    "1": {"flag": true}  // 是否营业中
   }
 }
 ```
 
+**FLAG 字段过期时间格式**：
+- `{"flag": true}` - 永久为 true
+- `{"flag": false}` - 永久为 false
+- `{"flag": true, "expire": 1758686629}` - 在 Unix 时间戳 1758686629 前为 true，之后为 false
+
+#### 2.3.4.3 写入方式
+
+GEO 数据区支持以下写入方式，可根据数据量和使用场景选择：
+
+##### **方法一：使用 saastool CLI 工具**
+
+最简单的写入方式，适合开发测试和小批量数据写入。
+
+```sh
+# 写入单个文件
+saastool write -ds geo -source ./stores.jsonl
+
+# 写入目录下所有 JSONL 文件
+saastool write -ds geo -source ./geo_data_dir/
+
+# 写入前先清空所有数据（慎用）
+saastool write -ds geo -source ./stores.jsonl -clear
+
+# 指定批处理大小
+saastool write -ds geo -source ./stores.jsonl -batchsize 5000
+```
+
+**参数说明**：
+- `-ds geo`：指定 GEO 数据区
+- `-source`：数据文件或目录路径
+- `-batchsize`：批处理大小（默认 10000，建议 5000-10000）
+- `-clear`：写入前清空所有数据（可选，危险操作）
+
+##### **方法二：使用 saashttp 包（程序集成）**
+
+在 Go 程序中使用 `saashttp` 包进行数据写入。
+
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+    "git.algo.com.cn/public/saasapi/pkg/rtapb"
+    "git.algo.com.cn/public/saasapi/pkg/saashttp"
+)
+
+func main() {
+    // 1. 创建客户端
+    client := &saashttp.SaasClient{
+        ApiUrls: saashttp.NewApiUrls(saashttp.ApiEnvDemo), // 或 ApiEnvPrd
+        Auth: &saashttp.SaasAuth{
+            Account: 2000,
+            Token:   "your_token_here",
+        },
+        Client: saashttp.DefaultClient,
+    }
+
+    // 2. 准备写入数据（示例：北京两家门店）
+    req := &rtapb.SaasReq{
+        Write: &rtapb.Write{
+            DataspaceId: "geo",
+            WriteItems: []*rtapb.WriteItem{
+                {
+                    Userid: "store_tianmen",
+                    Uint32SKv: map[uint32]uint32{
+                        1: 116397128, // 经度 × 1000000
+                        2: 39916527,  // 纬度 × 1000000
+                        3: 1000,      // 日客流量
+                    },
+                    BytesKv: map[uint32]uint32{
+                        1: 3,   // 门店等级
+                        2: 150, // 门店面积
+                    },
+                    FlagsWithExpireKv: map[uint32]*rtapb.FlagWithExpire{
+                        1: {Flag: true}, // 营业中
+                    },
+                },
+                {
+                    Userid: "store_wangjing",
+                    Uint32SKv: map[uint32]uint32{
+                        1: 116470000, // 经度
+                        2: 39995000,  // 纬度
+                        3: 500,       // 日客流量
+                    },
+                    BytesKv: map[uint32]uint32{
+                        1: 2,   // 门店等级
+                        2: 120, // 门店面积
+                    },
+                },
+            },
+        },
+    }
+
+    // 3. 发起写入请求
+    res, err := client.Write(context.Background(), req)
+    if err != nil {
+        fmt.Printf("请求失败: %v\n", err)
+        return
+    }
+
+    // 4. 检查返回结果
+    if res.Code != 0 {
+        fmt.Printf("业务错误: code=%d, status=%s\n", res.Code, res.Status)
+        return
+    }
+
+    // 5. 检查失败的 userid
+    if len(res.GetWrite().FailedUserid) > 0 {
+        fmt.Printf("部分写入失败: %v\n", res.GetWrite().FailedUserid)
+    } else {
+        fmt.Println("✅ 所有数据写入成功")
+    }
+}
+```
+
+##### **方法三：使用 saastool HTTP daemon 模式**
+
+saastool 支持以 HTTP 服务模式运行，提供简单的 HTTP 接口进行数据读写。
+
+**1. 启动 daemon 服务**
+
+```sh
+export SRTA_ACCOUNT=2000
+export SRTA_TOKEN=your_token_here
+export SRTA_ENV=demo  # 或 prd
+export SRTA_PORT=8080
+
+saastool daemon
+```
+
+**2. 单个门店写入（GET 请求）**
+
+```sh
+# 写入门店数据（含经纬度）
+curl "http://localhost:8080/write?ds=geo&userid=store_001&u32.1=116397128&u32.2=39916527&u8.1=3&u8.2=150"
+
+# 写入前先清空该门店数据
+curl "http://localhost:8080/write?ds=geo&userid=store_001&u32.1=116397128&u32.2=39916527&clear=true"
+
+# 写入 FLAG 字段
+curl "http://localhost:8080/write?ds=geo&userid=store_001&u32.1=116397128&u32.2=39916527&flag.1=true"
+```
+
+**3. 批量写入（POST 请求）**
+
+```sh
+curl -X POST "http://localhost:8080/write?ds=geo" \
+  -H "Content-Type: text/plain" \
+  -d "userid=store_001&u32.1=116397128&u32.2=39916527&u8.1=3" \
+  -d "userid=store_002&u32.1=121473701&u32.2=31230416&u8.1=2" \
+  -d "userid=store_003&u32.1=113264385&u32.2=23129112&flag.1=true"
+```
+
+##### **方法四：使用 Task 任务批量写入（推荐大数据量）**
+
+Task 任务模式适用于**千万级以上门店数据**的批量写入，支持断点续传和并发上传。
+
+**完整流程**：
+
+**步骤1：生成任务元数据**
+
+```sh
+saastool task make \
+  -source ./geo_stores.jsonl \
+  -hash ./task.json \
+  -ds geo \
+  -blocksize 200M \
+  -desc "门店数据批量导入"
+```
+
+**步骤2：创建任务**
+
+```sh
+saastool task create -hash ./task.json
+```
+
+**步骤3：上传数据分块**
+
+```sh
+# 从返回结果中获取 taskSha256
+saastool task upload -sha256 <taskSha256>
+```
+
+**步骤4：执行任务**
+
+```sh
+saastool task run -sha256 <taskSha256>
+```
+
+**步骤5：查询任务状态**
+
+```sh
+saastool task info -sha256 <taskSha256>
+```
+
+**步骤6：删除任务（可选）**
+
+```sh
+saastool task delete -sha256 <taskSha256>
+```
+
+#### 2.3.4.4 数据验证
+
+写入完成后，建议进行数据验证：
+
+```sh
+# 使用 saastool 读取
+saastool read -ds geo -userids store_001,store_002
+
+# 使用 HTTP daemon 读取
+curl "http://localhost:8080/read?ds=geo&userid=store_001"
+```
+
+**返回示例**：
+
+```json
+{
+  "code": 0,
+  "status": "ok",
+  "read": {
+    "readItems": [
+      {
+        "userid": "store_001",
+        "bytesKv": {"1": 3, "2": 150},
+        "uint32sKv": {"1": 116397128, "2": 39916527, "3": 1000},
+        "flagsKv": {"1": true}
+      }
+    ]
+  }
+}
+```
+
+**验证经纬度**：
+```
+经度 = 116397128 ÷ 1000000 = 116.397128
+纬度 = 39916527 ÷ 1000000 = 39.916527
+```
+
+#### 2.3.4.5 注意事项
+
+1. **userid 格式**：
+   - GEO 区的 `userid` 为**客户自定义的门店 ID**，可以是任意字符串
+   - 建议使用数字或字母组合，避免特殊字符
+   - 推荐格式：`store_001`, `poi_bj_hd_001`, `shop12345`
+
+2. **⚠️ 经纬度字段约定**（**非常重要**）：
+   - **UINT32[1]** 固定存储**经度**（longitude × 1000000）
+   - **UINT32[2]** 固定存储**纬度**（latitude × 1000000）
+   - 不遵循此约定会导致地理位置定向功能异常
+   - 其他 UINT32 字段（索引 3-8）可自由使用
+
+3. **字段索引范围**：
+   - UINT8 字段：索引 1-64，值范围 0-255
+   - UINT32 字段：索引 1-8，值范围 0-4294967295（**索引 1、2 预留给经纬度**）
+   - FLAG 字段：索引 1-4，值为布尔型
+
+4. **批处理大小**：
+   - 实时写入建议单次不超过 10000 条记录
+   - 大批量数据（≥ 100万）建议使用 Task 模式
+
+5. **增量写入**：
+   - 默认为增量写入（覆盖指定字段）
+   - 使用 `-clear` 参数可先清空该门店数据再写入
+
+6. **清空数据区**：
+   - 使用 `saastool resetds -ds geo` 可清空整个 GEO 数据区（**慎用**）
+   - 每天限制调用 5 次
+
+7. **Task 任务限制**：
+   - 同一时间只能运行一个任务
+   - 任务运行期间，实时写入接口会被阻塞
+
+#### 2.3.4.6 最佳实践
+
+1. **经纬度数据规范**：
+   - 始终将经度存入 `UINT32[1]`，纬度存入 `UINT32[2]`
+   - 确保经纬度精度为 6 位小数（乘以 1000000 后取整）
+   - 经度范围：-180 ~ 180（存储值：0 ~ 360000000）
+   - 纬度范围：-90 ~ 90（存储值：0 ~ 180000000）
+   - 处理负数经纬度时加上偏移量（如经度 -116.397128 存储为：`(-116.397128 + 180) × 1000000 = 63602872`）
+
+2. **门店 ID 规划**：
+   - 使用统一的命名规范（如：`store_{city}_{id}`）
+   - 保持 ID 长度适中（建议不超过 32 字符）
+   - 避免使用容易混淆的字符（如：`0` vs `O`, `1` vs `l`）
+
+3. **字段规划**：
+   - 提前规划好 UINT8 和 UINT32 字段的用途
+   - 建议维护字段索引文档（示例：U8[1]=门店等级, U8[2]=门店面积）
+   - UINT32[3-8] 可用于存储业务指标（如客流量、评分）
+
+4. **数据验证**：
+   - 写入后使用 `read` 命令验证数据正确性
+   - 检查 `failed_userid` 并重试失败的记录
+   - 定期抽查门店数据的经纬度是否正确
+
+5. **错误处理**：
+   - API 返回的 `failed_userid` 可能包含格式错误或系统错误
+   - 建议记录失败的门店 ID 并分析原因
+   - 对失败的记录进行重试或记录日志
+
+6. **性能优化**：
+   - 小批量数据（< 10万）使用 CLI 或 API 实时写入
+   - 大批量数据（≥ 100万）使用 Task 模式
+   - Task 模式建议在业务低峰期执行
+
+#### 2.3.4.7 GEO 区与其他数据区对比
+
+| 对比项 | GEO 数据区 | DID 数据区 | WUID 数据区 |
+| --- | --- | --- | --- |
+| **用户标识** | 门店 ID（原始值） | 设备 ID 的 MD5 | 手机号哈希 或 OpenID |
+| **userid 格式** | 任意字符串 | 32位十六进制 MD5 | 32位哈希 或 OpenID 原文 |
+| **必填参数** | 无 | 无 | `hashtype` 或 `appid` |
+| **特殊字段** | **UINT32[1,2] 预留给经纬度** | 无特殊约定 | 无特殊约定 |
+| **数据格式** | 无需哈希或加密 | 必须计算 MD5 | 手机号需哈希，OpenID 不需要 |
+| **适用场景** | 门店、POI、地理位置数据 | 设备用户数据 | 手机号或微信生态用户数据 |
+
+**选择建议**：
+- 门店、POI、地理位置场景 → 使用 **GEO 数据区**
+- 需要存储设备用户行为 → 使用 **DID 数据区**
+- 需要手机号或微信用户数据 → 使用 **WUID 数据区**
+
+#### 2.3.4.8 经纬度转换工具函数
+
+为了方便开发者使用，提供以下经纬度转换工具函数：
+
+**Go 语言示例**：
+
+```go
+// 经纬度转 UINT32 存储值
+func LatLngToUint32(lat, lng float64) (latInt, lngInt uint32) {
+    // 经度：-180 ~ 180 转为 0 ~ 360000000
+    lngInt = uint32((lng + 180) * 1000000)
+    // 纬度：-90 ~ 90 转为 0 ~ 180000000
+    latInt = uint32((lat + 90) * 1000000)
+    return
+}
+
+// UINT32 存储值转经纬度
+func Uint32ToLatLng(latInt, lngInt uint32) (lat, lng float64) {
+    lng = float64(lngInt)/1000000 - 180
+    lat = float64(latInt)/1000000 - 90
+    return
+}
+
+// 使用示例
+func main() {
+    // 北京天安门坐标
+    lat, lng := 39.916527, 116.397128
+    
+    // 转换为存储值
+    latInt, lngInt := LatLngToUint32(lat, lng)
+    fmt.Printf("经度存储值: %d, 纬度存储值: %d\n", lngInt, latInt)
+    // 输出: 经度存储值: 296397128, 纬度存储值: 129916527
+    
+    // 反向转换验证
+    lat2, lng2 := Uint32ToLatLng(latInt, lngInt)
+    fmt.Printf("经度: %.6f, 纬度: %.6f\n", lng2, lat2)
+    // 输出: 经度: 116.397128, 纬度: 39.916527
+}
+```
+
+**Python 示例**：
+
+```python
+def latlng_to_uint32(lat, lng):
+    """经纬度转 UINT32 存储值"""
+    lng_int = int((lng + 180) * 1000000)
+    lat_int = int((lat + 90) * 1000000)
+    return lat_int, lng_int
+
+def uint32_to_latlng(lat_int, lng_int):
+    """UINT32 存储值转经纬度"""
+    lng = lng_int / 1000000 - 180
+    lat = lat_int / 1000000 - 90
+    return lat, lng
+
+# 使用示例
+lat, lng = 39.916527, 116.397128
+lat_int, lng_int = latlng_to_uint32(lat, lng)
+print(f"经度存储值: {lng_int}, 纬度存储值: {lat_int}")
+# 输出: 经度存储值: 296397128, 纬度存储值: 129916527
+
+# 反向转换验证
+lat2, lng2 = uint32_to_latlng(lat_int, lng_int)
+print(f"经度: {lng2:.6f}, 纬度: {lat2:.6f}")
+# 输出: 经度: 116.397128, 纬度: 39.916527
+```
+
 ### 2.3.5 IP城市数据写入(GEOIP区)
 
-先使用saastool info命令检查是否有对应数据区。
+GEOIP 数据区用于存储基于**用户 IP 地址所在城市**的用户数据。与其他数据区不同，GEOIP 数据区的 `userid` 使用**中国行政区划码**（6位数字编码）作为用户标识。本节介绍 IP 城市数据写入的完整流程。
+
+#### 2.3.5.1 检查数据区开通状态
+
+在写入数据前，先使用 `saastool info` 命令检查是否已开通 GEOIP 数据区。
 
 ```sh
 saastool info
 ```
 
-如显示的dataspace节点下有`GEOIP`区，则可以使用`GEOIP`数据区。所不存在，则表明未开通`GEOIP`区。
+如显示的 `dataspace` 节点下有 `geoip` 字段,则表明已开通 GEOIP 数据区；若不存在，需联系管理员开通。
 
 ```json
 Info res: {
@@ -1770,19 +2254,504 @@ Info res: {
       "geoip",
       "20010801"
     ]
+  },
+  "targetId": []
+}
+```
+
+- `"geoip"`: 数据空间别名
+- `"20010801"`: 数据空间数字ID
+
+:::info 行政区划码说明
+
+GEOIP 区使用**中国行政区划码**作为 `userid`，行政区划码采用 6 位数字编码：
+
+**编码规则**：
+- 前 2 位：省级（省、自治区、直辖市）
+- 中间 2 位：地级（市、地区、自治州）
+- 后 2 位：县级（县、区、县级市）
+
+**示例**：
+- `110000`：北京市（省级）
+- `130100`：河北省石家庄市（地级市）
+- `440300`：广东省深圳市（地级市）
+- `100000`：全国（国家级，用于默认数据）
+
+**支持格式**：
+1. **6位数字行政区划码**（推荐）：`"130100"`, `"440300"`
+2. **"省:市" 格式**：`"河北省:石家庄市"`, `"广东省:深圳市"`
+3. **单省份名称**：`"河北省"`, `"广东省"`（会自动转换为省级代码）
+
+完整的行政区划码映射表请参考：[附录：行政区划码映射表](appendix.md)
+
+:::
+
+#### 2.3.5.2 数据准备
+
+准备符合格式要求的 JSONL（JSON Lines）文件，每行一个 JSON 对象。
+
+**数据格式示例**：
+
+```jsonl
+{"userid":"110000","bytesKv":{"1":5,"2":200},"uint32sKv":{"1":1000000},"flagsWithExpireKv":{"1":{"flag":true}}}
+{"userid":"130100","bytesKv":{"1":3,"2":150},"uint32sKv":{"1":500000}}
+{"userid":"440300","bytesKv":{"1":5,"2":250},"uint32sKv":{"1":2000000},"flagsWithExpireKv":{"2":{"flag":true,"expire":1758686629}}}
+{"userid":"河北省:石家庄市","bytesKv":{"1":3,"2":150}}
+{"userid":"广东省:深圳市","bytesKv":{"1":5,"2":250}}
+```
+
+**字段说明**：
+
+| 字段 | 类型 | 说明 | 示例 |
+| --- | --- | --- | --- |
+| `userid` | string | **行政区划码**（6位数字）或 **"省:市"** 格式 | `"110000"`, `"河北省:石家庄市"` |
+| `bytesKv` | map | UINT8 字段（索引 1-64，值 0-255） | `{"1":5,"2":200}` |
+| `uint32sKv` | map | UINT32 字段（索引 1-8，值 0-4294967295） | `{"1":1000000}` |
+| `flagsWithExpireKv` | map | FLAG 字段（索引 1-4，布尔型+可选过期） | `{"1":{"flag":true,"expire":1758686629}}` |
+
+**userid 格式说明**：
+
+1. **推荐格式**：使用 6 位数字行政区划码
+   ```json
+   {"userid":"110000","bytesKv":{"1":5}}  // 北京市
+   {"userid":"130100","bytesKv":{"1":3}}  // 河北省石家庄市
+   {"userid":"440300","bytesKv":{"1":5}}  // 广东省深圳市
+   ```
+
+2. **"省:市" 格式**：会自动转换为对应的行政区划码
+   ```json
+   {"userid":"北京:北京","bytesKv":{"1":5}}        // 自动转为 110000
+   {"userid":"河北省:石家庄市","bytesKv":{"1":3}}  // 自动转为 130100
+   {"userid":"广东省:深圳市","bytesKv":{"1":5}}    // 自动转为 440300
+   ```
+
+3. **单省份格式**：会转换为省级代码
+   ```json
+   {"userid":"北京","bytesKv":{"1":5}}      // 自动转为 110000
+   {"userid":"河北省","bytesKv":{"1":3}}    // 自动转为 130000
+   {"userid":"广东省","bytesKv":{"1":5}}    // 自动转为 440000
+   ```
+
+**数据写入示例（业务场景）**：
+
+假设要为不同城市的用户设置推荐权重和投放预算：
+
+```jsonl
+{"userid":"110000","bytesKv":{"1":10,"2":5},"uint32sKv":{"1":5000000},"flagsWithExpireKv":{"1":{"flag":true}}}
+{"userid":"310000","bytesKv":{"1":10,"2":5},"uint32sKv":{"1":4500000},"flagsWithExpireKv":{"1":{"flag":true}}}
+{"userid":"440300","bytesKv":{"1":9,"2":4},"uint32sKv":{"1":3000000},"flagsWithExpireKv":{"1":{"flag":true}}}
+{"userid":"130100","bytesKv":{"1":7,"2":3},"uint32sKv":{"1":1000000},"flagsWithExpireKv":{"1":{"flag":true}}}
+```
+
+字段含义示例：
+- `bytesKv.1`：城市推荐权重（1-10）
+- `bytesKv.2`：城市等级（1-5）
+- `uint32sKv.1`：投放预算（单位：分）
+- `flagsWithExpireKv.1`：是否启用投放
+
+#### 2.3.5.3 写入方式
+
+GEOIP 数据区支持以下写入方式，可根据数据量和使用场景选择：
+
+##### **方法一：使用 saastool CLI 工具**
+
+最简单的写入方式，适合开发测试和小批量数据写入。
+
+```sh
+# 写入单个文件
+saastool write -ds geoip -source ./geoip_data.jsonl
+
+# 写入目录下所有 JSONL 文件
+saastool write -ds geoip -source ./geoip_data_dir/
+
+# 写入前先清空所有数据（慎用）
+saastool write -ds geoip -source ./geoip_data.jsonl -clear
+
+# 指定批处理大小
+saastool write -ds geoip -source ./geoip_data.jsonl -batchsize 5000
+```
+
+**参数说明**：
+- `-ds geoip`：指定 GEOIP 数据区
+- `-source`：数据文件或目录路径
+- `-batchsize`：批处理大小（默认 10000，建议 5000-10000）
+- `-clear`：写入前清空所有数据（可选，危险操作）
+
+##### **方法二：使用 saashttp 包（程序集成）**
+
+在 Go 程序中使用 `saashttp` 包进行数据写入。
+
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+    "git.algo.com.cn/public/saasapi/pkg/rtapb"
+    "git.algo.com.cn/public/saasapi/pkg/saashttp"
+)
+
+func main() {
+    // 1. 创建客户端
+    client := &saashttp.SaasClient{
+        ApiUrls: saashttp.NewApiUrls(saashttp.ApiEnvDemo), // 或 ApiEnvPrd
+        Auth: &saashttp.SaasAuth{
+            Account: 2000,
+            Token:   "your_token_here",
+        },
+        Client: saashttp.DefaultClient,
+    }
+
+    // 2. 准备写入数据（示例：北京、上海、深圳、石家庄）
+    req := &rtapb.SaasReq{
+        Write: &rtapb.Write{
+            DataspaceId: "geoip",
+            WriteItems: []*rtapb.WriteItem{
+                {
+                    Userid: "110000", // 北京市
+                    BytesKv: map[uint32]uint32{
+                        1: 10, // 推荐权重
+                        2: 5,  // 城市等级
+                    },
+                    Uint32SKv: map[uint32]uint32{
+                        1: 5000000, // 投放预算（分）
+                    },
+                    FlagsWithExpireKv: map[uint32]*rtapb.FlagWithExpire{
+                        1: {Flag: true}, // 启用投放
+                    },
+                },
+                {
+                    Userid: "310000", // 上海市
+                    BytesKv: map[uint32]uint32{
+                        1: 10,
+                        2: 5,
+                    },
+                    Uint32SKv: map[uint32]uint32{
+                        1: 4500000,
+                    },
+                    FlagsWithExpireKv: map[uint32]*rtapb.FlagWithExpire{
+                        1: {Flag: true},
+                    },
+                },
+                {
+                    Userid: "河北省:石家庄市", // 也支持 "省:市" 格式
+                    BytesKv: map[uint32]uint32{
+                        1: 7,
+                        2: 3,
+                    },
+                    Uint32SKv: map[uint32]uint32{
+                        1: 1000000,
+                    },
+                },
+            },
+        },
+    }
+
+    // 3. 发起写入请求
+    res, err := client.Write(context.Background(), req)
+    if err != nil {
+        fmt.Printf("请求失败: %v\n", err)
+        return
+    }
+
+    // 4. 检查返回结果
+    if res.Code != 0 {
+        fmt.Printf("业务错误: code=%d, status=%s\n", res.Code, res.Status)
+        return
+    }
+
+    // 5. 检查失败的 userid
+    if len(res.GetWrite().FailedUserid) > 0 {
+        fmt.Printf("部分写入失败: %v\n", res.GetWrite().FailedUserid)
+    } else {
+        fmt.Println("✅ 所有数据写入成功")
+    }
+}
+```
+
+##### **方法三：使用 saastool HTTP daemon 模式**
+
+saastool 支持以 HTTP 服务模式运行，提供简单的 HTTP 接口进行数据读写。
+
+**1. 启动 daemon 服务**
+
+```sh
+export SRTA_ACCOUNT=2000
+export SRTA_TOKEN=your_token_here
+export SRTA_ENV=demo  # 或 prd
+export SRTA_PORT=8080
+
+saastool daemon
+```
+
+**2. 单个城市写入（GET 请求）**
+
+```sh
+# 使用行政区划码写入（推荐）
+curl "http://localhost:8080/write?ds=geoip&userid=110000&u8.1=10&u8.2=5&u32.1=5000000&flag.1=true"
+
+# 使用 "省:市" 格式
+curl "http://localhost:8080/write?ds=geoip&userid=河北省:石家庄市&u8.1=7&u8.2=3&u32.1=1000000"
+
+# 写入前先清空该城市数据
+curl "http://localhost:8080/write?ds=geoip&userid=110000&u8.1=10&clear=true"
+```
+
+**3. 批量写入（POST 请求）**
+
+```sh
+curl -X POST "http://localhost:8080/write?ds=geoip" \
+  -H "Content-Type: text/plain" \
+  -d "userid=110000&u8.1=10&u8.2=5&u32.1=5000000" \
+  -d "userid=310000&u8.1=10&u8.2=5&u32.1=4500000" \
+  -d "userid=440300&u8.1=9&u8.2=4&u32.1=3000000" \
+  -d "userid=130100&u8.1=7&u8.2=3&u32.1=1000000"
+```
+
+##### **方法四：使用 Task 任务批量写入（推荐大数据量）**
+
+Task 任务模式适用于**大量城市数据**的批量写入，支持断点续传和并发上传。
+
+**完整流程**：
+
+**步骤1：生成任务元数据**
+
+```sh
+saastool task make \
+  -source ./geoip_cities.jsonl \
+  -hash ./task.json \
+  -ds geoip \
+  -blocksize 200M \
+  -desc "IP城市数据批量导入"
+```
+
+**步骤2：创建任务**
+
+```sh
+saastool task create -hash ./task.json
+```
+
+**步骤3：上传数据分块**
+
+```sh
+# 从返回结果中获取 taskSha256
+saastool task upload -sha256 <taskSha256>
+```
+
+**步骤4：执行任务**
+
+```sh
+saastool task run -sha256 <taskSha256>
+```
+
+**步骤5：查询任务状态**
+
+```sh
+saastool task info -sha256 <taskSha256>
+```
+
+**步骤6：删除任务（可选）**
+
+```sh
+saastool task delete -sha256 <taskSha256>
+```
+
+#### 2.3.5.4 数据验证
+
+写入完成后，建议进行数据验证：
+
+```sh
+# 使用 saastool 读取（使用行政区划码）
+saastool read -ds geoip -userids 110000,130100,440300
+
+# 使用 saastool 读取（使用 "省:市" 格式）
+saastool read -ds geoip -userids "北京:北京,河北省:石家庄市"
+
+# 使用 HTTP daemon 读取
+curl "http://localhost:8080/read?ds=geoip&userid=110000"
+```
+
+**返回示例**：
+
+```json
+{
+  "code": 0,
+  "status": "ok",
+  "read": {
+    "readItems": [
+      {
+        "userid": "110000",
+        "bytesKv": {"1": 10, "2": 5},
+        "uint32sKv": {"1": 5000000},
+        "flagsKv": {"1": true}
+      },
+      {
+        "userid": "130100",
+        "bytesKv": {"1": 7, "2": 3},
+        "uint32sKv": {"1": 1000000},
+        "flagsKv": {}
+      }
+    ]
   }
 }
 ```
 
+#### 2.3.5.5 查询行政区划码
+
+系统提供了 `admincode` 命令用于查询行政区划码：
+
+```sh
+# 查询所有行政区划码
+saastool admincode list
+
+# 查询结果示例
+{
+  "adminCodes": [
+    {
+      "code": "110000",
+      "province": "北京市",
+      "city": "北京市"
+    },
+    {
+      "code": "130100",
+      "province": "河北省",
+      "city": "石家庄市"
+    },
+    {
+      "code": "440300",
+      "province": "广东省",
+      "city": "深圳市"
+    }
+  ]
+}
+```
+
+**完整的行政区划码映射表**请参考：[附录：行政区划码映射表](appendix.md)
+
+#### 2.3.5.6 注意事项
+
+1. **userid 格式要求**：
+   - ✅ **推荐使用 6 位数字行政区划码**：`"110000"`, `"130100"`
+   - ✅ 支持 "省:市" 格式：`"河北省:石家庄市"`（会自动转换）
+   - ✅ 支持单省份：`"河北省"`（会转换为省级代码）
+   - ❌ 不支持任意字符串（必须能转换为有效的行政区划码）
+
+2. **行政区划码转换**：
+   - 系统会自动将 "省:市" 格式转换为 6 位数字行政区划码
+   - 转换失败的 userid 会在 API 返回的 `failed_userid` 中
+   - 建议提前验证行政区划码的有效性
+
+3. **字段索引范围**：
+   - UINT8 字段：索引 1-64，值范围 0-255
+   - UINT32 字段：索引 1-8，值范围 0-4294967295
+   - FLAG 字段：索引 1-4，值为布尔型
+
+4. **批处理大小**：
+   - 实时写入建议单次不超过 10000 条记录
+   - GEOIP 数据通常不会超过数千条（全国城市数量有限）
+
+5. **增量写入**：
+   - 默认为增量写入（覆盖指定字段）
+   - 使用 `-clear` 参数可先清空该城市数据再写入
+
+6. **清空数据区**：
+   - 使用 `saastool resetds -ds geoip` 可清空整个 GEOIP 数据区（**慎用**）
+   - 每天限制调用 5 次
+
+7. **Lua 查询回退机制**：
+   - 在 Lua 脚本中查询 GEOIP 数据时，如果找不到城市级数据，会自动回退到省级
+   - 如果省级也找不到，会回退到国家级代码 `100000`
+   - 建议为常用省份和全国设置默认数据
+
+#### 2.3.5.7 最佳实践
+
+1. **数据分层策略**：
+   - **国家级**（`100000`）：设置全国默认数据
+   - **省级**（如 `130000` 河北省）：设置省级默认数据
+   - **市级**（如 `130100` 石家庄市）：设置具体城市数据
+   - Lua 查询时会自动回退，确保总能获取到数据
+
+2. **行政区划码规范**：
+   - 优先使用 6 位数字行政区划码，避免使用 "省:市" 格式（减少转换开销）
+   - 提前验证行政区划码的有效性（使用 `saastool admincode list` 查询）
+   - 维护行政区划码与业务含义的映射文档
+
+3. **字段规划**：
+   - 提前规划好 UINT8 和 UINT32 字段的用途
+   - 建议维护字段索引文档（示例：U8[1]=推荐权重, U32[1]=投放预算）
+   - 考虑字段的扩展性，为未来需求预留字段
+
+4. **数据验证**：
+   - 写入后使用 `read` 命令验证数据正确性
+   - 检查 `failed_userid` 并重试失败的记录
+   - 定期抽查城市数据是否正确
+
+5. **错误处理**：
+   - API 返回的 `failed_userid` 可能包含无效的行政区划码
+   - 建议记录失败的 userid 并分析原因（是否为无效城市）
+   - 对失败的记录进行重试或记录日志
+
+6. **性能优化**：
+   - GEOIP 数据量通常较小（全国城市数千个），可使用 CLI 或 API 实时写入
+   - 如果数据量较大（> 10万），使用 Task 模式
+   - 建议在业务低峰期执行批量更新
+
+7. **默认数据设置**：
+   - 务必设置国家级默认数据（`100000`），作为最终兜底
+   - 为一线城市和重点省份设置具体数据
+   - 其他城市可使用省级或国家级数据
+
+#### 2.3.5.8 GEOIP 区与其他数据区对比
+
+| 对比项 | GEOIP 数据区 | GEO 数据区 | DID 数据区 |
+| --- | --- | --- | --- |
+| **用户标识** | 行政区划码（6位数字） | 门店 ID（原始值） | 设备 ID 的 MD5 |
+| **userid 格式** | `"110000"` 或 `"北京:北京"` | 任意字符串 | 32位十六进制 MD5 |
+| **userid 转换** | ✅ 支持 "省:市" 自动转换 | ❌ 不需要转换 | ❌ 必须预先计算 MD5 |
+| **数据量级** | 小（数千条，全国城市有限） | 中等（数万-数百万门店） | 大（亿级设备用户） |
+| **适用场景** | 基于用户 IP 所在城市定向 | 门店、POI 地理位置定向 | 设备用户行为数据 |
+| **Lua 查询** | 支持自动回退（市→省→国家） | 不支持回退 | 不支持回退 |
+
+**选择建议**：
+- 需要基于用户 IP 所在城市定向 → 使用 **GEOIP 数据区**
+- 需要门店、POI 地理位置定向 → 使用 **GEO 数据区**
+- 需要存储设备用户行为 → 使用 **DID 数据区**
+
+#### 2.3.5.9 行政区划码示例
+
+以下是常用城市的行政区划码示例：
+
+| 省份 | 城市 | 行政区划码 | 使用场景 |
+|------|------|-----------|---------|
+| 全国 | 全国 | `100000` | 国家级默认数据 |
+| 北京市 | 北京市 | `110000` | 直辖市 |
+| 上海市 | 上海市 | `310000` | 直辖市 |
+| 天津市 | 天津市 | `120000` | 直辖市 |
+| 重庆市 | 重庆市 | `500100` | 直辖市 |
+| 河北省 | 河北省 | `130000` | 省级默认 |
+| 河北省 | 石家庄市 | `130100` | 省会城市 |
+| 广东省 | 广东省 | `440000` | 省级默认 |
+| 广东省 | 广州市 | `440100` | 省会城市 |
+| 广东省 | 深圳市 | `440300` | 一线城市 |
+| 浙江省 | 杭州市 | `330100` | 省会城市 |
+| 江苏省 | 南京市 | `320100` | 省会城市 |
+| 四川省 | 成都市 | `510100` | 省会城市 |
+
+完整的行政区划码映射表请参考：**[附录：行政区划码映射表](appendix.md)**
+
 ### 2.3.6 常住城市数据写入(GEOFAC区)
 
-先使用saastool info命令检查是否有对应数据区。
+GEOFAC（Frequently Active City）数据区用于存储基于**用户常住城市**的用户数据。与 GEOIP 数据区类似，GEOFAC 数据区也使用**中国行政区划码**（6位数字编码）作为用户标识。本节介绍常住城市数据写入的完整流程。
+
+#### 2.3.6.1 检查数据区开通状态
+
+在写入数据前，先使用 `saastool info` 命令检查是否已开通 GEOFAC 数据区。
 
 ```sh
 saastool info
 ```
 
-如显示的dataspace节点下有`GEOFAC`区，则可以使用`GEOFAC`数据区。所不存在，则表明未开通`GEOFAC`区。
+如显示的 `dataspace` 节点下有 `geofac` 字段，则表明已开通 GEOFAC 数据区；若不存在，需联系管理员开通。
 
 ```json
 Info res: {
@@ -1791,7 +2760,519 @@ Info res: {
       "geofac",
       "20010901"
     ]
+  },
+  "targetId": []
+}
+```
+
+- `"geofac"`: 数据空间别名
+- `"20010901"`: 数据空间数字ID
+
+:::info 行政区划码说明
+
+GEOFAC 区使用**中国行政区划码**作为 `userid`，行政区划码采用 6 位数字编码：
+
+**编码规则**：
+- 前 2 位：省级（省、自治区、直辖市）
+- 中间 2 位：地级（市、地区、自治州）
+- 后 2 位：县级（县、区、县级市）
+
+**示例**：
+- `110000`：北京市（省级）
+- `130100`：河北省石家庄市（地级市）
+- `440300`：广东省深圳市（地级市）
+- `100000`：全国（国家级，用于默认数据）
+
+**支持格式**：
+1. **6位数字行政区划码**（推荐）：`"130100"`, `"440300"`
+2. **"省:市" 格式**：`"河北省:石家庄市"`, `"广东省:深圳市"`
+3. **单省份名称**：`"河北省"`, `"广东省"`（会自动转换为省级代码）
+
+完整的行政区划码映射表请参考：[附录：行政区划码映射表](appendix.md)
+
+:::
+
+#### 2.3.6.2 GEOFAC 与 GEOIP 的区别
+
+虽然两者都使用行政区划码，但应用场景和数据含义不同：
+
+| 对比项 | GEOFAC（常住城市） | GEOIP（IP城市） |
+|--------|-------------------|----------------|
+| **数据来源** | 用户常住城市（通过用户画像、GPS、历史行为分析） | 用户当前 IP 所在城市 |
+| **稳定性** | 稳定（常住地一般不变） | 不稳定（用户可能出差、旅行） |
+| **准确性** | 高（需要用户画像数据支持） | 中（IP 定位可能有偏差） |
+| **适用场景** | 长期用户画像、本地化推荐 | 实时地理位置定向、临时活动推广 |
+| **数据更新频率** | 低（月度或季度更新） | 高（每次请求实时查询） |
+
+**选择建议**：
+- 需要基于用户常住地的长期投放策略 → 使用 **GEOFAC 数据区**
+- 需要基于用户当前位置的实时投放 → 使用 **GEOIP 数据区**
+- 可以同时使用两个数据区，在 Lua 脚本中实现更精准的定向逻辑
+
+#### 2.3.6.3 数据准备
+
+准备符合格式要求的 JSONL（JSON Lines）文件，每行一个 JSON 对象。
+
+**数据格式示例**：
+
+```jsonl
+{"userid":"110000","bytesKv":{"1":8,"2":100},"uint32sKv":{"1":3000000},"flagsWithExpireKv":{"1":{"flag":true}}}
+{"userid":"130100","bytesKv":{"1":5,"2":80},"uint32sKv":{"1":800000}}
+{"userid":"440300","bytesKv":{"1":9,"2":120},"uint32sKv":{"1":5000000},"flagsWithExpireKv":{"2":{"flag":true,"expire":1758686629}}}
+{"userid":"河北省:石家庄市","bytesKv":{"1":5,"2":80}}
+{"userid":"广东省:深圳市","bytesKv":{"1":9,"2":120}}
+```
+
+**字段说明**：
+
+| 字段 | 类型 | 说明 | 示例 |
+| --- | --- | --- | --- |
+| `userid` | string | **行政区划码**（6位数字）或 **"省:市"** 格式 | `"110000"`, `"河北省:石家庄市"` |
+| `bytesKv` | map | UINT8 字段（索引 1-64，值 0-255） | `{"1":8,"2":100}` |
+| `uint32sKv` | map | UINT32 字段（索引 1-8，值范围 0-4294967295） | `{"1":3000000}` |
+| `flagsWithExpireKv` | map | FLAG 字段（索引 1-4，布尔型+可选过期） | `{"1":{"flag":true,"expire":1758686629}}` |
+
+**userid 格式说明**（与 GEOIP 相同）：
+
+1. **推荐格式**：使用 6 位数字行政区划码
+   ```json
+   {"userid":"110000","bytesKv":{"1":8}}  // 北京市
+   {"userid":"130100","bytesKv":{"1":5}}  // 河北省石家庄市
+   {"userid":"440300","bytesKv":{"1":9}}  // 广东省深圳市
+   ```
+
+2. **"省:市" 格式**：会自动转换为对应的行政区划码
+   ```json
+   {"userid":"北京:北京","bytesKv":{"1":8}}        // 自动转为 110000
+   {"userid":"河北省:石家庄市","bytesKv":{"1":5}}  // 自动转为 130100
+   {"userid":"广东省:深圳市","bytesKv":{"1":9}}    // 自动转为 440300
+   ```
+
+3. **单省份格式**：会转换为省级代码
+   ```json
+   {"userid":"北京","bytesKv":{"1":8}}      // 自动转为 110000
+   {"userid":"河北省","bytesKv":{"1":5}}    // 自动转为 130000
+   {"userid":"广东省","bytesKv":{"1":9}}    // 自动转为 440000
+   ```
+
+**数据写入示例（业务场景）**：
+
+假设要为不同常住城市的用户设置推荐权重和投放策略：
+
+```jsonl
+{"userid":"110000","bytesKv":{"1":10,"2":100,"3":5},"uint32sKv":{"1":8000000},"flagsWithExpireKv":{"1":{"flag":true}}}
+{"userid":"310000","bytesKv":{"1":10,"2":100,"3":5},"uint32sKv":{"1":7000000},"flagsWithExpireKv":{"1":{"flag":true}}}
+{"userid":"440300","bytesKv":{"1":9,"2":95,"3":4},"uint32sKv":{"1":6000000},"flagsWithExpireKv":{"1":{"flag":true}}}
+{"userid":"510100","bytesKv":{"1":8,"2":90,"3":4},"uint32sKv":{"1":4000000},"flagsWithExpireKv":{"1":{"flag":true}}}
+{"userid":"130100","bytesKv":{"1":7,"2":80,"3":3},"uint32sKv":{"1":2000000},"flagsWithExpireKv":{"1":{"flag":true}}}
+```
+
+字段含义示例：
+- `bytesKv.1`：常住地推荐权重（1-10）
+- `bytesKv.2`：用户活跃度（0-100）
+- `bytesKv.3`：城市消费等级（1-5）
+- `uint32sKv.1`：月度投放预算（单位：分）
+- `flagsWithExpireKv.1`：是否启用常住地投放
+
+#### 2.3.6.4 写入方式
+
+GEOFAC 数据区支持以下写入方式，可根据数据量和使用场景选择：
+
+##### **方法一：使用 saastool CLI 工具**
+
+最简单的写入方式，适合开发测试和小批量数据写入。
+
+```sh
+# 写入单个文件
+saastool write -ds geofac -source ./geofac_data.jsonl
+
+# 写入目录下所有 JSONL 文件
+saastool write -ds geofac -source ./geofac_data_dir/
+
+# 写入前先清空所有数据（慎用）
+saastool write -ds geofac -source ./geofac_data.jsonl -clear
+
+# 指定批处理大小
+saastool write -ds geofac -source ./geofac_data.jsonl -batchsize 5000
+```
+
+**参数说明**：
+- `-ds geofac`：指定 GEOFAC 数据区
+- `-source`：数据文件或目录路径
+- `-batchsize`：批处理大小（默认 10000，建议 5000-10000）
+- `-clear`：写入前清空所有数据（可选，危险操作）
+
+##### **方法二：使用 saashttp 包（程序集成）**
+
+在 Go 程序中使用 `saashttp` 包进行数据写入。
+
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+    "git.algo.com.cn/public/saasapi/pkg/rtapb"
+    "git.algo.com.cn/public/saasapi/pkg/saashttp"
+)
+
+func main() {
+    // 1. 创建客户端
+    client := &saashttp.SaasClient{
+        ApiUrls: saashttp.NewApiUrls(saashttp.ApiEnvDemo), // 或 ApiEnvPrd
+        Auth: &saashttp.SaasAuth{
+            Account: 2000,
+            Token:   "your_token_here",
+        },
+        Client: saashttp.DefaultClient,
+    }
+
+    // 2. 准备写入数据（示例：一线城市常住地数据）
+    req := &rtapb.SaasReq{
+        Write: &rtapb.Write{
+            DataspaceId: "geofac",
+            WriteItems: []*rtapb.WriteItem{
+                {
+                    Userid: "110000", // 北京市
+                    BytesKv: map[uint32]uint32{
+                        1: 10,  // 推荐权重
+                        2: 100, // 用户活跃度
+                        3: 5,   // 消费等级
+                    },
+                    Uint32SKv: map[uint32]uint32{
+                        1: 8000000, // 月度预算（分）
+                    },
+                    FlagsWithExpireKv: map[uint32]*rtapb.FlagWithExpire{
+                        1: {Flag: true}, // 启用常住地投放
+                    },
+                },
+                {
+                    Userid: "310000", // 上海市
+                    BytesKv: map[uint32]uint32{
+                        1: 10,
+                        2: 100,
+                        3: 5,
+                    },
+                    Uint32SKv: map[uint32]uint32{
+                        1: 7000000,
+                    },
+                    FlagsWithExpireKv: map[uint32]*rtapb.FlagWithExpire{
+                        1: {Flag: true},
+                    },
+                },
+                {
+                    Userid: "河北省:石家庄市", // 也支持 "省:市" 格式
+                    BytesKv: map[uint32]uint32{
+                        1: 7,
+                        2: 80,
+                        3: 3,
+                    },
+                    Uint32SKv: map[uint32]uint32{
+                        1: 2000000,
+                    },
+                },
+            },
+        },
+    }
+
+    // 3. 发起写入请求
+    res, err := client.Write(context.Background(), req)
+    if err != nil {
+        fmt.Printf("请求失败: %v\n", err)
+        return
+    }
+
+    // 4. 检查返回结果
+    if res.Code != 0 {
+        fmt.Printf("业务错误: code=%d, status=%s\n", res.Code, res.Status)
+        return
+    }
+
+    // 5. 检查失败的 userid
+    if len(res.GetWrite().FailedUserid) > 0 {
+        fmt.Printf("部分写入失败: %v\n", res.GetWrite().FailedUserid)
+    } else {
+        fmt.Println("✅ 所有数据写入成功")
+    }
+}
+```
+
+##### **方法三：使用 saastool HTTP daemon 模式**
+
+saastool 支持以 HTTP 服务模式运行，提供简单的 HTTP 接口进行数据读写。
+
+**1. 启动 daemon 服务**
+
+```sh
+export SRTA_ACCOUNT=2000
+export SRTA_TOKEN=your_token_here
+export SRTA_ENV=demo  # 或 prd
+export SRTA_PORT=8080
+
+saastool daemon
+```
+
+**2. 单个城市写入（GET 请求）**
+
+```sh
+# 使用行政区划码写入（推荐）
+curl "http://localhost:8080/write?ds=geofac&userid=110000&u8.1=10&u8.2=100&u32.1=8000000&flag.1=true"
+
+# 使用 "省:市" 格式
+curl "http://localhost:8080/write?ds=geofac&userid=河北省:石家庄市&u8.1=7&u8.2=80&u32.1=2000000"
+
+# 写入前先清空该城市数据
+curl "http://localhost:8080/write?ds=geofac&userid=110000&u8.1=10&clear=true"
+```
+
+**3. 批量写入（POST 请求）**
+
+```sh
+curl -X POST "http://localhost:8080/write?ds=geofac" \
+  -H "Content-Type: text/plain" \
+  -d "userid=110000&u8.1=10&u8.2=100&u32.1=8000000" \
+  -d "userid=310000&u8.1=10&u8.2=100&u32.1=7000000" \
+  -d "userid=440300&u8.1=9&u8.2=95&u32.1=6000000" \
+  -d "userid=130100&u8.1=7&u8.2=80&u32.1=2000000"
+```
+
+##### **方法四：使用 Task 任务批量写入（推荐大数据量）**
+
+Task 任务模式适用于**大量城市数据**的批量写入，支持断点续传和并发上传。
+
+**完整流程**：
+
+**步骤1：生成任务元数据**
+
+```sh
+saastool task make \
+  -source ./geofac_cities.jsonl \
+  -hash ./task.json \
+  -ds geofac \
+  -blocksize 200M \
+  -desc "常住城市数据批量导入"
+```
+
+**步骤2：创建任务**
+
+```sh
+saastool task create -hash ./task.json
+```
+
+**步骤3：上传数据分块**
+
+```sh
+# 从返回结果中获取 taskSha256
+saastool task upload -sha256 <taskSha256>
+```
+
+**步骤4：执行任务**
+
+```sh
+saastool task run -sha256 <taskSha256>
+```
+
+**步骤5：查询任务状态**
+
+```sh
+saastool task info -sha256 <taskSha256>
+```
+
+**步骤6：删除任务（可选）**
+
+```sh
+saastool task delete -sha256 <taskSha256>
+```
+
+#### 2.3.6.5 数据验证
+
+写入完成后，建议进行数据验证：
+
+```sh
+# 使用 saastool 读取（使用行政区划码）
+saastool read -ds geofac -userids 110000,130100,440300
+
+# 使用 saastool 读取（使用 "省:市" 格式）
+saastool read -ds geofac -userids "北京:北京,河北省:石家庄市"
+
+# 使用 HTTP daemon 读取
+curl "http://localhost:8080/read?ds=geofac&userid=110000"
+```
+
+**返回示例**：
+
+```json
+{
+  "code": 0,
+  "status": "ok",
+  "read": {
+    "readItems": [
+      {
+        "userid": "110000",
+        "bytesKv": {"1": 10, "2": 100, "3": 5},
+        "uint32sKv": {"1": 8000000},
+        "flagsKv": {"1": true}
+      },
+      {
+        "userid": "130100",
+        "bytesKv": {"1": 7, "2": 80, "3": 3},
+        "uint32sKv": {"1": 2000000},
+        "flagsKv": {}
+      }
+    ]
   }
 }
 ```
 
+#### 2.3.6.6 查询行政区划码
+
+系统提供了 `admincode` 命令用于查询行政区划码：
+
+```sh
+# 查询所有行政区划码
+saastool admincode list
+
+# 查询结果示例
+{
+  "adminCodes": [
+    {
+      "code": "110000",
+      "province": "北京市",
+      "city": "北京市"
+    },
+    {
+      "code": "130100",
+      "province": "河北省",
+      "city": "石家庄市"
+    },
+    {
+      "code": "440300",
+      "province": "广东省",
+      "city": "深圳市"
+    }
+  ]
+}
+```
+
+**完整的行政区划码映射表**请参考：**[附录：行政区划码映射表](appendix.md)**
+
+#### 2.3.6.7 注意事项
+
+1. **userid 格式要求**（与 GEOIP 相同）：
+   - ✅ **推荐使用 6 位数字行政区划码**：`"110000"`, `"130100"`
+   - ✅ 支持 "省:市" 格式：`"河北省:石家庄市"`（会自动转换）
+   - ✅ 支持单省份：`"河北省"`（会转换为省级代码）
+   - ❌ 不支持任意字符串（必须能转换为有效的行政区划码）
+
+2. **行政区划码转换**：
+   - 系统会自动将 "省:市" 格式转换为 6 位数字行政区划码
+   - 转换失败的 userid 会在 API 返回的 `failed_userid` 中
+   - 建议提前验证行政区划码的有效性
+
+3. **字段索引范围**：
+   - UINT8 字段：索引 1-64，值范围 0-255
+   - UINT32 字段：索引 1-8，值范围 0-4294967295
+   - FLAG 字段：索引 1-4，值为布尔型
+
+4. **批处理大小**：
+   - 实时写入建议单次不超过 10000 条记录
+   - GEOFAC 数据通常不会超过数千条（全国城市数量有限）
+
+5. **增量写入**：
+   - 默认为增量写入（覆盖指定字段）
+   - 使用 `-clear` 参数可先清空该城市数据再写入
+
+6. **清空数据区**：
+   - 使用 `saastool resetds -ds geofac` 可清空整个 GEOFAC 数据区（**慎用**）
+   - 每天限制调用 5 次
+
+7. **Lua 查询回退机制**：
+   - 在 Lua 脚本中查询 GEOFAC 数据时，如果找不到城市级数据，会自动回退到省级
+   - 如果省级也找不到，会回退到国家级代码 `100000`
+   - 建议为常用省份和全国设置默认数据
+
+#### 2.3.6.8 最佳实践
+
+1. **数据分层策略**（与 GEOIP 相同）：
+   - **国家级**（`100000`）：设置全国默认数据
+   - **省级**（如 `130000` 河北省）：设置省级默认数据
+   - **市级**（如 `130100` 石家庄市）：设置具体城市数据
+   - Lua 查询时会自动回退，确保总能获取到数据
+
+2. **行政区划码规范**：
+   - 优先使用 6 位数字行政区划码，避免使用 "省:市" 格式（减少转换开销）
+   - 提前验证行政区划码的有效性（使用 `saastool admincode list` 查询）
+   - 维护行政区划码与业务含义的映射文档
+
+3. **字段规划**：
+   - 提前规划好 UINT8 和 UINT32 字段的用途
+   - 建议维护字段索引文档（示例：U8[1]=推荐权重, U8[2]=活跃度, U32[1]=月度预算）
+   - 考虑字段的扩展性，为未来需求预留字段
+   - **GEOFAC 与 GEOIP 可使用不同的字段索引**，避免混淆
+
+4. **数据验证**：
+   - 写入后使用 `read` 命令验证数据正确性
+   - 检查 `failed_userid` 并重试失败的记录
+   - 定期抽查城市数据是否正确
+
+5. **错误处理**：
+   - API 返回的 `failed_userid` 可能包含无效的行政区划码
+   - 建议记录失败的 userid 并分析原因（是否为无效城市）
+   - 对失败的记录进行重试或记录日志
+
+6. **性能优化**：
+   - GEOFAC 数据量通常较小（全国城市数千个），可使用 CLI 或 API 实时写入
+   - 如果数据量较大（> 10万），使用 Task 模式
+   - 建议在业务低峰期执行批量更新
+
+7. **默认数据设置**：
+   - 务必设置国家级默认数据（`100000`），作为最终兜底
+   - 为一线城市和重点省份设置具体数据
+   - 其他城市可使用省级或国家级数据
+
+8. **与 GEOIP 配合使用**：
+   - 常住地数据（GEOFAC）更新频率低，可设置更长期的投放策略
+   - IP 城市数据（GEOIP）实时性强，可用于临时活动和实时定向
+   - 在 Lua 脚本中可同时查询两个数据区，实现更精细的定向逻辑
+   - 示例：优先使用常住地数据，常住地无数据时使用 IP 城市数据
+
+#### 2.3.6.9 GEOFAC、GEOIP 与其他数据区对比
+
+| 对比项 | GEOFAC（常住城市） | GEOIP（IP城市） | GEO（门店） | DID（设备） |
+| --- | --- | --- | --- | --- |
+| **用户标识** | 行政区划码 | 行政区划码 | 门店 ID | 设备 ID 的 MD5 |
+| **userid 格式** | `"110000"` 或 `"北京:北京"` | `"110000"` 或 `"北京:北京"` | 任意字符串 | 32位十六进制 MD5 |
+| **userid 转换** | ✅ 支持 "省:市" 自动转换 | ✅ 支持 "省:市" 自动转换 | ❌ 不需要转换 | ❌ 必须预先计算 MD5 |
+| **数据来源** | 用户画像、历史行为 | 用户当前 IP | 门店/POI 数据 | 设备用户行为 |
+| **数据稳定性** | 高（常住地稳定） | 低（IP 变化） | 固定（门店位置） | 高（设备ID固定） |
+| **数据量级** | 小（数千条） | 小（数千条） | 中等（数万-百万） | 大（亿级） |
+| **适用场景** | 长期用户画像定向 | 实时地理位置定向 | 门店、POI 定向 | 设备用户行为数据 |
+| **Lua 查询** | 支持自动回退 | 支持自动回退 | 不支持回退 | 不支持回退 |
+
+**选择建议**：
+- 需要基于用户常住地的长期策略 → 使用 **GEOFAC 数据区**
+- 需要基于用户当前位置的实时投放 → 使用 **GEOIP 数据区**
+- 需要门店、POI 地理位置定向 → 使用 **GEO 数据区**
+- 需要存储设备用户行为 → 使用 **DID 数据区**
+
+#### 2.3.6.10 行政区划码示例
+
+以下是常用城市的行政区划码示例（与 GEOIP 相同）：
+
+| 省份 | 城市 | 行政区划码 | 使用场景 |
+|------|------|-----------|---------|
+| 全国 | 全国 | `100000` | 国家级默认数据 |
+| 北京市 | 北京市 | `110000` | 直辖市 |
+| 上海市 | 上海市 | `310000` | 直辖市 |
+| 天津市 | 天津市 | `120000` | 直辖市 |
+| 重庆市 | 重庆市 | `500100` | 直辖市 |
+| 河北省 | 河北省 | `130000` | 省级默认 |
+| 河北省 | 石家庄市 | `130100` | 省会城市 |
+| 广东省 | 广东省 | `440000` | 省级默认 |
+| 广东省 | 广州市 | `440100` | 省会城市 |
+| 广东省 | 深圳市 | `440300` | 一线城市 |
+| 浙江省 | 杭州市 | `330100` | 省会城市 |
+| 江苏省 | 南京市 | `320100` | 省会城市 |
+| 四川省 | 成都市 | `510100` | 省会城市 |
+
+完整的行政区划码映射表请参考：**[附录：行政区划码映射表](appendix.md)**
