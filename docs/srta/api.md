@@ -832,9 +832,7 @@ API以protobuf格式返回，返回信息为SaasRes结构
 | SaasRes.exp_get_res | [ExpGet](#expdata) | 唯一 | 实验报表返回状态 |
 | SaasRes.admin_code_list_res | [AdminCodeListRes](#admincodelist) | 唯一 | 行政区划代码列表返回状态 |
 
-<span id="info"></span>
-
-## 3.10 获取账号设置 Info
+## 3.10 获取账号设置 Info {#info}
 
 **说明**：该接口用于查询账号信息
 
@@ -859,9 +857,7 @@ API以protobuf格式返回，返回信息为SaasRes结构
 | dataspace.wuid | array of string | 否 | OpenId数据分区号 |
 | target_id | array of string  | 否 | 策略ID列表 |
 
-<span id="read"></span>
-
-## 3.11 实时读 Read
+## 3.11 实时读 Read {#read}
 
 **说明**：该接口用于实时查询用户 ID下的数据信息（byte、uint32、flag），**少量抽样验证**当前结果是否符合预期。为了防止对线上业务产生冲击，该接口限制并发数 = **1**，QPS = **1**，单次查询 用户 ID数上限为 **100**。即同时只能有 1 个查询，每秒限制 1次，单次最多可查 100个。
 
@@ -907,9 +903,7 @@ API以protobuf格式返回，返回信息为SaasRes结构
 | ~~value_item.flags_with_expire.default_flag~~ 弃用 | bool | 否 | 默认标志位。过期后则回到默认值 |
 | ~~value_item.flags_with_expire.expire~~ 弃用 | uint32 | 否 | 过期时间，为 0 则永不过期 |
 
-<span id="write"></span>
-
-## 3.12 实时写 Write
+## 3.12 实时写 Write {#write}
 
 **说明**：该接口用于实时写入用户 ID下的数据信息（byte、uint32、flag），**即时更新**用户的部分/全部字段变更。为了防止对线上业务产生冲击，该接口限制并发数 = **1**，QPS = **1**，单次写入 用户 ID数上限为 **10000**。即同时只能有 1 个写入，每秒限制 1次，单次最多可写入 10000个。
 
@@ -1035,9 +1029,7 @@ saastool resetds -ds geofac
 
 ## 3.15 任务
 
-<span id="taskcreate"></span>
-
-### 3.15.1 创建 TaskCreate
+### 3.15.1 创建 TaskCreate {#taskcreate}
 
 **说明**：任务用于大批量集中上传写入。适用于对亿级用户的一个或多列进行（byte、uint32、flag）变更，具有并发写入量大，批量集中执行的特点。该接口用于创建一个任务，通过描述待上传数据的摘要信息，允许后续任务数据的分块分批上传。新创建的任务将在 7 天内有效并等待分块上传，待任务数据全部上传完毕后，再通过运行接口执行写入任务。超过 7 天的任务自动删除。
 
@@ -1090,9 +1082,7 @@ saastool resetds -ds geofac
 | total_block | uint32 | 否 | 总块数 |
 | status | TaskStatus | 是 | 任务状态<br/>WAITING = 1;// 等待中<br/>READY = 2;// 上传完毕<br/>RUNNING = 3;// 运行中<br/>SUCCESS = 4;// 成功<br/>FAIL = 5;// 失败<br/>DELETED = 10; // 已删除，仅在执行删除成功时返回 |
 
-<span id="tasklist"></span>
-
-### 3.15.2 列表 TaskList
+### 3.15.2 列表 TaskList {#tasklist}
 
 **说明**：该接口用于列出任务，查看各任务的状态。
 
@@ -1148,9 +1138,7 @@ saastool resetds -ds geofac
 顶层节点 SaasRes.code/SaasRes.status 表达操作成功/失败状态
 
 
-<span id="taskrun"></span>
-
-### 3.15.4 执行 TaskRun
+### 3.15.4 执行 TaskRun {#taskrun}
 
 **说明**：该接口用于执行指定任务。将已处于全部分块上传完毕且未执行过的任务写入数据区。同一时间只能执行一个任务，当前有任务执行时，通过该接口调用多的其它任务将进入串行等待执行状态。
 
@@ -1193,9 +1181,7 @@ saastool resetds -ds geofac
 | total_block | uint32 | 否 | 总块数 |
 | status | TaskStatus | 是 | 任务状态<br/>WAITING = 1;// 等待中<br/>READY = 2;// 上传完毕<br/>RUNNING = 3;// 运行中<br/>SUCCESS = 4;// 成功<br/>FAIL = 5;// 失败<br/>DELETED = 10; // 已删除，仅在执行删除成功时返回 |
 
-<span id="taskdelete"></span>
-
-### 3.15.5 删除 TaskDelete
+### 3.15.5 删除 TaskDelete {#taskdelete}
 
 **说明**：该接口用于删除指定任务。对于处于等待上传、成功、失败的任务，直接删除。对于处于运行中的任务，先中断运行状态后进行删除。
 
@@ -1238,9 +1224,7 @@ saastool resetds -ds geofac
 | total_block | uint32 | 否 | 总块数 |
 | status | TaskStatus | 是 | 任务状态<br/>WAITING = 1;// 等待中<br/>READY = 2;// 上传完毕<br/>RUNNING = 3;// 运行中<br/>SUCCESS = 4;// 成功<br/>FAIL = 5;// 失败<br/>DELETED = 10; // 已删除，仅在执行删除成功时返回 |
 
-<span id="taskinfo"></span>
-
-### 3.15.6 详情 TaskInfo
+### 3.15.6 详情 TaskInfo {#taskinfo}
 
 **说明**：该接口用于查看指定任务的详细信息。包括分块上传完成情况。
 
@@ -1286,9 +1270,7 @@ saastool resetds -ds geofac
 
 ## 3.16 策略
 
-<span id="targetlist"></span>
-
-### 3.16.1 列表 TargetList
+### 3.16.1 列表 TargetList {#targetlist}
 
 **说明**：该接口用于查看策略列表，以及获取完整绑定列表。
 
@@ -1320,9 +1302,7 @@ saastool resetds -ds geofac
 | target_list.binds.account_id | int64 | 否 | 广告主ID |
 | target_list.binds.bind_source | BindSourceType | 否 | 绑定操作来源<br/>DefaultBindSourceType = 0;  //广告主或未填写<br/>ThirdPartyApi = 1;//第三方API<br/>ADQ = 2;//ADQ平台<br/>MP = 3;//MP平台<br/>MktApi = 4;//MarketingAPI |
 
-<span id="targetcreate"></span>
-
-### 3.16.2 创建 TargetCreate
+### 3.16.2 创建 TargetCreate {#targetcreate}
 
 :::tip
 最多能创建10个策略ID。当出现策略ID不够时，请及时清理不再使用或使用率低的策略。
@@ -1354,9 +1334,7 @@ saastool resetds -ds geofac
 | target_id | string | 否 | 策略ID |
 | target_description | string | 否 | 策略备注 |
 
-<span id="targetdelete"></span>
-
-### 3.16.3 删除 TargetDelete
+### 3.16.3 删除 TargetDelete {#targetdelete}
 
 **说明**：该接口用于删除策略。
 
@@ -1384,9 +1362,7 @@ saastool resetds -ds geofac
 
 ## 3.17 绑定
 
-<span id="bindset"></span>
-
-### 3.17.1 设置 BindSet
+### 3.17.1 设置 BindSet {#bindset}
 
 **说明**：该接口用于将广告主ID或广告ID绑定至策略。如相关ID已绑定至其它策略，使用本功能将覆盖原绑定。
 
@@ -1419,9 +1395,7 @@ saastool resetds -ds geofac
 | errors.bind_type | BindType | 是 | 绑定类型<br/>AdgroupId = 1;//广告ID<br/>AccountId = 3;//广告主ID  |
 | errors.reason | string | 是 | 绑定错误原因 |
 
-<span id="binddelete"></span>
-
-### 3.17.2 解除 BindDelete
+### 3.17.2 解除 BindDelete {#binddelete}
 
 **说明**：该接口用于将广告主ID或广告ID从策略解绑。解绑成功后相关广告将不再受RTA决策控制。
 
@@ -1455,9 +1429,7 @@ saastool resetds -ds geofac
 
 ## 3.18 数据授权 Grant
 
-<span id="grantlist"></span>
-
-### 3.18.1 列表 GrantList⚠️
+### 3.18.1 列表 GrantList⚠️ {#grantlist}
 
 **说明**：该接口用于查看数据授权列表。
 
@@ -1488,9 +1460,7 @@ saastool resetds -ds geofac
 | to.dataspace_id | uint64 | 否 | 授权数据空间ID（数字型） |
 
 
-<span id="grantadd"></span>
-
-### 3.18.2 增加 GrantAdd⚠️
+### 3.18.2 增加 GrantAdd⚠️ {#grantadd}
 
 **说明**：该接口用于增加数据授权，可以指定具体索引位置或索引区间。
 
@@ -1518,9 +1488,7 @@ saastool resetds -ds geofac
 | grant_index | string | 否 | 授权索引。格式为 "index1, index2, index55-index64"，例如 "1, 2, 55-64" |
 | dataspace_id | uint64 | 否 | 授权数据空间ID（数字型） |
 
-<span id="grantdelete"></span>
-
-### 3.18.3 删除 GrantDelete⚠️
+### 3.18.3 删除 GrantDelete⚠️ {#grantdelete}
 
 **说明**：该接口用于删除数据授权，可以指定具体索引位置或索引区间。
 
@@ -1550,9 +1518,7 @@ saastool resetds -ds geofac
 
 ## 3.19 脚本
 
-<span id="scriptdebug"></span>
-
-### 3.19.1 调试 ScriptDebug
+### 3.19.1 调试 ScriptDebug {#scriptdebug}
 
 **说明**：该接口用于调试 LUA 脚本，LUA 将在服务端沙箱环境运行并返回结果。调试模式下 print 函数将生效，可用于输出中间状态。关于该函数使用的更多信息，请参阅[代码调试](./lua.md#56-代码调试)。
 
@@ -1582,9 +1548,7 @@ saastool resetds -ds geofac
 | targets_output | string | 否 | 策略输出内容 |
 | dataspace_out | string | 否 | 数据区输出内容 |
 
-<span id="scriptcreate"></span>
-
-### 3.19.2 创建 ScriptCreate
+### 3.19.2 创建 ScriptCreate {#scriptcreate}
 
 **说明**：该接口用于在服务端创建 LUA 脚本，创建的脚本并不会直接替换当前 LUA 的运行代码。脚本在经过检查后（checked = true），方可通过 API 置为当前运行。
 
@@ -1613,9 +1577,7 @@ saastool resetds -ds geofac
 | script_info.lua_checked | bool | 否 | 是否已检查 |
 | script_info.lua_used | bool | 否 | 是否在使用 |
 
-<span id="scriptlist"></span>
-
-### 3.19.3 列表 ScriptList
+### 3.19.3 列表 ScriptList {#scriptlist}
 
 **说明**：该接口用于列出服务端的 LUA 脚本。
 
@@ -1642,9 +1604,7 @@ saastool resetds -ds geofac
 | script_info.lua_checked | bool | 否 | 是否已检查 |
 | script_info.lua_used | bool | 否 | 是否在使用 |
 
-<span id="scriptdelete"></span>
-
-### 3.19.4 删除 ScriptDelete
+### 3.19.4 删除 ScriptDelete {#scriptdelete}
 
 **说明**：该接口用于删除服务端的 LUA 脚本。正在使用中的脚本无法删除。
 
@@ -1672,9 +1632,7 @@ saastool resetds -ds geofac
 | script_info.lua_checked | bool | 否 | 是否已检查 |
 | script_info.lua_used | bool | 否 | 是否在使用 |
 
-<span id="scriptget"></span>
-
-### 3.19.5 获取 ScriptGet
+### 3.19.5 获取 ScriptGet {#scriptget}
 
 **说明**：该接口用于获取 LUA 脚本内容。
 
@@ -1702,9 +1660,7 @@ saastool resetds -ds geofac
 | script_info.lua_checked | bool | 否 | 是否已检查 |
 | script_info.lua_used | bool | 否 | 是否在使用 |
 
-<span id="scriptuse"></span>
-
-### 3.19.6 使用 ScriptUse
+### 3.19.6 使用 ScriptUse {#scriptuse}
 
 **说明**：该接口用于指定服务端当前执行的 LUA 脚本（升级/降级）。
 
@@ -1735,9 +1691,7 @@ saastool resetds -ds geofac
 
 ## 3.20 实验
 
-<span id="explist"></span>
-
-### 3.20.1 列表 ExpList
+### 3.20.1 列表 ExpList {#explist}
 
 **说明**：该接口用于查询实验列表
 
@@ -1762,9 +1716,7 @@ saastool resetds -ds geofac
 | buckets.pt_exp_id | uint32 | 否 | 平台实验ID |
 | buckets.percent | uint32  | 否 | 流量百分比 |
 
-<span id="expdata"></span>
-
-### 3.20.2 报表 ExpData
+### 3.20.2 报表 ExpData {#expdata}
 
 **说明**：该接口用于查询实验数据报表
 
@@ -1920,9 +1872,7 @@ saastool resetds -ds geofac
 | md_pur_val_30 | float64 | 30日付费金额(激活口径) |
 | md_pur_val_30_roi | float64 | 30日ROI(激活口径) |
 
-<span id="admincodelist"></span>
-
-## 3.21 行政区划代码
+## 3.21 行政区划代码 {#admincodelist}
 
 ### 3.21.1 列表 AdminCodeList
 
