@@ -241,9 +241,8 @@ message Grant {
 // ScriptDebug 调试脚本
 message ScriptDebug {
     string lua_script                            = 1;   // 要调试的lua脚本
-    string server_did                            = 2;   // 将从服务端读取该DID下的数据
-    string appid                                 = 3;   // 小程序/小游戏/公众号/视频号的appid
-    string server_openid                         = 4;   // 将从服务端读取该openid下的数据，需与appid配对使用
+    string userid                                = 2;   // 将从服务端读取该用户ID下的数据。当使用WUID区时,该字段将直接作为用户ID使用,而不会进行ID转换,且仅在演示环境有效。
+    string dataspace_id                          = 4;   // 数据空间ID
     OS os                                        = 5;   // 操作系统
 }
 
@@ -1566,9 +1565,8 @@ saastool resetds -ds geofac
 | 字段名称 | 字段类型 | 必填 | 描述 |
 | :--- | :--- | :--- | :--- |
 | lua_script | string | 是 | LUA脚本 |
-| server_did | string | 是 | 将从服务端读取该DID下的数据 |
-| appid | string | 否 | 小程序/小游戏/公众号/视频号的appid |
-| server_openid | string | 否 | 将从服务端读取该openid下的数据，需与appid配对使用 |
+| userid | string | 是 | 将从服务端读取该用户ID下的数据。当使用WUID区时，该字段将直接作为用户ID使用，而不会进行ID转换，且仅在演示环境有效。 |
+| dataspace_id | string | 否 | 数据空间ID |
 | os | os OS | 否 | 操作系统<br/>IOS = 1;<br/>Android = 2;<br/>默认 2  |
 
 **返回参数**：

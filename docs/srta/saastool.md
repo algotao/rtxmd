@@ -1067,8 +1067,10 @@ Usage of debug:
         Config file. (default "cfg.toml")
   -lua string
         LUA file name (required)
-  -did string
-        device md5 (lower case) (required)
+  -userid string
+        device md5 (lower case) / openid / phone md5 / phone sha256 (required)
+  -ds string
+        dataspace id
   -os uint
         1=iOS, 2=Android, 7=Harmony default=2
 ```
@@ -1078,7 +1080,8 @@ Usage of debug:
 | 参数 | 必填 | 含义 | 样例 |
 | --- | --- | --- | --- |
 | -lua | 是 | Lua脚本文件路径 | ./script.lua |
-| -did | 是 | 设备md5值（小写） | abc123def456... |
+| -userid | 是 | 用户ID（设备md5值小写、openid、手机号md5、手机号sha256） | abc123def456... |
+| -ds | 否 | 数据空间ID | 123 |
 | -os | 否 | 操作系统：1=iOS，2=Android，7=Harmony | 2（默认） |
 | -config | 否 | 配置文件路径 | cfg.toml（默认） |
 
@@ -1086,10 +1089,13 @@ Usage of debug:
 
 ```sh
 # 调试脚本
-saastool script debug -lua ./script.lua -did abc123def456 -os 2
+saastool script debug -lua ./script.lua -userid abc123def456 -os 2
 
 # 使用 run 别名
-saastool script run -lua ./script.lua -did abc123def456 -os 1
+saastool script run -lua ./script.lua -userid abc123def456 -os 1
+
+# 指定数据空间
+saastool script debug -lua ./script.lua -userid abc123def456 -ds 123 -os 2
 ```
 
 #### 4.1.13.3 script create（创建脚本）

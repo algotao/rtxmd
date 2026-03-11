@@ -502,7 +502,7 @@ export function SRTATool() {
         </div>
         <br />
         <div className="row">
-          <InputItem colwidth="col--4" prepend="设备号MD5" placeholder="必填" name="did" defaultvalue={inputs.did || ""} onchange={handleChange} />
+          <InputItem colwidth="col--4" prepend="用户ID" placeholder="必填" name="did" defaultvalue={inputs.did || ""} onchange={handleChange} />
         </div>
         <br />
         <div className="row">
