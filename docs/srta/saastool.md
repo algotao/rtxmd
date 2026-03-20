@@ -1585,7 +1585,7 @@ saastool提供了容器版本。在容器中将默认启动为daemon并提供htt
 ```yml
 services:
   saastool:
-    image: rta-docker.pkg.coding.net/public/docker/saastool:2026030318
+    image: rta-docker.pkg.coding.net/public/docker/saastool:2026032017
     restart: unless-stopped
     environment:
       - SRTA_ACCOUNT=2000
@@ -1600,7 +1600,7 @@ services:
 ```yml
 services:
   saastool:
-    image: rta-docker.pkg.coding.net/public/docker/saastool:2026030318
+    image: rta-docker.pkg.coding.net/public/docker/saastool:2026032017
     restart: unless-stopped
     environment:
       - SRTA_ACCOUNT=2000
