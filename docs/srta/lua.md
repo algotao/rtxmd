@@ -489,7 +489,10 @@ function hijack()
                 [srta.FLAG] = {[1] = true}
             }
         },
-        time_now = 1755414905
+        time_now = 1755414905,
+        geo_ip = 110000,       -- IP城市行政区划码（如110000代表北京市），用于srta.get_dsdata(srta.DS_GEOIP)
+        geo_fac = 610100,      -- 常住城市行政区划码（如610100代表西安市），用于srta.get_dsdata(srta.DS_GEOFAC)
+        geo_lnglat = {116.397128, 39.907507}  -- 经纬度{lng, lat}，用于srta.get_geo_nearest()
     }
 
     return sandbox
@@ -515,3 +518,6 @@ end
 | srta_get_siteset | 0 |
 | srta_get_geo_nearest | 返回距离为4294967295（0xFFFFFFFF）和空表 |
 | time_now | 使用time.now获取真实的系统时间 |
+| geo_ip | 使用请求中的IP地址解析行政区划码。如未指定则为0，srta.get_dsdata(srta.DS_GEOIP) 将返回空表 |
+| geo_fac | 使用请求中的常住城市行政区划码。如未指定则为0，srta.get_dsdata(srta.DS_GEOFAC) 将返回空表 |
+| geo_lnglat | 使用请求中的用户常住经纬度。如未指定则 srta.get_geo_nearest() 查无结果 |

@@ -28,7 +28,7 @@ Commands:
     info               Saas Info
     write              Write user's 'bytes / uint32s / flags'
     read               Read user's 'bytes / uint32s / flags'
-    columnwrite        Write columns for 'deviceid / openid' users
+    columnclear        Clear columns for data space
     resetds            Reset data space
 
     convert            Convert data to write format
@@ -290,12 +290,59 @@ saastool convert -map ./map.json -source ./raw_data/ -dest ./converted_data/
 {"userid":"a763b592c846f0a78fb9b326d5c8ba78","bytesKv":{"1":1,"2":3}}
 ```
 
-### 4.1.7 columnwrite（列式写入）
+### 4.1.7 columnclear（列清零）
 
-针对设备ID或openid用户的列式数据写入命令（当前未实现）。
+将指定数据空间中全量用户的一个或多个列（byte、uint32、flag）清零。对于 DID/WUID 数据空间采用惰性失效机制，对于 Geo/GeoIP/GeoFAC 采用直接 Redis 覆写方式。
 
 ```sh
-saastool columnwrite -help
+saastool columnclear -help
+```
+
+```
+Usage of columnclear:
+  -all
+        Clear all columns
+  -config string
+        Config file. (default "cfg.toml")
+  -ds string
+        Data space ID (required)
+  -flag string
+        Flag column indexes to clear (1-4), comma separated. e.g. '1,2'
+  -u32 string
+        Uint32 column indexes to clear (1-8), comma separated. e.g. '1,2'
+  -u8 string
+        Uint8 column indexes to clear (1-64), comma separated. e.g. '1,2,3'
+```
+
+**参数说明**
+
+| 参数 | 必填 | 含义 | 样例 |
+| --- | --- | --- | --- |
+| -ds | 是 | 数据空间ID | did、wuid、geo、geoip 或 geofac |
+| -all | 否 | 是否清零所有列 | 不填时为false |
+| -u8 | 否 | 要清零的 uint8 列索引（1-64），逗号分隔 | 1,2,3 |
+| -u32 | 否 | 要清零的 uint32 列索引（1-8），逗号分隔 | 1,2 |
+| -flag | 否 | 要清零的 flag 列索引（1-4），逗号分隔 | 1,2 |
+| -config | 否 | 配置文件路径 | cfg.toml（默认） |
+
+:::tip
+必须指定 `-all` 或至少一个 `-u8`、`-u32`、`-flag` 参数。
+:::
+
+**使用示例**
+
+```sh
+# 清零 did 数据空间的所有列
+saastool columnclear -ds did -all
+
+# 清零 did 数据空间的指定 uint8 列
+saastool columnclear -ds did -u8 1,2,3
+
+# 清零 wuid 数据空间的指定 uint32 和 flag 列
+saastool columnclear -ds wuid -u32 1,2 -flag 1
+
+# 清零 geo 数据空间的所有列
+saastool columnclear -ds geo -all
 ```
 
 ### 4.1.8 daemon（守护进程/HTTP服务）

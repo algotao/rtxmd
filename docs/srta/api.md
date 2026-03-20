@@ -26,7 +26,7 @@ message SaasReq {
 
         Read read                                = 10;  // 批量读取
         Write write                              = 11;  // 批量写入
-        ColumnWrite column_write                 = 12;  // 全量列式写入
+        ColumnClear column_clear                 = 12;  // 列清零
         ResetDs reset_ds                         = 13;  // 清空数据区
 
         Task task_create                         = 20;  // 任务创建
@@ -128,13 +128,16 @@ message FlagWithExpire {
     uint32 expire                                = 3;   // 过期时间，为 0 则永不过期
 }
 
-// ColumnWrite 全量列式写入命令
-message ColumnWrite {
+// ColumnClear 列清零命令
+message ColumnClear {
     string dataspace_id                          = 1;   // 数据空间ID
-    bool is_clear_all_first                      = 2;   // 是否先执行清空
-    Bytes write_bytes                            = 3;   // byte区域
-    Uint32s write_uint32s                        = 4;   // uint32区域
-    FlagsWithExpire write_flags_with_expire      = 5;   // 标志位区域
+    bool is_clear_all                            = 2;   // 是否执行全量列清零，true: 清零所有列，false: 清零指定列
+    Bytes write_bytes                            = 3 [deprecated = true];   // byte区域。!!!弃用，请使用bytes_kv
+    Uint32s write_uint32s                        = 4 [deprecated = true];   // uint32区域。!!!弃用，请使用uint32s_kv
+    FlagsWithExpire write_flags_with_expire      = 5 [deprecated = true];   // 标志位区域。!!!弃用，请使用flags_with_expire_kv
+    map<uint32, uint32> bytes_kv                 = 6;   // 清零uint8，key为1-64索引值，value任意值都被视为0。index超限会丢弃
+    map<uint32, uint32> uint32s_kv               = 7;   // 清零uint32，key为1-8索引值，value任意值都被视为0。index超限会丢弃
+    map<uint32, FlagWithExpire> flags_with_expire_kv    = 8;   // 清零标志位，key为1-4索引值，value任意值都被视为0，index超限会丢弃
 }
 
 // ResetDs 清空数据区命令
@@ -317,6 +320,7 @@ message SaasRes {
 
         ReadRes read_res                         = 10;  // 读取命令返回
         WriteRes write_res                       = 11;  // 写入命令返回
+        ColumnClearRes column_clear_res          = 12;  // 列清零命令返回
         ResetDsRes reset_ds_res                  = 13;  // 清空数据区命令返回
 
         Task task_create_res                     = 20;  // 创建任务返回状态
@@ -795,6 +799,8 @@ API以protobuf格式返回，返回信息为SaasRes结构
 | SaasReq.script_use | [ScriptUse](#scriptuse) | 唯一 | 使用脚本 |
 | SaasReq.exp_list | [ExpList](#explist) | 唯一 | 实验列表 |
 | SaasReq.exp_get | [ExpGet](#expdata) | 唯一 | 实验报表 |
+| SaasReq.column_clear | [ColumnClear](#columnclear) | 唯一 | 列清零 |
+| SaasReq.reset_ds | [ResetDs](#resetds) | 唯一 | 清空数据区 |
 | SaasReq.admincode_list | [AdminCodeList](#admincodelist) | 唯一 | 列出行政区划代码 |
 
 
@@ -830,6 +836,8 @@ API以protobuf格式返回，返回信息为SaasRes结构
 | SaasReq.script_use_res | [ScriptUseRes](#scriptuse) | 唯一 | 使用脚本返回状态 |
 | SaasRes.exp_list_res | [ExpList](#explist) | 唯一 | 实验列表返回状态 |
 | SaasRes.exp_get_res | [ExpGet](#expdata) | 唯一 | 实验报表返回状态 |
+| SaasRes.column_clear_res | [ColumnClearRes](#columnclear) | 唯一 | 列清零返回状态 |
+| SaasRes.reset_ds_res | [ResetDsRes](#resetds) | 唯一 | 清空数据区返回状态 |
 | SaasRes.admin_code_list_res | [AdminCodeListRes](#admincodelist) | 唯一 | 行政区划代码列表返回状态 |
 
 ## 3.10 获取账号设置 Info {#info}
@@ -952,41 +960,32 @@ API以protobuf格式返回，返回信息为SaasRes结构
 | :--- | :--- | :--- | :--- |
 | failed_userid | array of string | 否 | 失败的用户ID |
 
-<span id="columnwrite"></span>
-## 3.13 全列覆盖写(暂不可用) ColumnWrite
+<span id="columnclear"></span>
+## 3.13 列清零 ColumnClear {#columnclear}
 
-**说明**：该接口用于设置全量用户的一个或多个列（byte、uint32、flag）状态。例如在拉活场景中，当天发生过唤起的用户会逐步从可设放变为不可投放（在 UV级将某列标记为不可投放），在跨天时全量用户又需变成可设放状态。在常规思路下需要记录变更用户集，跨天时将该用户集全部改写一遍，存在着数据量大且可能有遗漏的情形。通过此接口可快速设置全量用户的状态，即时生效。
+**说明**：该接口用于将指定数据空间中全量用户的一个或多个列（byte、uint32、flag）清零。例如在拉活场景中，当天发生过唤起的用户会逐步从可投放变为不可投放（在 UV 级将某列标记为不可投放），在跨天时全量用户又需变成可投放状态。在常规思路下需要记录变更用户集，跨天时将该用户集全部改写一遍，存在着数据量大且可能有遗漏的情形。通过此接口可快速将全量用户的指定列清零，即时生效。
 
 **调用限制**：
-  + 当有任务处于“运行”状态时，不可调用。
-  + 每自然天调用上限为 10 次。
+  + 当有任务处于"运行"状态时，不可调用。
 
-**数据覆盖规则**：
-  + 调用后以逻辑覆盖的方式执行，非物理写入。
-  + 调用后立即覆盖指定的所有列值，零等待。
-  + 在此之后执行的写入动作(write/task run)包含覆盖列时，将新值写入该列。
+**数据清零规则**：
+  + 调用后以逻辑覆盖的方式执行，即时生效，零等待。
+  + 在此之后执行的写入动作（write/task run）包含已清零列时，将新值写入该列。
+  + 使用 `is_clear_all` 可清零所有列；也可通过 `bytes_kv`、`uint32s_kv`、`flags_with_expire_kv` 分别指定要清零的列。
 
-**接口**：/saas/columwrite
+**接口**：/saas/columnclear
 
 **请求参数**：
 
-表格节点位于 SaasReq.column_write
+表格节点位于 SaasReq.column_clear
 
 | 字段名称 | 字段类型 | 必填 | 描述 |
 | :--- | :--- | :--- | :--- |
-| is_clear_all_first | bool	| 否 | 是否先清空该用户的所有数据 |
-| write_bytes | Bytes | 否 | 写入的uint8类型数值 |
-| write_bytes.bytes | array of byte/bytes | 是 | 写入的byte数组，每个byte 的填写编号由下面index决定 |
-| write_bytes.index_1 | uint64 | 是 | 写入byte的索引值(0..63)，位置使用bit位表示 |
-| write_uint32s | Uint32s | 否 | 写入的uint32类型数值 |
-| write_uint32s.uint32s | array of uint32 | 是 | 写入的uint32数组，每个uint32 的填写编号由下面index决定 |
-| write_uint32s.index_1 | uint64 | 是 | 写入uint32的索引值(0..7)，位置使用bit位表示 |
-| write_flags_with_expire | FlagsWithExpire | 否 | 写入的标志位类型值 |
-| write_flags_with_expire.flags_with_expire | array of FlagWithExpire | 是 | 写入的标志位 |
-| write_flags_with_expire.flags_with_expire.flag | bool | 是 | 标志位。在读取时，标志位未过期则返回flag值，过期则返回default_flag值 |
-| write_flags_with_expire.flags_with_expire.default_flag | bool | 否 | 默认标志位。过期后则回到默认值 |
-| write_flags_with_expire.flags_with_expire.expire | uint32 | 否 | 过期时间，为 0 则永不过期 |
-| write_flags_with_expire.index_1 | uint64 | 是 | 写入flag的索引值(0..3)，位置使用bit位表示 |
+| dataspace_id | string | 是 | 数据空间ID，如 did、wuid、geo、geoip、geofac |
+| is_clear_all | bool | 否 | 是否执行全量列清零。true: 清零所有列，false: 清零指定列 |
+| bytes_kv | map&lt;uint32, uint32&gt; | 否 | 清零 uint8 列，key 为 1-64 索引值，value 任意值都被视为 0 |
+| uint32s_kv | map&lt;uint32, uint32&gt; | 否 | 清零 uint32 列，key 为 1-8 索引值，value 任意值都被视为 0 |
+| flags_with_expire_kv | map&lt;uint32, FlagWithExpire&gt; | 否 | 清零标志位，key 为 1-4 索引值，value 任意值都被视为 0 |
 
 **返回参数**：
 
