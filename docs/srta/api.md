@@ -991,7 +991,7 @@ API以protobuf格式返回，返回信息为SaasRes结构
 
 仅使用顶层节点 SaasRes.code/SaasRes.status 表达操作成功/失败状态
 
-## 3.14 清空数据区 ResetDs
+## 3.14 清空数据区 ResetDs {#resetds}
 
 **说明**：该接口用于清空指定数据空间中账号下的所有数据。支持清空 `geo`、`geoip`、`geofac` 数据空间。清空后数据不可恢复，请谨慎操作。
 

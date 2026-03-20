@@ -12,8 +12,12 @@ const config = {
   url: 'https://wiki.algo.com.cn',
   baseUrl: '/',
   onBrokenLinks: 'throw',
-  onBrokenMarkdownLinks: 'warn',
   favicon: 'img/favicon.ico',
+  markdown: {
+    hooks: {
+      onBrokenMarkdownLinks: 'warn',
+    },
+  },
 
   organizationName: 'algotao', // Usually your GitHub org/user name.
   projectName: 'rtxmd',

@@ -1,7 +1,5 @@
 import React, { useState, useEffect } from "react";
 import CodeBlock from '@theme/CodeBlock';
-import CodeEditor from '@uiw/react-textarea-code-editor';
-import '@site/src/css/code-editor-fix.css';
 
 async function RTAQuery(url, reqbody) {
   const response = await fetch(url,
@@ -36,11 +34,6 @@ const getHostURL = (areacode) => {
     default:
       return "https://sh.algo.com.cn";
   }
-};
-
-async function SRTAAPI(urlpath, reqbody) {
-  var url = "https://sh.algo.com.cn" + urlpath;
-  return RTAQuery(url, reqbody);
 };
 
 export const CodeView = ({ language, title, code }) => {
@@ -81,37 +74,6 @@ export const TextArea = ({ name, info, disabled, prepend, placeholder, colwidth,
       </div>
       <textarea placeholder={placeholder} name={name} disabled={disabled} rows={rows} cols={cols} readOnly={readOnly} value={info} />
     </div>
-  );
-}
-
-export default function LuaCodeEditor({name, code, onchange, language}) {
-  // 创建事件包装器，确保传递正确的name属性
-  const handleCodeChange = (event) => {
-    const syntheticEvent = {
-      target: {
-        name: name,
-        value: event.target.value
-      }
-    };
-    onchange(syntheticEvent);
-  };
-
-  return (
-    <CodeEditor
-      value={code}
-      language={language}
-      placeholder="请输入sRTA LUA代码."
-      onChange={handleCodeChange}
-      padding={15}
-      style={{
-        backgroundColor: "#f5f5f5",
-        fontFamily: 'ui-monospace,SFMono-Regular,SF Mono,Consolas,Liberation Mono,Menlo,monospace',
-        fontSize: '14px',
-        lineHeight: '1.5',
-        minHeight: '200px',
-      }}
-      data-color-mode="light"
-    />
   );
 }
 
@@ -436,94 +398,6 @@ export function RTATool() {
             <CodeView title="返回状态" language="http" code={codeRecvInfo} />
             <CodeView title="返回HTTP Header" language="http" code={codeRecvHeader} />
             <CodeView title="返回Body内容" language={codeRecvCodeClass} code={codeRecvBody} />
-          </div>
-        </div>
-      </form>
-      <br />
-    </div>
-  );
-}
-
-export function SRTATool() {
-  const [inputs, setInputs] = useState({});
-  const [codeRecvError, setRecvError] = useState("");
-  const [codeRecvPrint, setRecvPrint] = useState("");
-  const [codeRecvTargets, setRecvTargets] = useState("");
-  const [codeRecvDataSpace, setRecvDataSpace] = useState("");
-  const envMap = new Map([[0, "Demo"], [1, "正式沙箱"]]);
-  useEffect(() => {
-    const setting = localStorage.getItem("tencent_srta_setting");
-    const jsonSetting = setting ? JSON.parse(setting) : { env: 0 };
-    console.log(jsonSetting)
-    setInputs(jsonSetting);
-  }, []);
-  const handleChange = (event) => {
-    const name = event.target.name;
-    const value = event.target.value;
-    
-    console.log(name, value);
-    setInputs(values => ({ ...values, [name]: value }));
-  };
-  function selectEnv(env) {
-    setInputs(values => ({ ...values, ["env"]: env }));
-  }
-  function sendDebug() {
-    localStorage.setItem("tencent_srta_setting", JSON.stringify(inputs));
-    
-    SRTAAPI("/srtacaller/sendDebug",  { 
-      env: inputs.env, 
-      lua: inputs.luacode, 
-      account: inputs.account, 
-      token: inputs.token,
-      did: inputs.did,
-    })
-      .then((data) => {
-        setRecvError(data.state.text+"\n"+data.Error);
-        setRecvPrint(data.Print);
-        setRecvTargets(data.Targets);
-        setRecvDataSpace(data.DataSpace);
-      })
-      .catch((error) => {
-        //console.error('Error:', error);
-      });
-  }
-  return (
-    <div className="container">
-      <form>
-          <div className="row">
-            <InputItem colwidth="col--6" prepend="Account" placeholder="账号" name="account" defaultvalue={inputs.account || ""} onchange={handleChange} />
-            <InputItem colwidth="col--6" prepend="Token" placeholder="Token" name="token" defaultvalue={inputs.token || ""} onchange={handleChange} />
-          </div>
-        <br />
-        <div className="row">
-          <div className="col col-12">
-            <LuaCodeEditor name="luacode" language="lua" code={inputs.luacode || ""} onchange={handleChange} />
-          </div>
-        </div>
-        <br />
-        <div className="row">
-          <InputItem colwidth="col--4" prepend="用户ID" placeholder="必填" name="did" defaultvalue={inputs.did || ""} onchange={handleChange} />
-        </div>
-        <br />
-        <div className="row">
-          <div className="col col-12">
-            <button type="button" className="button button--primary" onClick={sendDebug}>发送</button>
-            <div className="dropdown dropdown--hoverable keepspace">
-              <div className="button button--success">环境 ({envMap.get(inputs.env)})</div>
-              <ul className="dropdown__menu">
-                <li><div className="dropdown__link" onClick={() => selectEnv(0)}>{inputs.env == 0 ? "✓" : ""} {envMap.get(0)}</div></li>
-                <li><div className="dropdown__link" onClick={() => selectEnv(1)}>{inputs.env == 1 ? "✓" : ""} {envMap.get(1)}</div></li>
-              </ul>
-            </div>
-          </div>
-        </div>
-        <br />
-        <div className="row">
-          <div className="col col-12">
-            <CodeView title="返回错误"  code={codeRecvError} />
-            <CodeView title="返回打印输出" code={codeRecvPrint} />
-            <CodeView title="返回策略" language="json" code={codeRecvTargets} />
-            <CodeView title="返回数据区" language="json" code={codeRecvDataSpace} />
           </div>
         </div>
       </form>
