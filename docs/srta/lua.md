@@ -93,8 +93,8 @@ didData = srta.get_dsdata(srta.DS_DID) -- 获取设备数据
 -- 以下为字段返回值示例
 didData = {
     [1] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, .... 0, 0, 0, 0, 0, 0, 0, 0},
-    [2] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-    [3] = {false, false, false, false,false, false, false, false}
+    [2] = {0, 0, 0, 0, 0, 0, 0, 0},
+    [3] = {false, false, false, false}
 }
 ```
 
