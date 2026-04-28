@@ -68,6 +68,13 @@ keywords: [LUA智能决策, RTA SaaS, 系统函数, 内置模块, srta, string, 
 | srta.TARGETINFO_CPA_PRICE | CPA出价 | target_info |
 | srta.TARGETINFO_USER_WEIGHT_FACTOR | 用户权重系数 | target_info |
 | srta.TARGETINFO_CPC_FACTOR | CPC出价系数 | target_info |
+| srta.TARGETINFO_DC_INFOS | DCA标签信息（数组）| target_info |
+
+**DCA标签信息**
+| 常量名称 | 含义 | 适用函数或变量 |
+| :-- | :-- | :-- |
+| srta.DC_TAG_NAME | DCA标签名称 | DCA数组元素 |
+| srta.DC_TAG_VALUE | DCA标签值 | DCA数组元素 |
 
 
 ### 5.2.2 函数列表
@@ -414,6 +421,28 @@ end
 | srta.TARGETINFO_CPA_PRICE | int | 策略CPA出价 |
 | srta.TARGETINFO_USER_WEIGHT_FACTOR | float | 策略用户权重系数 |
 | srta.TARGETINFO_CPC_FACTOR | float | 策略CPC出价系数 |
+| srta.TARGETINFO_DC_INFOS | table数组 | DCA标签信息（可选）|
+
+**DCA标签信息格式**
+
+`srta.TARGETINFO_DC_INFOS` 为一个数组，其中每个元素为包含 DCA 标签的 table 结构：
+
+```lua
+results[targetid] = {
+    [srta.TARGETINFO_ENABLE] = true,
+    [srta.TARGETINFO_CPC_PRICE] = 100,
+    [srta.TARGETINFO_DC_INFOS] = {
+        {
+            [srta.DC_TAG_NAME] = "tag_name_1",    -- DCA标签名称
+            [srta.DC_TAG_VALUE] = "tag_value_1"   -- DCA标签值
+        },
+        {
+            [srta.DC_TAG_NAME] = "tag_name_2",
+            [srta.DC_TAG_VALUE] = "tag_value_2"
+        }
+    }
+}
+```
 
 
 ### 5.5.2 二次请求second
@@ -496,6 +525,44 @@ function hijack()
     }
 
     return sandbox
+end
+```
+
+**DCA标签信息沙箱模拟**
+
+在 hijack 函数中可以模拟返回 DCA 标签信息。DCA 标签作为策略返回值的一部分，用于设定广告的动态创意属性：
+
+```lua
+function hijack()
+    local sandbox = {
+        -- 其他模拟数据...
+        -- main函数中返回的数据会通过DCA标签进行增强
+    }
+    return sandbox
+end
+
+function main()
+    targets = srta.get_targets()
+    local results = {}
+    
+    for i, targetid in ipairs(targets) do
+        results[targetid] = {
+            [srta.TARGETINFO_ENABLE] = true,
+            [srta.TARGETINFO_CPC_PRICE] = 100,
+            [srta.TARGETINFO_DC_INFOS] = {
+                {
+                    [srta.DC_TAG_NAME] = "category",
+                    [srta.DC_TAG_VALUE] = "electronics"
+                },
+                {
+                    [srta.DC_TAG_NAME] = "brand",
+                    [srta.DC_TAG_VALUE] = "tech_brand"
+                }
+            }
+        }
+    end
+    
+    return results
 end
 ```
 
