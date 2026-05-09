@@ -241,6 +241,11 @@ saasai read --ds wuid --id-type 1 --user-ids 6b23320fcfc29304d73ce8090bce8e96
 | `--dry-run` | 否 | 仅预览 | — |
 | `--config` / `-c` | 否 | 配置文件路径 | `cfg.toml`（默认） |
 
+::::tip[wuid 数据空间的参数约束]
+- `--ds=wuid` 且 `--appid` 为空：`--id-type` 必须为 `1` 或 `2`。
+- `--ds=wuid` 且 `--appid` 非空：必须指定 `--account-id`。
+::::
+
 **数据格式（JSONL，每行一个 `WriteItem` 的 protojson）**
 
 ```json
@@ -288,7 +293,7 @@ saasai --dry-run write --ds did --source ./users.jsonl --clear
 
 | 参数 | 必填 | 含义 | 样例 |
 | --- | --- | --- | --- |
-| `--ds` | 是 | 数据空间 ID | `did`、`geo`、`geofac` |
+| `--ds` | 是 | 数据空间 ID | `geo`、`geoip`、`geofac` |
 | `--dry-run` | 否 | 仅预览 | — |
 | `--config` / `-c` | 否 | 配置文件路径 | `cfg.toml`（默认） |
 

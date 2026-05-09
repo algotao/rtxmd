@@ -102,12 +102,16 @@ saastool read -help
 
 ```
 Usage of read:
+  -accountid int
+        Account ID (advertiser ID), required when appid is not empty
   -appid string
         Wechat appid
   -config string
         Config file. (default "cfg.toml")
   -ds string
         Data space ID (required)
+  -hashtype int
+        Hash Type. 0=HASH_TYPE_DEFAULT, 1=PHONE_MD5, 2=PHONE_SHA256
   -userids string
         Device ID or Wechat UserID, separated by comma (required)
 ```
@@ -119,7 +123,15 @@ Usage of read:
 | -userids | 是 | 用户ID列表，多个ID用逗号分隔；设备号MD5值（小写）或微信openid | cfcd208495d565ef66e7dff9f98764da |
 | -ds | 是 | 数据空间ID | did、wuid、geo、geoip 或 geofac |
 | -appid | 否 | 小程序ID，当ds为wuid时必填 | wx1111111111111111 |
+| -accountid | 否 | 广告主ID，当appid不为空时必填 | 12345 |
+| -hashtype | 否 | 哈希类型：0=默认，1=PHONE_MD5，2=PHONE_SHA256；当ds为wuid且appid为空时必填 | 1 |
 | -config | 否 | 配置文件路径 | cfg.toml（默认） |
+
+**wuid数据空间约束**
+
+当 ds 为 wuid 时，需要满足以下条件之一：
+- 提供 `-appid` 且同时提供 `-accountid`（按openid读取）
+- 不提供 `-appid`，但必须设置 `-hashtype` 为 1 或 2（按手机号哈希读取）
 
 **使用示例**
 
@@ -130,8 +142,11 @@ saastool read -ds did -userids cfcd208495d565ef66e7dff9f98764da
 # 读取多个用户数据
 saastool read -ds did -userids cfcd208495d565ef66e7dff9f98764da,a87ff679a2f3e71d9181a67b7542122c
 
-# 读取wuid数据空间的用户数据
-saastool read -ds wuid -userids o_e3j4ggVPO2CP8iCPBLunzKL79n -appid wx1111111111111111
+# 读取wuid数据空间的用户数据（openid方式）
+saastool read -ds wuid -userids o_e3j4ggVPO2CP8iCPBLunzKL79n -appid wx1111111111111111 -accountid 12345
+
+# 读取wuid数据空间的用户数据（手机号MD5方式）
+saastool read -ds wuid -userids e10adc3949ba59abbe56e057f20f883e -hashtype 1
 ```
 
 ### 4.1.4 write（写入用户数据
@@ -144,6 +159,8 @@ saastool write -help
 
 ```
 Usage of write:
+  -accountid int
+        Account ID (advertiser ID), required when appid is not empty
   -appid string
         Wechat appid
   -batchsize uint
@@ -154,6 +171,8 @@ Usage of write:
         Config file. (default "cfg.toml")
   -ds string
         Data space ID (required)
+  -hashtype int
+        Hash Type. 0=HASH_TYPE_DEFAULT, 1=PHONE_MD5, 2=PHONE_SHA256
   -source string
         Source path or filename (required)
 ```
@@ -165,9 +184,17 @@ Usage of write:
 | -source | 是 | 本地文件或目录路径，JSONL格式 | ./users.jsonl 或 ./data_dir/ |
 | -ds | 是 | 数据空间ID | did、wuid、geo、geoip 或 geofac |
 | -appid | 否 | 小程序ID，当ds为wuid时必填 | wx1111111111111111 |
+| -accountid | 否 | 广告主ID，当appid不为空时必填 | 12345 |
+| -hashtype | 否 | 哈希类型：0=默认，1=PHONE_MD5，2=PHONE_SHA256；当ds为wuid且appid为空时必填 | 1 |
 | -batchsize | 否 | 批处理大小 | 10000（默认） |
 | -clear | 否 | 写入前是否清空所有数据 | 不填时为false |
 | -config | 否 | 配置文件路径 | cfg.toml（默认） |
+
+**wuid数据空间约束**
+
+当 ds 为 wuid 时，需要满足以下条件之一：
+- 提供 `-appid` 且同时提供 `-accountid`（按openid写入）
+- 不提供 `-appid`，但必须设置 `-hashtype` 为 1 或 2（按手机号哈希写入）
 
 **数据格式说明**
 
@@ -190,8 +217,11 @@ saastool write -ds did -source ./data_dir/ -batchsize 5000
 # 写入前清空所有数据
 saastool write -ds did -source ./users.jsonl -clear
 
-# 为wuid数据空间写入数据
-saastool write -ds wuid -source ./openid_users.jsonl -appid wx1111111111111111
+# 写入wuid数据空间（openid方式，需要appid和accountid）
+saastool write -ds wuid -source ./openid_users.jsonl -appid wx1111111111111111 -accountid 12345
+
+# 写入wuid数据空间（手机号MD5方式）
+saastool write -ds wuid -source ./phone_users.jsonl -hashtype 1
 ```
 
 ### 4.1.5 resetds（重置数据空间）
@@ -218,17 +248,17 @@ Usage of resetds:
 
 | 参数 | 必填 | 含义 | 样例 |
 | --- | --- | --- | --- |
-| -ds | 是 | 数据空间ID | 当前仅支持 geo、geoip 或 geofac |
+| -ds | 是 | 数据空间ID | geo、geoip 或 geofac |
 | -config | 否 | 配置文件路径 | cfg.toml（默认） |
 
 **使用示例**
 
 ```sh
-# 重置did数据空间
-saastool resetds -ds did
+# 重置geo数据空间
+saastool resetds -ds geo
 
-# 重置wuid数据空间
-saastool resetds -ds wuid
+# 重置geofac数据空间
+saastool resetds -ds geofac
 ```
 
 ### 4.1.6 convert（数据转换）
@@ -241,8 +271,6 @@ saastool convert -help
 
 ```
 Usage of convert:
-  -config string
-        Config file. (default "cfg.toml")
   -dest string
         Destination path or filename (required)
   -map string
@@ -258,7 +286,6 @@ Usage of convert:
 | -source | 是 | 源数据文件或目录路径 | ./raw_data/ 或 ./raw_data.txt |
 | -dest | 是 | 转换后数据的输出目录 | ./converted_data/ |
 | -map | 是 | 映射配置文件路径（JSON格式） | ./map.json |
-| -config | 否 | saastool配置文件路径 | cfg.toml（默认） |
 
 **映射文件格式**
 
@@ -451,16 +478,18 @@ saastool task make -help
 
 ```
 Usage of make:
+  -accountid int
+        Account ID (advertiser ID), required when appid is not empty
   -appid string
         AppID for wuid dataspace
   -blocksize string
         Block size to make hash. using size mode K, M, G, T (default "50M")
-  -config string
-        Config file. (default "cfg.toml")
   -ds string
         DataSpace ID (required)
   -hashfile string
         Output hash file (required)
+  -hashtype int
+        Hash Type. 0=HASH_TYPE_DEFAULT, 1=PHONE_MD5, 2=PHONE_SHA256
   -source string
         source file or directory path (required)
   -desc string
@@ -476,8 +505,9 @@ Usage of make:
 | -ds | 是 | 数据空间ID | did、wuid、geo、geoip 或 geofac |
 | -blocksize | 否 | 块大小，支持 K/M/G/T 单位（50M-200M） | 100M、1G（默认50M） |
 | -appid | 否 | 小程序ID，当ds为wuid时必填 | wx1111111111111111 |
+| -accountid | 否 | 广告主ID，当appid不为空时必填 | 12345 |
+| -hashtype | 否 | 哈希类型：0=默认，1=PHONE_MD5，2=PHONE_SHA256 | 1 |
 | -desc | 否 | 任务描述 | 用户属性批量导入 |
-| -config | 否 | 配置文件路径 | cfg.toml（默认） |
 
 **使用示例**
 
@@ -488,8 +518,11 @@ saastool task make -source ./users.jsonl -hashfile ./task.json -ds did
 # 计算目录的哈希，指定块大小
 saastool task make -source ./data_dir/ -hashfile ./task.json -ds did -blocksize 100M
 
-# 为wuid数据空间创建任务
-saastool task make -source ./users.jsonl -hashfile ./task.json -ds wuid -appid wx1111111111111111 -desc "openid用户导入"
+# 为wuid数据空间创建任务（需要appid和accountid）
+saastool task make -source ./users.jsonl -hashfile ./task.json -ds wuid -appid wx1111111111111111 -accountid 12345 -desc "openid用户导入"
+
+# 为wuid数据空间创建任务，使用手机号MD5哈希（无需appid）
+saastool task make -source ./phones.jsonl -hashfile ./task.json -ds wuid -hashtype 1
 ```
 
 #### 4.1.9.3 task create（创建任务）
@@ -906,12 +939,15 @@ Usage of delete:
         ID Type. empty is Automatic matching, 1=AdGroup, 3=Account
   -ids string
         IDs for delete. Use commas to separate multiple IDs (required)
+  -target string
+        Target ID (required)
 ```
 
 **参数说明**
 
 | 参数 | 必填 | 含义 | 样例 |
 | --- | --- | --- | --- |
+| -target | 是 | 策略ID | my_target |
 | -ids | 是 | 要删除的ID列表，多个ID用逗号分隔 | 1001,1002 |
 | -idtype | 否 | ID类型：空=自动匹配，1=广告组，3=账户 | 1 或 3 |
 | -config | 否 | 配置文件路径 | cfg.toml（默认） |
@@ -919,14 +955,14 @@ Usage of delete:
 **使用示例**
 
 ```sh
-# 自动匹配ID类型删除
-saastool bind delete -ids 1001,1002
+# 删除指定策略的广告组绑定
+saastool bind delete -target my_target -ids 1001,1002
 
-# 删除广告组绑定
-saastool bind delete -idtype 1 -ids 1001,1002,1003
+# 删除指定策略的广告组绑定（指定类型）
+saastool bind delete -target my_target -idtype 1 -ids 1001,1002,1003
 
-# 删除账户绑定
-saastool bind delete -idtype 3 -ids 123,456
+# 删除指定策略的账户绑定
+saastool bind delete -target my_target -idtype 3 -ids 123,456
 ```
 
 ### 4.1.12 grant（授权管理）命令列表
@@ -1102,7 +1138,7 @@ saastool script list
 
 #### 4.1.13.2 script debug（调试脚本）
 
-在服务器上调试Lua脚本（debug 和 run 是别名关系）。
+在服务器上调试Lua脚本。
 
 ```sh
 saastool script debug -help
@@ -1137,9 +1173,6 @@ Usage of debug:
 ```sh
 # 调试脚本
 saastool script debug -lua ./script.lua -userid abc123def456 -os 2
-
-# 使用 run 别名
-saastool script run -lua ./script.lua -userid abc123def456 -os 1
 
 # 指定数据空间
 saastool script debug -lua ./script.lua -userid abc123def456 -ds 123 -os 2
