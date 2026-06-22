@@ -59,6 +59,8 @@ message SaasReq {
         ExpGrant exp_grant_add                   = 103; // 授权他人访问实验报表
         ExpGrant exp_grant_delete                = 104; // 取消他人访问实验报表
 
+        RTExpGet rt_exp_get                      = 110; // 获取实时实验报表
+
         AdminCodeList admincode_list             = 1000; // 列出行政区划代码
     }
 }
@@ -306,6 +308,21 @@ message ExpGrant {
     uint32 target_account_id                    = 1;   // sRTA授权目标账号ID
 }
 
+message ExpBucketGroup {
+    repeated uint32 bucket_ids                  = 1;   // 实验组ID(1-10)
+}
+
+// RTExpGet 获取实时实验报表
+message RTExpGet {
+    uint64 where_begin_time                     = 10;  // 起始年月日时分秒 (YYYYMMDDHHMMSS)
+    uint64 where_end_time                       = 11;  // 结束年月日时分秒
+    ExpBucketGroup base_bucket_group            = 12;  // 对照组
+    repeated ExpBucketGroup exp_bucket_group    = 13;  // 多个实验组
+    string where_target                         = 14;  // 策略ID
+    repeated uint64 where_advertiser_id         = 15;  // 广告主ID
+    uint32 normalization_flag                   = 30;  // 是否归一化 (0=否, 1=是)
+}
+
 // AdminCodeList 列出行政区划代码
 message AdminCodeList {
 
@@ -352,6 +369,8 @@ message SaasRes {
         ExpGrantListRes exp_grant_list_res       = 102; // 实验授权列表返回
         ExpGrant exp_grant_add_res               = 103; // 增加实验授权返回
         ExpGrant exp_grant_delete_res            = 104; // 实验解除授权返回
+
+        RTExpGetRes rt_exp_get_res               = 110; // 实时实验报表返回
         
         AdminCodeListRes admin_code_list_res     = 1000; // 行政区划代码列表返回
     }
@@ -568,6 +587,32 @@ message ExpBaseFields {
 message ExpGrantListRes {
     repeated ExpGrant from                        = 1;  // 被授权列表
     repeated ExpGrant to                          = 2;  // 向外授权列表
+}
+
+// RTExpBaseFields 实时实验基础字段
+message RTExpBaseFields {
+    double exposure                                = 1;  // 曝光量
+    double click                                   = 2;  // 点击量
+    double cpm_cost                                = 3;  // CPM花费(元)
+    double cpc_cost                                = 4;  // CPC花费(元)
+    double ocpx_exposure                           = 5;  // OCPX曝光量
+    double ocpx_click                              = 6;  // OCPX点击量
+    double ocpm_cost                               = 7;  // oCPM花费(元)
+    double ocpc_cost                               = 8;  // oCPC花费(元)
+    double conversion                              = 10; // 浅层转化量
+    double conversion_second                       = 11; // 深层转化量
+}
+
+// RTBucketData 实验分桶数据
+message RTBucketData {
+    repeated uint32 bucket_ids                     = 1;  // 实验组ID(1-10)
+    RTExpBaseFields base_fields                    = 3;  // 基础字段
+}
+
+// RTExpGetRes 实时实验报表返回
+message RTExpGetRes {
+    RTBucketData base_bucket_data                  = 1;  // 对照组数据
+    repeated RTBucketData exp_bucket_data          = 2;  // 实验组数据
 }
 
 // AdminCodeListRes 行政区划代码列表返回
@@ -799,6 +844,7 @@ API以protobuf格式返回，返回信息为SaasRes结构
 | SaasReq.script_use | [ScriptUse](#scriptuse) | 唯一 | 使用脚本 |
 | SaasReq.exp_list | [ExpList](#explist) | 唯一 | 实验列表 |
 | SaasReq.exp_get | [ExpGet](#expdata) | 唯一 | 实验报表 |
+| SaasReq.rt_exp_get | [RTExpGet](#rtexpget) | 唯一 | 实时实验报表 |
 | SaasReq.column_clear | [ColumnClear](#columnclear) | 唯一 | 列清零 |
 | SaasReq.reset_ds | [ResetDs](#resetds) | 唯一 | 清空数据区 |
 | SaasReq.admincode_list | [AdminCodeList](#admincodelist) | 唯一 | 列出行政区划代码 |
@@ -836,6 +882,7 @@ API以protobuf格式返回，返回信息为SaasRes结构
 | SaasReq.script_use_res | [ScriptUseRes](#scriptuse) | 唯一 | 使用脚本返回状态 |
 | SaasRes.exp_list_res | [ExpList](#explist) | 唯一 | 实验列表返回状态 |
 | SaasRes.exp_get_res | [ExpGet](#expdata) | 唯一 | 实验报表返回状态 |
+| SaasRes.rt_exp_get_res | [RTExpGetRes](#rtexpget) | 唯一 | 实时实验报表返回状态 |
 | SaasRes.column_clear_res | [ColumnClearRes](#columnclear) | 唯一 | 列清零返回状态 |
 | SaasRes.reset_ds_res | [ResetDsRes](#resetds) | 唯一 | 清空数据区返回状态 |
 | SaasRes.admin_code_list_res | [AdminCodeListRes](#admincodelist) | 唯一 | 行政区划代码列表返回状态 |
@@ -1871,7 +1918,101 @@ saastool resetds -ds geofac
 | md_pur_val_30 | float64 | 30日付费金额(激活口径) |
 | md_pur_val_30_roi | float64 | 30日ROI(激活口径) |
 
-## 3.21 行政区划代码 {#admincodelist}
+## 3.21 实时实验报表 {#rtexpget}
+
+### 3.21.1 获取 RTExpGet
+
+**说明**：该接口用于获取实时实验报表数据，数据源为 InfluxDB，由 tdbankconsumer 消费 ETL PageView 消息后写入。与 [ExpGet](#expdata)（T+1 离线数据）不同，RTExpGet 提供分钟级延迟的实时数据，支持自定义对照组/实验组分桶、时间范围精确到分钟、归一化等功能。
+
+**接口**：/saas/rtexp/get
+
+::::tip[与 ExpGet 的区别]
+- **数据源**：ExpGet 来自离线数仓（T+1），RTExpGet 来自 InfluxDB 实时流。
+- **时间粒度**：ExpGet 按天查询，RTExpGet 精确到分钟。
+- **分组方式**：ExpGet 按单桶或按广告主分组，RTExpGet 自由组合对照组/实验组的分桶。
+- **字段差异**：RTExpGet 返回 CPM/CPC 计费明细及 OCPX 维度数据，不含 ExpGet 的扩展指标和衍生指标（CPM/CPC/CPC/CPA/CTR/CVR 等比率）。
+::::
+
+**请求参数**：
+
+表格节点位于 SaasReq.rt_exp_get
+
+| 字段名称 | 字段类型 | 必填 | 描述 |
+| :--- | :--- | :--- | :--- |
+| where_begin_time | uint64 | 否 | 起始时间（YYYYMMDDHHMMSS），为0时默认今天00:00 |
+| where_end_time | uint64 | 否 | 结束时间（YYYYMMDDHHMMSS），为0时默认当前分钟 |
+| base_bucket_group | ExpBucketGroup | 是 | 对照组 |
+| base_bucket_group.bucket_ids | repeated uint32 | 是 | 对照组桶ID列表（1-10） |
+| exp_bucket_group | repeated ExpBucketGroup | 否 | 实验组列表 |
+| exp_bucket_group.bucket_ids | repeated uint32 | 是 | 实验组桶ID列表（1-10） |
+| where_target | string | 是 | 策略ID。本账户策略直接填写（如 `my-target`），跨账户策略格式为 `<源账户ID>_<策略ID>`（如 `2033_target-v3`） |
+| where_advertiser_id | repeated uint64 | 否 | 广告主ID列表，为空时取策略下全部广告主 |
+| normalization_flag | uint32 | 否 | 是否归一化：0=否，1=按分桶数量归一化（值÷桶数×10） |
+
+**时间范围约束**：
+- `where_begin_time` 不能小于 T-2（今天0点减2天）
+- `where_end_time` 不能大于当前时间
+- `where_end_time` 不能小于 `where_begin_time + 1分钟`
+- 秒数自动清零（如 `20250617120102` → `20250617120100`）
+
+**分桶ID约束**：
+- 所有 bucket_id 必须在 1-10 范围内
+- 全局（base + 所有 exp 组）分桶 ID 不能重复
+
+**跨账户授权**：
+- 跨账户策略（target 含下划线）需要源账户已对当前账户授权（ExpGrant），未授权返回 PARAM_ERROR
+- 本账户策略（target 不含下划线）无需授权
+
+**返回参数**：
+
+表格节点位于 SaasRes.rt_exp_get_res
+
+| 字段名称 | 字段类型 | 必填 | 描述 |
+| :--- | :--- | :--- | :--- |
+| base_bucket_data | RTBucketData | 否 | 对照组数据 |
+| base_bucket_data.bucket_ids | repeated uint32 | 否 | 对照组桶ID列表 |
+| base_bucket_data.base_fields | RTExpBaseFields | 否 | 对照组统计字段 |
+| exp_bucket_data | repeated RTBucketData | 否 | 实验组数据列表 |
+| exp_bucket_data.bucket_ids | repeated uint32 | 否 | 实验组桶ID列表 |
+| exp_bucket_data.base_fields | RTExpBaseFields | 否 | 实验组统计字段 |
+
+**RTExpBaseFields 字段说明**：
+
+| 字段名称 | 字段类型 | 描述 |
+| :--- | :--- | :--- |
+| exposure | double | 曝光量（不区分OCPX） |
+| click | double | 点击量（不区分OCPX） |
+| cpm_cost | double | CPM花费（元，不区分OCPX） |
+| cpc_cost | double | CPC花费（元，不区分OCPX） |
+| ocpx_exposure | double | OCPX曝光量 |
+| ocpx_click | double | OCPX点击量 |
+| ocpm_cost | double | oCPM花费（元） |
+| ocpc_cost | double | oCPC花费（元） |
+| conversion | double | 浅层转化量 |
+| conversion_second | double | 深层转化量 |
+
+**使用示例**：
+
+```sh
+# 使用 saastool 查询实时实验报表
+saastool rtexp get \
+  -target my-target \
+  -basebuckets 0,1,5,6,10 \
+  -expbuckets "2,7;3,8;4,9" \
+  -begintime 20250622000000 \
+  -endtime 20250622230000
+
+# 使用 saasai 查询（归一化）
+saasai rtexp get \
+  --target my-target \
+  --base 0,1,5,6,10 \
+  --exp-groups "2,7;3,8;4,9" \
+  --begin-time 20250622000000 \
+  --end-time 20250622230000 \
+  --normalize
+```
+
+## 3.22 行政区划代码 {#admincodelist}
 
 ### 3.21.1 列表 AdminCodeList
 

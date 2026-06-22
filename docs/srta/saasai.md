@@ -154,6 +154,7 @@ Available Commands:
   info        Get SaaS server info
   read        Read users' bytes / uint32s / flags
   resetds     Reset data space (destructive!)
+  rtexp       Realtime experiment report (InfluxDB-based)
   script      Manage lua scripts
   target      Manage targets
   task        Manage tasks
@@ -765,7 +766,54 @@ saasai --dry-run exp grant add --account 12345
 | `--account` | 是（add/delete） | sRTA 账户 ID | `12345` |
 | `--dry-run` | 否（仅 add/delete） | 仅预览 | — |
 
-## 6.15 admincode（行政区划代码）
+## 6.15 rtexp（实时实验报表）
+
+查询实时实验报表数据（InfluxDB 数据源）。与 `exp get`（离线 T+1 数据）不同，`rtexp get` 从 InfluxDB 实时流查询，延迟在分钟级，支持自定义对照组/实验组分桶和归一化。
+
+```
+Available Commands:
+  get         Get realtime exp report
+```
+
+### 6.15.1 rtexp get
+
+| 参数 | 必填 | 含义 | 样例 |
+| --- | --- | --- | --- |
+| `--target` | 是 | 策略 ID | `my-target` |
+| `--base` | 是 | 对照组桶 ID，逗号分隔（1-10） | `0,1,5,6,10` |
+| `--exp-groups` | 否 | 实验组桶 ID，分号分隔多组，组内逗号分隔 | `"2,7;3,8;4,9"` |
+| `--begin-time` | 否 | 起始时间 YYYYMMDDHHMMSS（默认今天 00:00） | `20250622000000` |
+| `--end-time` | 否 | 结束时间 YYYYMMDDHHMMSS（默认当前分钟） | `20250622230000` |
+| `--advertiser-ids` | 否 | 广告主 ID 列表，逗号分隔 | `123,456` |
+| `--normalize` | 否 | 归一化（÷桶数×10） | — |
+
+::::tip[与 exp get 的区别]
+- **数据源**：`exp get` 来自离线数仓（T+1），`rtexp get` 来自 InfluxDB 实时流。
+- **时间粒度**：`exp get` 按天，`rtexp get` 精确到分钟。
+- **分组方式**：`rtexp get` 自由组合对照组/实验组的分桶。
+- **字段差异**：`rtexp get` 返回 CPM/CPC 计费明细及 OCPX 维度数据。
+::::
+
+**使用示例**
+
+```sh
+# 基本查询
+saasai rtexp get --target my-target --base 0,1,5,6,10 --exp-groups "2,7;3,8;4,9"
+
+# 指定时间范围
+saasai rtexp get --target my-target --base 0,1,5,6,10 \
+                 --exp-groups "2,7;3,8;4,9" \
+                 --begin-time 20250622000000 --end-time 20250622230000
+
+# 带归一化和广告主过滤
+saasai rtexp get --target my-target --base 1,5,6 --exp-groups "2,7;3,8" \
+                 --advertiser-ids 123,456 --normalize
+
+# 跨账户策略
+saasai rtexp get --target 2033_target-v3 --base 1,5,6 --exp-groups "2,7"
+```
+
+## 6.16 admincode（行政区划代码）
 
 查询中国行政区划代码。
 
@@ -790,9 +838,9 @@ saasai -o table admincode list   # 人类可读
 }
 ```
 
-## 6.16 AI Agent / 脚本集成范式
+## 6.17 AI Agent / 脚本集成范式
 
-### 6.16.1 Bash
+### 6.17.1 Bash
 
 ```sh
 if saasai task info --sha256 "$H" > ok.json 2> err.json; then
@@ -810,7 +858,7 @@ else
 fi
 ```
 
-### 6.16.2 Python
+### 6.17.2 Python
 
 ```python
 import json, subprocess
@@ -829,14 +877,14 @@ else:
         raise RuntimeError(f"{err['type']}: {err['message']}")
 ```
 
-### 6.16.3 关键约定
+### 6.17.3 关键约定
 
 - **永远先看 exit code**，再解析 stderr（error）或 stdout（data）。
 - **失败时 stdout 一定为空**，可放心 `cmd > out.json` 或 `| jq`。
 - **JSON 模式下 stderr 也是纯净 JSON**（或完全为空），方便 `2> err.json` 后直接解析。
 - 需要人工可读时加 `-o table`；需要诊断时加 `-v` 或 `-vv`。
 
-## 6.17 与 saastool 的关系
+## 6.18 与 saastool 的关系
 
 | 维度 | saastool | saasai |
 | --- | --- | --- |

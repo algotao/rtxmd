@@ -39,6 +39,7 @@ Commands:
     grant              Grant commands
     script             Script commands
     exp                Exp commands
+    rtexp              Realtime exp commands
     admincode          Admin code commands
 
     daemon             Run in daemon mode
@@ -1515,7 +1516,102 @@ Usage of delete:
 saastool exp grant delete -account 12345
 ```
 
-### 4.1.15 admincode（行政区划代码）命令列表
+### 4.1.15 rtexp（实时实验报表）命令列表
+
+用于查询实时实验报表数据（InfluxDB 数据源），支持自定义对照组/实验组分桶、分钟级时间范围和归一化。
+
+```sh
+saastool rtexp help
+```
+
+```
+Usage:  saastool rtexp COMMAND [OPTIONS]
+
+Commands:
+    get                 Get realtime exp report
+
+"help" is the default command.
+
+Use "saastool rtexp COMMAND -help" for more information about a command.
+```
+
+#### 4.1.15.1 rtexp get（获取实时实验报表）
+
+查询实时实验报表数据。与 `exp get`（离线 T+1 数据）不同，`rtexp get` 从 InfluxDB 实时流查询，延迟在分钟级。
+
+```sh
+saastool rtexp get -help
+```
+
+```
+Usage of get:
+  -basebuckets string
+        Base bucket IDs, comma separated (required)
+  -begintime uint
+        Begin time YYYYMMDDHHMMSS (default: today 00:00)
+  -config string
+        Config file. (default "cfg.toml")
+  -endtime uint
+        End time YYYYMMDDHHMMSS (default: now, minute precision)
+  -expbuckets string
+        Exp bucket groups, semicolon separated; commas within each group
+  -normalize int
+        Normalization flag: 0=off, 1=normalize by bucket count (default 0)
+  -target string
+        Target ID (required)
+  -uid string
+        Advertiser IDs. Use commas to separate multiple IDs
+```
+
+**参数说明**
+
+| 参数 | 必填 | 含义 | 样例 |
+| --- | --- | --- | --- |
+| -target | 是 | 策略ID | my-target |
+| -basebuckets | 是 | 对照组桶ID，逗号分隔（1-10） | 0,1,5,6,10 |
+| -expbuckets | 否 | 实验组桶ID，分号分隔多组，组内逗号分隔 | "2,7;3,8;4,9" |
+| -begintime | 否 | 起始时间 YYYYMMDDHHMMSS | 20250622000000（默认今天00:00） |
+| -endtime | 否 | 结束时间 YYYYMMDDHHMMSS | 20250622230000（默认当前分钟） |
+| -uid | 否 | 广告主ID，逗号分隔 | 123,456 |
+| -normalize | 否 | 归一化标志：0=否，1=按桶数归一化 | 1 |
+| -config | 否 | 配置文件路径 | cfg.toml（默认） |
+
+**时间范围说明**
+
+- 时间格式为14位 YYYYMMDDHHMMSS，秒位自动清零
+- 最早支持 T-2（今天0点减2天）
+- 结束时间不能大于当前时间
+- 结束时间不能小于起始时间+1分钟
+
+**分桶ID说明**
+
+- 桶 ID 范围 1-10，全局（base + 所有 exp 组）不可重复
+- 对照组和实验组的分桶可以不覆盖全部 1-10
+
+**跨账户策略**
+
+- 跨账户策略格式：`<源账户ID>_<策略ID>`（如 `2033_target-v3`）
+- 需要源账户已通过 `exp grant add` 授权
+
+**使用示例**
+
+```sh
+# 基本查询
+saastool rtexp get -target my-target -basebuckets 0,1,5,6,10 -expbuckets "2,7;3,8;4,9"
+
+# 指定时间范围
+saastool rtexp get -target my-target -basebuckets 0,1,5,6,10 \
+  -begintime 20250622000000 -endtime 20250622230000
+
+# 带归一化和广告主过滤
+saastool rtexp get -target my-target -basebuckets 1,5,6 -expbuckets "2,7;3,8" \
+  -uid 123,456 -normalize 1
+
+# 跨账户策略
+saastool rtexp get -target 2033_target-v3 -basebuckets 1,5,6 -expbuckets "2,7"
+```
+
+### 4.1.16 admincode（行政区划代码）命令列表
 
 用于查询中国行政区划代码信息，包括省、市级别的行政区划代码。
 
@@ -1533,7 +1629,7 @@ Examples:
   saastool admincode list -c cfg.toml
 ```
 
-#### 4.1.15.1 admincode list（查询行政区划代码列表）
+#### 4.1.16.1 admincode list（查询行政区划代码列表）
 
 查询所有中国行政区划代码，包括省、市级别的代码信息。
 
