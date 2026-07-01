@@ -513,9 +513,10 @@ saasai task info --sha256 abc123...
 
 ```
 Available Commands:
-  create  Create a target
-  delete  Delete a target
-  list    List targets
+  config   Manage target-level configurations
+  create   Create a target
+  delete   Delete a target
+  list     List targets
 ```
 
 ### 6.10.1 target list
@@ -553,6 +554,80 @@ saasai --dry-run target create --target my_target
 ```sh
 saasai target delete --target my_target
 saasai --dry-run target delete --target my_target
+```
+
+### 6.10.4 target config list
+
+查询策略级配置（赔付期 CPA 调节 / 权重调节的启用状态）。
+
+| 参数 | 必填 | 含义 | 样例 |
+| --- | --- | --- | --- |
+| `--targets` | 否 | 策略 ID 列表，逗号分隔（空=全部） | `t1,t2` |
+
+**返回字段值语义**
+
+| 值 | 含义 |
+| --- | --- |
+| `0` | 启用（默认） |
+| `2` | 禁用 |
+
+```sh
+saasai target config list
+saasai target config list --targets t1,t2
+```
+
+### 6.10.5 target config update
+
+修改策略级配置。支持**单条模式**和**批量模式**（两者互斥）。
+
+**字段值语义**
+
+| 值 | 含义 |
+| --- | --- |
+| `-1` | 不修改（保持当前值） |
+| `0` | 启用（默认） |
+| `2` | 禁用 |
+
+#### 单条模式
+
+| 参数 | 必填 | 含义 | 样例 |
+| --- | --- | --- | --- |
+| `--target` | 是 | 策略 ID | `t1` |
+| `--enable-cpa` | 否 | 赔付期 CPA 调节：`-1`=保持, `0`=启用, `2`=禁用 | `2` |
+| `--enable-weight` | 否 | 赔付期权重调节：`-1`=保持, `0`=启用, `2`=禁用 | `2` |
+| `--dry-run` | 否 | 仅预览 | — |
+
+至少指定 `--enable-cpa` 或 `--enable-weight` 中的一个。
+
+```sh
+# 禁用 CPA 调节
+saasai target config update --target t1 --enable-cpa 2
+
+# 恢复权重调节为默认（启用）
+saasai target config update --target t1 --enable-weight 0
+
+# 同时修改两个字段
+saasai target config update --target t1 --enable-cpa 2 --enable-weight 2
+
+# 预览
+saasai --dry-run target config update --target t1 --enable-cpa 2
+```
+
+#### 批量模式
+
+| 参数 | 必填 | 含义 | 样例 |
+| --- | --- | --- | --- |
+| `--items` | 是 | 紧凑格式，最多 10 条，逗号分隔 | `'t1:2:2,t2:-1:0'` |
+| `--dry-run` | 否 | 仅预览 | — |
+
+**`--items` 格式**：`<target_id>:<enable_cpa>:<enable_weight>`，多条用逗号分隔。
+
+```sh
+# 批量修改：t1 禁用两项，t2 只改权重为启用，t3 禁用 CPA
+saasai target config update --items 't1:2:2,t2:-1:0,t3:2:-1'
+
+# 预览
+saasai --dry-run target config update --items 't1:2:2,t2:0:0'
 ```
 
 ## 6.11 bind（策略绑定）

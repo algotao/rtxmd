@@ -718,6 +718,7 @@ Commands:
     list                 List targets
     create               Create a new target
     delete               Delete an existing target
+    config               Manage target-level configurations
 
 "help" is the default command.
 
@@ -826,6 +827,113 @@ Usage of delete:
 
 ```sh
 saastool target delete -target my_target
+```
+
+#### 4.1.10.4 target config（策略级配置）
+
+用于管理策略级配置，目前支持**赔付期 CPA 出价调节**和**赔付期权重调节**两个开关。
+
+```sh
+saastool target config help
+```
+
+```
+Usage:  saastool target config COMMAND [OPTIONS]
+
+Commands:
+    list                 List target-level configurations
+    update               Update target-level configurations (single target per call)
+
+Field values (0=enable/default, 2=disable):
+    -enable-cpa          Enable CPA on cost guarantee.    -1=keep, 0=enable, 2=disable
+    -enable-weight       Enable weight on cost guarantee. -1=keep, 0=enable, 2=disable
+
+Note: saastool update supports one target per call.
+      For batch updates (up to 10 targets), use 'saasai target config update --items=...'.
+```
+
+##### 4.1.10.4.1 target config list（查询策略级配置）
+
+查询本账户策略的赔付期配置状态。不传 `-targets` 时返回全部策略。
+
+```sh
+saastool target config list -help
+```
+
+```
+Usage of list:
+  -config string
+        Config file. (default "cfg.toml")
+  -targets string
+        Target IDs. Use commas to separate multiple IDs
+```
+
+**参数说明**
+
+| 参数 | 必填 | 含义 | 样例 |
+| --- | --- | --- | --- |
+| `-targets` | 否 | 策略 ID 列表，逗号分隔（空=全部） | `t1,t2,t3` |
+| `-config` | 否 | 配置文件路径 | `cfg.toml`（默认） |
+
+**字段值语义**
+
+| 值 | 含义 |
+| --- | --- |
+| `0` | 启用（默认） |
+| `2` | 禁用 |
+
+**使用示例**
+
+```sh
+# 查询全部策略的配置
+saastool target config list
+
+# 查询指定策略
+saastool target config list -targets t1,t2
+```
+
+##### 4.1.10.4.2 target config update（修改策略级配置）
+
+修改单个策略的赔付期配置。**一次只能修改一个策略**；如需批量修改，请使用 `saasai target config update --items=...`。
+
+```sh
+saastool target config update -help
+```
+
+```
+Usage of update:
+  -config string
+        Config file. (default "cfg.toml")
+  -enable-cpa int
+        Enable CPA on cost guarantee. -1=keep, 0=enable, 2=disable (default -1)
+  -enable-weight int
+        Enable weight on cost guarantee. -1=keep, 0=enable, 2=disable (default -1)
+  -target string
+        Target ID
+```
+
+**参数说明**
+
+| 参数 | 必填 | 含义 | 样例 |
+| --- | --- | --- | --- |
+| `-target` | 是 | 策略 ID | `t1` |
+| `-enable-cpa` | 否 | 赔付期 CPA 调节：`-1`=保持, `0`=启用, `2`=禁用 | `2` |
+| `-enable-weight` | 否 | 赔付期权重调节：`-1`=保持, `0`=启用, `2`=禁用 | `2` |
+| `-config` | 否 | 配置文件路径 | `cfg.toml`（默认） |
+
+至少指定 `-enable-cpa` 或 `-enable-weight` 中的一个。
+
+**使用示例**
+
+```sh
+# 禁用某策略的 CPA 调节
+saastool target config update -target t1 -enable-cpa 2
+
+# 恢复某策略的权重调节为默认（启用）
+saastool target config update -target t1 -enable-weight 0
+
+# 同时修改两个字段
+saastool target config update -target t1 -enable-cpa 2 -enable-weight 2
 ```
 
 ### 4.1.11 bind（策略绑定）命令列表
@@ -1714,7 +1822,7 @@ saastool提供了容器版本。在容器中将默认启动为daemon并提供htt
 ```yml
 services:
   saastool:
-    image: rta-docker.pkg.coding.net/public/docker/saastool:2026060118
+    image: rta-docker.pkg.coding.net/public/docker/saastool:2026070113
     restart: unless-stopped
     environment:
       - SRTA_ACCOUNT=2000
@@ -1729,7 +1837,7 @@ services:
 ```yml
 services:
   saastool:
-    image: rta-docker.pkg.coding.net/public/docker/saastool:2026060118
+    image: rta-docker.pkg.coding.net/public/docker/saastool:2026070113
     restart: unless-stopped
     environment:
       - SRTA_ACCOUNT=2000
