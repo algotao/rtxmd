@@ -85,10 +85,12 @@ keywords: [LUA智能决策, RTA SaaS, 系统函数, 内置模块, srta, string, 
 | srta.get_targets | 获取需决策的策略ID列表 |
 | srta.get_apps | 获取App安装态(需授权) |
 | srta.get_scores | 获取模型分(需授权) |
+| srta.get_extscore | 简化版模型分查询(需授权) |
 | srta.get_os | 获取终端操作系统 |
 | srta.get_siteset | 获取站点集ID |
 | srta.get_expid | 获取实验分桶ID |
 | srta.get_geo_nearest | 获取地理位置最近的数据 |
+| srta.get_geo_points | 获取半径范围内排序的地理位置数据点 |
 
 
 ### 5.2.3 srta.get_dsdata函数
@@ -134,14 +136,55 @@ app3 = nil
 一次可以获得多个模型打分，每个返回值为数字/nil(无权限或不可靠)中的一个状态
 
 ```lua
-score1, score2, score3 = srta.get_scores(model1, model2, model1) -- 获取模型分，可支持多个。
--- 以下为字段返回值示例
+score1, score2, score3 = srta.get_scores(model1, model2, model3) -- 获取模型分，可支持多个。
+
+-- 以下为返回值示例
 score1 = 0
 score2 = 80
 score3 = nil
 ```
 
-### 5.2.7 srta.get_os函数
+例如，获取外部账号2002在wuid空间中shard=1的U8列1/2/3的打分：
+
+```lua
+score1, score2, score3 = srta.get_scores(20020201001, 20020201002, 20020201003)
+
+-- 以下为返回值示例
+score1 = 0
+score2 = 80
+score3 = nil
+```
+
+### 5.2.7 srta.get_extscore函数
+
+`srta.get_extscore` 是 `srta.get_scores` 的跨账号访问专用版，简化调用代码编写，用于查询其他账号数据空间的模型打分（需授权）。
+
+与 `srta.get_scores` 的区别在于，`get_extscore` 首个参数使用 `accountSubId` 组合值指定目标账号和子空间，而非要求每个参数直接传入完整的模型ID。
+
+```lua
+-- 等价于上例 srta.get_scores 的简化写法
+score1, score2, score3 = srta.get_extscore(200202, 1, 2, 3) -- 200202=账号2002的WUID区
+
+-- 以下为返回值示例
+score1 = 0    -- 等价于 U8列1 (模型ID:20020201001)
+score2 = 80   -- 等价于 U8列2 (模型ID:20020201002)
+score3 = nil  -- 等价于 U8列3 (模型ID:20020201003), 无权限或不存在时返回 nil
+```
+
+**参数说明**：
+- 参数1：`accountSubId`，类型为整数，由 `account*100 + subId` 计算得出。例如 `200102` 表示 account=2001, subId=2 (WUID 区)。当传入 `0` 时，会自动转为系统 2001 账号的 WUID 区
+- 参数2及之后：一个或多个 U8 列索引（1-based，范围 1~64），shard index 固定为 1
+
+**返回值说明**：
+- 每个 U8 列索引对应一个返回值，按参数顺序返回
+- 命中时返回数字（0~255 的 U8 值）
+- 未命中、无权限或数据不存在时返回 `nil`
+
+**使用场景**：
+- 需要查询合作方或其他账号的模型打分数据进行联合决策
+- 在不需要完整 DS 数据时，直接获取指定列的打分值，性能更优
+
+### 5.2.8 srta.get_os函数
 
 获取终端的操作系统。返回值参考[系统常量]
 
@@ -152,7 +195,7 @@ os = srta.get_os() -- 获取终端操作系统
 1 -- 代表iOS，可以用srta常量进行判断
 ```
 
-### 5.2.8 srta.get_siteset函数
+### 5.2.9 srta.get_siteset函数
 
 获取媒体站点集ID。返回值参考[系统常量]
 
@@ -163,7 +206,7 @@ siteset = srta.get_siteset() -- 获取媒体站点集ID
 21 -- 21代表微信，可以用srta常量进行判断
 ```
 
-### 5.2.9 srta.get_expid函数
+### 5.2.10 srta.get_expid函数
 
 获取实验分桶编号。返回值为 0-10。1-10 每个分桶 UV 比例接近于 10%。由于系统原因，目前线上极少量的流量不会被分到任何实验分组，当分桶号为 0 时，代表流量未分桶。
 
@@ -174,7 +217,7 @@ expid = srta.get_expid() -- 获取实验分桶号
 5 -- 代表5号分桶
 ```
 
-### 5.2.10 srta.get_geo_nearest函数
+### 5.2.11 srta.get_geo_nearest函数
 
 获取地理位置最近的数据。传入搜索半径（单位：公里），返回距离（单位：米）和对应的数据表。
 
@@ -204,6 +247,58 @@ geoData = {
 - 地域性活动推广：向特定区域用户推送本地活动信息
 - 门店引流：向门店附近用户推送优惠信息
 
+### 5.2.12 srta.get_geo_points函数
+
+获取半径范围内、按指定 U8 列倒序排列的地理位置数据点，最多返回 10 个。与 `srta.get_geo_nearest` 仅返回最近一个不同，该函数返回排序后的多点列表，适用于多个候选点的比选场景。
+
+```lua
+points = srta.get_geo_points(3, 1) -- 查询3公里范围内按U8列1倒序排列的点
+
+-- 以下为返回值示例
+points = {
+    [1] = {
+        [srta.GEO_DISTANCE] = 500,     -- 距离(米)
+        [srta.GEO_DATA] = {
+            [srta.U8] = {10, 20, 30},
+            [srta.U32] = {100, 200},
+            [srta.FLAG] = {true, false}
+        },
+        [srta.GEO_SCORE] = 80          -- 排序所用 U8 列的值
+    },
+    [2] = {
+        [srta.GEO_DISTANCE] = 1200,
+        [srta.GEO_DATA] = { ... },
+        [srta.GEO_SCORE] = 60
+    },
+    -- 最多10个点，按 srta.GEO_SCORE 倒序，分相同时按距离近优先
+}
+```
+
+**参数说明**：
+- 参数1：搜索半径，单位为公里（km），类型为整数
+- 参数2：排序用的 U8 列索引（1-based），类型为整数
+
+**返回值说明**：
+- 返回一个数组表，每个元素是一个包含三个字段的 table：
+  - `srta.GEO_DISTANCE`：距离（米），类型为整数
+  - `srta.GEO_DATA`：数据空间数据表，结构与 `srta.get_dsdata` 返回的表结构相同，包含 U8/U32/FLAG 三个区
+  - `srta.GEO_SCORE`：排序所用 U8 列的值，已预取，无需再从 `GEO_DATA` 中查询
+- 排序规则：按 `GEO_SCORE` 倒序，分值相同时按距离近优先
+- 未找到数据时返回空表（非 nil）
+
+**与 srta.get_geo_nearest 的区别**：
+
+| 特性 | get_geo_nearest | get_geo_points |
+| :-- | :-- | :-- |
+| 返回数量 | 1个（最近） | 最多10个 |
+| 排序 | 按距离最近 | 按U8列倒序+距离 |
+| 无数据时 | 返回哨兵距离+空表 | 返回空数组表 |
+| GEO_SCORE 预取 | 不支持 | 支持 |
+
+**使用场景**：
+- 多点比选：查询附近多个门店，按门店评分排序后择优投放
+- 竞价排名：按出价/权重列排序，对多个候选广告位进行优选出价
+- 商圈分析：获取周边所有候选点数据进行综合决策
 
 ## 5.3 内置模块string
 
@@ -507,6 +602,9 @@ function hijack()
             [200701123] = 10,
             [200701129] = 50
         },
+        srta_get_extscore = {
+            [200102] = {10, 50, 80}  -- accountSubId=200102 的 U8列1/2/3 打分
+        },
         srta_get_os = srta.OS_IOS,
         srta_get_expid = 1,
         srta_get_siteset = srta.SITESET_WECHAT,
@@ -516,6 +614,26 @@ function hijack()
                 [srta.U8] = {[1] = 10, [2] = 20},
                 [srta.U32] = {[1] = 100},
                 [srta.FLAG] = {[1] = true}
+            }
+        },
+        srta_get_geo_points = {
+            [1] = {
+                [srta.GEO_DISTANCE] = 500,
+                [srta.GEO_DATA] = {
+                    [srta.U8] = {[1] = 10, [2] = 20},
+                    [srta.U32] = {[1] = 100},
+                    [srta.FLAG] = {[1] = true}
+                },
+                [srta.GEO_SCORE] = 80
+            },
+            [2] = {
+                [srta.GEO_DISTANCE] = 1200,
+                [srta.GEO_DATA] = {
+                    [srta.U8] = {[1] = 8, [2] = 15},
+                    [srta.U32] = {[1] = 200},
+                    [srta.FLAG] = {[1] = false}
+                },
+                [srta.GEO_SCORE] = 60
             }
         },
         time_now = 1755414905,
@@ -580,10 +698,12 @@ end
 | srta_get_targets | 使用srta.get_targets获取真实的策略列表 |
 | srta_get_apps | 返回nil |
 | srta_get_scores | 返回nil |
+| srta_get_extscore | 返回nil |
 | srta_get_os | 使用ScriptRun接口调用的 os 字段，如调用接口未指定则为 srta.OS_ANDROID |
 | srta_get_expid | 0 |
 | srta_get_siteset | 0 |
 | srta_get_geo_nearest | 返回距离为4294967295（0xFFFFFFFF）和空表 |
+| srta_get_geo_points | 返回空数组表 |
 | time_now | 使用time.now获取真实的系统时间 |
 | geo_ip | 使用请求中的IP地址解析行政区划码。如未指定则为0，srta.get_dsdata(srta.DS_GEOIP) 将返回空表 |
 | geo_fac | 使用请求中的常住城市行政区划码。如未指定则为0，srta.get_dsdata(srta.DS_GEOFAC) 将返回空表 |
