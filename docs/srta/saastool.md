@@ -58,14 +58,13 @@ saastool需要一个配置文件，其中可填写自己的Account、Token。使
 
 ```toml
 # 样例
+# 演示模式：取消注释下行即可（无需改 baseurl）
+#demo = true
+
 [auth]
 account = "2000"
 token = "test"
 
-[apiurls]
-baseurl = "https://api.rta.qq.com" # 正式环境
-# 演示模式：取消注释下行即可（无需改 baseurl）
-#demo = true
 ```
 
 ### 4.1.2 info（获取Saas信息）
