@@ -38,6 +38,8 @@ message SaasReq {
         TargetList target_list                   = 50;  // 列出策略及绑定
         TargetCreate target_create               = 51;  // 创建策略
         TargetDelete target_delete               = 52;  // 删除策略
+        TargetConfigList target_config_list      = 53;  // 查询策略级配置
+        TargetConfigUpdate target_config_update  = 54;  // 修改策略级配置
 
         BindSet bind_set                         = 61;  // 设置绑定
         BindDelete bind_delete                   = 62;  // 解除绑定
@@ -221,6 +223,27 @@ message TargetDelete {
     string target_id                             = 1;   // 策略ID
 }
 
+// TargetConfigList 查询策略级配置
+message TargetConfigList {
+    repeated string targets                      = 1;   // 策略ID列表，为空则返回本账户全部
+}
+
+// TargetConfigUpdate 修改策略级配置（一次可批量多条，最多10条）
+message TargetConfigUpdate {
+    repeated TargetConfigUpdateItem items        = 1;   // 待更新的策略级配置项
+}
+
+// TargetConfigUpdateItem 单条待更新配置
+// 说明：字段值语义
+//   -1 = 不修改（保持当前值）
+//    0 = 启用（默认状态）
+//    2 = 禁用
+message TargetConfigUpdateItem {
+    string target_id                             = 1;   // 策略ID
+    int32 enable_cpa_on_cost_guarantee           = 2;   // 赔付期允许CPA调节
+    int32 enable_weight_on_cost_guarantee        = 3;   // 赔付期允许权重调节
+}
+
 // BindSet 设置绑定
 message BindSet {
     repeated Bind binds                          = 2;   // 设置绑定内容
@@ -349,6 +372,8 @@ message SaasRes {
         TargetListRes target_list_res            = 50;  // 列出策略及绑定返回状态
         TargetCreateRes target_create_res        = 51;  // 创建策略返回状态
         TargetDeleteRes target_delete_res        = 52;  // 删除策略返回状态
+        TargetConfigListRes target_config_list_res     = 53;  // 查询策略级配置返回
+        TargetConfigUpdateRes target_config_update_res = 54;  // 修改策略级配置返回
     
         BindSetRes bind_set_res                  = 61;  // 设置绑定返回状态
         BindDeleteRes bind_delete_res            = 62;  // 删除绑定返回状态
@@ -444,6 +469,26 @@ message TargetCreateRes {
 message TargetDeleteRes {
     string target_id                             = 1;  // 策略ID
     string target_description                    = 2;  // 策略描述
+}
+
+// TargetConfigListRes 查询策略级配置返回
+message TargetConfigListRes {
+    repeated TargetConfigItem items              = 1;  // 策略级配置列表
+}
+
+// TargetConfigItem 单条策略级配置（查询返回，字段值即为当前值）
+// 说明：字段值语义
+//    0 = 启用（默认状态）
+//    2 = 禁用
+message TargetConfigItem {
+    string target_id                             = 1;  // 策略ID
+    int32 enable_cpa_on_cost_guarantee           = 2;  // 赔付期允许CPA调节
+    int32 enable_weight_on_cost_guarantee        = 3;  // 赔付期允许权重调节
+}
+
+// TargetConfigUpdateRes 修改策略级配置返回
+message TargetConfigUpdateRes {
+    string message                               = 1;  // 更新结果消息
 }
 
 message Binds {
@@ -601,6 +646,7 @@ message RTExpBaseFields {
     double ocpc_cost                               = 8;  // oCPC花费(元)
     double conversion                              = 10; // 浅层转化量
     double conversion_second                       = 11; // 深层转化量
+    double gmv                                     = 12; // GMV(target_cpa累加)
 }
 
 // RTBucketData 实验分桶数据
@@ -703,18 +749,30 @@ enum MAX {
 }
 ```
 
-## 3.2 API域名
+## 3.2 API域名与演示模式
 
-数据管理测试URL：https://srta.algo.com.cn
+**数据管理正式URL：https://api.rta.qq.com**
+
+sRTA 不再使用独立的演示服务器，演示（Demo）模式与正式模式共用同一个基础地址 `https://api.rta.qq.com`，仅通过**请求路径前缀**区分：
+
+| 模式 | 路径前缀 | 完整示例 |
+| --- | --- | --- |
+| 正式模式（默认） | `/saas` | `https://api.rta.qq.com/saas/info` |
+| 演示模式 | `/saas/demo` | `https://api.rta.qq.com/saas/demo/info` |
+
 :::tip
-非官方地址的沙盒环境，仅用于测试，请不要上传真实数据。
+原演示模式地址 https://srta.algo.com.cn/saas 已改为转发至 https://api.rta.qq.com/saas/demo 模式。
 :::
 
 :::warning
-测试环境有可能会存在不稳定或服务关闭现象，在使用前请与研发先确认。 
+测试环境有可能会存在不稳定或服务关闭现象，在使用前请与研发先确认。
 :::
 
-**数据管理正式URL：https://api.rta.qq.com**
+**如何启用演示模式**
+
+- **客户端（saastool / saasai）**：在 `cfg.toml` 中设置顶层键 `demo = true`（需写在任何 `[table]` 之前），客户端即自动将所有请求路径加上 `/saas/demo` 前缀。
+- **HTTP API 直接调用**：将各接口路径中的 `/saas/` 替换为 `/saas/demo/`，例如写入接口由 `/saas/write` 改为 `/saas/demo/write`。
+- **Go SDK（saashttp）**：构造 `saashttp.SaasClient` 时设置 `Demo: true` 字段，详见后续各代码示例。
 
 ## 3.3 API请求
 
@@ -831,6 +889,8 @@ API以protobuf格式返回，返回信息为SaasRes结构
 | SaasReq.target_list | [TargetList](#targetlist) | 唯一 | 列出策略及绑定 |
 | SaasReq.target_create | [TargetCreate](#targetcreate) | 唯一 | 创建策略 |
 | SaasReq.target_delete | [TargetDelete](#targetdelete) | 唯一 | 删除策略 |
+| SaasReq.target_config_list | [TargetConfigList](#targetconfiglist) | 唯一 | 查询策略级配置 |
+| SaasReq.target_config_update | [TargetConfigUpdate](#targetconfigupdate) | 唯一 | 修改策略级配置 |
 | SaasReq.bind_set | [BindSet](#bindset) | 唯一 | 设置绑定 |
 | SaasReq.bind_delete | [BindDelete](#binddelete) | 唯一 | 解除绑定 |
 | SaasReq.grant_list | [GrantList](#grantlist) | 唯一 | 授权列表 |
@@ -869,6 +929,8 @@ API以protobuf格式返回，返回信息为SaasRes结构
 | SaasRes.target_list_res | [TargetListRes](#targetlist) | 唯一 | 列出策略及绑定返回状态 |
 | SaasReq.target_create_res | [TargetCreateRes](#targetcreate) | 唯一 | 创建策略返回状态 |
 | SaasReq.target_delete_res | [TargetDeleteRes](#targetdelete) | 唯一 | 删除策略返回状态 |
+| SaasRes.target_config_list_res | [TargetConfigListRes](#targetconfiglist) | 唯一 | 查询策略级配置返回 |
+| SaasRes.target_config_update_res | [TargetConfigUpdateRes](#targetconfigupdate) | 唯一 | 修改策略级配置返回 |
 | SaasRes.bind_set_res | [BindSetRes](#bindset) | 唯一 | 任务详情返回状态 |
 | SaasRes.bind_delete_res | [BindDeleteRes](#binddelete) | 唯一 | 设置绑定返回状态 |
 | SaasReq.grant_list_res | [GrantListRes](#grantlist) | 唯一 | 授权列表返回状态 |
@@ -1405,6 +1467,60 @@ saastool resetds -ds geofac
 | :--- | :--- | :--- | :--- |
 | target_id | string | 否 | 策略ID |
 | target_description | string | 否 | 策略备注 |
+
+### 3.16.4 查询策略级配置 TargetConfigList {#targetconfiglist}
+
+**说明**：该接口用于查询策略级配置，如赔付期是否允许 CPA/权重调节。`targets` 为空时返回本账户全部策略的配置。
+
+**接口**：/saas/target/config/list
+
+**请求参数**：
+
+表格节点位于 SaasReq.target_config_list
+
+| 字段名称 | 字段类型 | 必填 | 描述 |
+| :--- | :--- | :--- | :--- |
+| targets | array of string | 否 | 策略ID列表，为空则返回本账户全部 |
+
+**返回参数**：
+
+顶层节点 SaasRes.code/SaasRes.status 表达操作成功/失败状态
+
+表格节点位于 SaasRes.target_config_list_res
+
+| 字段名称 | 字段类型 | 必填 | 描述 |
+| :--- | :--- | :--- | :--- |
+| items | array of TargetConfigItem | 否 | 策略级配置列表 |
+| items.target_id | string | 否 | 策略ID |
+| items.enable_cpa_on_cost_guarantee | int32 | 否 | 赔付期允许CPA调节。0=启用（默认），2=禁用 |
+| items.enable_weight_on_cost_guarantee | int32 | 否 | 赔付期允许权重调节。0=启用（默认），2=禁用 |
+
+### 3.16.5 修改策略级配置 TargetConfigUpdate {#targetconfigupdate}
+
+**说明**：该接口用于批量修改策略级配置，一次最多 10 条。
+
+**接口**：/saas/target/config/update
+
+**请求参数**：
+
+表格节点位于 SaasReq.target_config_update
+
+| 字段名称 | 字段类型 | 必填 | 描述 |
+| :--- | :--- | :--- | :--- |
+| items | array of TargetConfigUpdateItem | 是 | 待更新的策略级配置项，最多 10 条 |
+| items.target_id | string | 是 | 策略ID |
+| items.enable_cpa_on_cost_guarantee | int32 | 否 | 赔付期允许CPA调节。-1=不修改，0=启用（默认），2=禁用 |
+| items.enable_weight_on_cost_guarantee | int32 | 否 | 赔付期允许权重调节。-1=不修改，0=启用（默认），2=禁用 |
+
+**返回参数**：
+
+顶层节点 SaasRes.code/SaasRes.status 表达操作成功/失败状态
+
+表格节点位于 SaasRes.target_config_update_res
+
+| 字段名称 | 字段类型 | 必填 | 描述 |
+| :--- | :--- | :--- | :--- |
+| message | string | 否 | 更新结果消息 |
 
 ## 3.17 绑定
 
@@ -1990,6 +2106,7 @@ saastool resetds -ds geofac
 | ocpc_cost | double | oCPC花费（元） |
 | conversion | double | 浅层转化量 |
 | conversion_second | double | 深层转化量 |
+| gmv | double | GMV（target_cpa累加） |
 
 **使用示例**：
 

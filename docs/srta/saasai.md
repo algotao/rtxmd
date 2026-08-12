@@ -115,7 +115,8 @@ token = "test"
 
 [apiurls]
 baseurl = "https://api.rta.qq.com"      # 正式环境
-#baseurl = "https://srta.algo.com.cn"   # 演示环境
+# 演示模式：取消注释下行即可（无需改 baseurl）
+#demo = true
 ```
 
 ### 6.1.5 参数命名对照（与 saastool）

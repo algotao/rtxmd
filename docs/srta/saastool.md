@@ -64,7 +64,8 @@ token = "test"
 
 [apiurls]
 baseurl = "https://api.rta.qq.com" # 正式环境
-#baseurl = "https://srta.algo.com.cn" # 演示环境
+# 演示模式：取消注释下行即可（无需改 baseurl）
+#demo = true
 ```
 
 ### 4.1.2 info（获取Saas信息）
@@ -387,7 +388,7 @@ saastool daemon -help
 | --- | --- | --- |
 | SRTA_ACCOUNT | sRTA账号（必填） | 2000 |
 | SRTA_TOKEN | sRTA Token（必填） | test_token |
-| SRTA_ENV | 环境类型：demo、prd 或 dev | demo、prd |
+| SRTA_ENV | 环境类型：demo（演示模式）、prd（正式模式）或 dev（本地开发） | demo、prd |
 | SRTA_PORT | 服务监听端口（可选） | 8080（默认） |
 
 **使用示例**
@@ -1818,11 +1819,11 @@ saastool提供了容器版本。在容器中将默认启动为daemon并提供htt
 
 ### 4.2.1 Docker Compose配置
 
-:::tip[Demo环境]
+:::tip[演示模式]
 ```yml
 services:
   saastool:
-    image: rta-docker.pkg.coding.net/public/docker/saastool:2026070113
+    image: rta-docker.pkg.coding.net/public/docker/saastool:202608121230
     restart: unless-stopped
     environment:
       - SRTA_ACCOUNT=2000
@@ -1837,7 +1838,7 @@ services:
 ```yml
 services:
   saastool:
-    image: rta-docker.pkg.coding.net/public/docker/saastool:2026070113
+    image: rta-docker.pkg.coding.net/public/docker/saastool:202608121230
     restart: unless-stopped
     environment:
       - SRTA_ACCOUNT=2000
@@ -1853,7 +1854,7 @@ services:
 | --- | --- |
 | SRTA_ACCOUNT | sRTA账号 |
 | SRTA_TOKEN | sRTA Token |
-| SRTA_ENV | 与Demo环境交互(demo) 或 与生产环境交互(prd) |
+| SRTA_ENV | 演示模式（demo）或正式模式（prd） |
 
 ### 4.2.2 基础信息
 

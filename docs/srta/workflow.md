@@ -436,7 +436,7 @@ saastool read -ds did -userids cfcd208495d565ef66e7dff9f98764da
 - **请求方式**：POST
 - **请求地址**：
   - 正式环境：`https://api.rta.qq.com/saas/write`
-  - 演示环境：`https://srta.algo.com.cn/saas/write`
+  - 演示模式：`https://api.rta.qq.com/saas/demo/write`
 - **请求头**：
   - `Content-Type: application/x-protobuf`
   - `X-Account-ID: {账号ID}`
@@ -480,13 +480,12 @@ import (
 )
 
 func main() {
-    // 初始化 API URLs（演示环境）
-    apiUrls := saashttp.InitAPIUrl(&saashttp.ApiUrlsCfg{
-        BaseUrl: "https://srta.algo.com.cn", // 演示环境
-        // 正式环境请使用: "https://api.rta.qq.com"
+    // 初始化 API URLs
+    apiUrls := saashttp.InitAPIUrl(&saashttp.ApiUrls{
+        BaseUrl: "https://api.rta.qq.com",
     })
-    
-    // 创建 SaasClient
+
+    // 创建 SaasClient（演示模式）
     client := &saashttp.SaasClient{
         Client:  &http.Client{},
         ApiUrls: apiUrls,
@@ -494,6 +493,7 @@ func main() {
             Account: "2000",           // 账号 ID
             Token:   "your_token_here", // Token
         },
+        Demo: true, // 演示模式
     }
     
     // 构造写入请求
@@ -574,7 +574,7 @@ saastool 支持以 HTTP 服务模式运行，提供简单的 HTTP 接口进行�
 # 设置环境变量
 export SRTA_ACCOUNT=2000
 export SRTA_TOKEN=your_token_here
-export SRTA_ENV=demo  # 或 prd
+export SRTA_ENV=demo  # 演示模式；prd 为正式模式
 export SRTA_PORT=8080
 
 # 启动 daemon
@@ -1008,7 +1008,7 @@ curl "http://localhost:8080/read?ds=did&userid=cfcd208495d565ef66e7dff9f98764da"
 2. **错误处理**：API 调用时务必检查返回的 `failed_userid`，对失败的记录进行重试或记录日志
 3. **过期策略**：合理使用 FLAG 字段的过期时间，避免过期数据占用存储空间
 4. **字段规划**：提前规划好字段索引的用途，避免后期混乱（建议维护字段索引文档）
-5. **测试验证**：生产环境写入前，建议先在演示环境（demo）进行测试验证
+5. **测试验证**：生产环境写入前，建议先在演示模式（demo）进行测试验证
 6. **任务管理**：
    - 定期清理已完成的 Task 任务，释放存储空间
    - 大批量数据更新建议在业务低峰期执行
@@ -1149,8 +1149,8 @@ import (
 )
 
 func main() {
-    apiUrls := saashttp.InitAPIUrl(&saashttp.ApiUrlsCfg{
-        BaseUrl: "https://srta.algo.com.cn",
+    apiUrls := saashttp.InitAPIUrl(&saashttp.ApiUrls{
+        BaseUrl: "https://api.rta.qq.com",
     })
     
     client := &saashttp.SaasClient{
@@ -1160,6 +1160,7 @@ func main() {
             Account: "2000",
             Token:   "your_token_here",
         },
+        Demo: true, // 演示模式
     }
     
     // 构造写入请求（手机号MD5）
@@ -1487,8 +1488,8 @@ import (
 )
 
 func main() {
-    apiUrls := saashttp.InitAPIUrl(&saashttp.ApiUrlsCfg{
-        BaseUrl: "https://srta.algo.com.cn",
+    apiUrls := saashttp.InitAPIUrl(&saashttp.ApiUrls{
+        BaseUrl: "https://api.rta.qq.com",
     })
     
     client := &saashttp.SaasClient{
@@ -1498,6 +1499,7 @@ func main() {
             Account: "2000",
             Token:   "your_token_here",
         },
+        Demo: true, // 演示模式
     }
     
     // 构造写入请求（OpenID）
@@ -1884,28 +1886,31 @@ saastool write -ds geo -source ./stores.jsonl -batchsize 5000
 package main
 
 import (
-    "context"
     "fmt"
-    "git.algo.com.cn/public/saasapi/pkg/rtapb"
+    "net/http"
+
+    "git.algo.com.cn/public/saasapi"
     "git.algo.com.cn/public/saasapi/pkg/saashttp"
 )
 
 func main() {
     // 1. 创建客户端
     client := &saashttp.SaasClient{
-        ApiUrls: saashttp.NewApiUrls(saashttp.ApiEnvDemo), // 或 ApiEnvPrd
-        Auth: &saashttp.SaasAuth{
-            Account: 2000,
+        ApiUrls: saashttp.InitAPIUrl(&saashttp.ApiUrls{BaseUrl: "https://api.rta.qq.com"}),
+        Auth: &saashttp.Auth{
+            Account: "2000",
             Token:   "your_token_here",
         },
-        Client: saashttp.DefaultClient,
+        Client:  &http.Client{},
+        Demo:   true, // 演示模式
     }
 
     // 2. 准备写入数据（示例：北京两家门店）
-    req := &rtapb.SaasReq{
-        Write: &rtapb.Write{
+    req := &saasapi.SaasReq{
+        Cmd: &saasapi.SaasReq_Write{
+            Write: &saasapi.Write{
             DataspaceId: "geo",
-            WriteItems: []*rtapb.WriteItem{
+            WriteItems: []*saasapi.WriteItem{
                 {
                     Userid: "store_tianmen",
                     Uint32SKv: map[uint32]uint32{
@@ -1917,7 +1922,7 @@ func main() {
                         1: 3,   // 门店等级
                         2: 150, // 门店面积
                     },
-                    FlagsWithExpireKv: map[uint32]*rtapb.FlagWithExpire{
+                    FlagsWithExpireKv: map[uint32]*saasapi.FlagWithExpire{
                         1: {Flag: true}, // 营业中
                     },
                 },
@@ -1935,24 +1940,25 @@ func main() {
                 },
             },
         },
+        },
     }
 
     // 3. 发起写入请求
-    res, err := client.Write(context.Background(), req)
+    res, err := client.Write(req)
     if err != nil {
         fmt.Printf("请求失败: %v\n", err)
         return
     }
 
     // 4. 检查返回结果
-    if res.Code != 0 {
+    if res.Code != saasapi.ErrorCode_SUCC {
         fmt.Printf("业务错误: code=%d, status=%s\n", res.Code, res.Status)
         return
     }
 
     // 5. 检查失败的 userid
-    if len(res.GetWrite().FailedUserid) > 0 {
-        fmt.Printf("部分写入失败: %v\n", res.GetWrite().FailedUserid)
+    if len(res.GetWriteRes().GetFailedUserid()) > 0 {
+        fmt.Printf("部分写入失败: %v\n", res.GetWriteRes().GetFailedUserid())
     } else {
         fmt.Println("✅ 所有数据写入成功")
     }
@@ -1968,7 +1974,7 @@ saastool 支持以 HTTP 服务模式运行，提供简单的 HTTP 接口进行�
 ```sh
 export SRTA_ACCOUNT=2000
 export SRTA_TOKEN=your_token_here
-export SRTA_ENV=demo  # 或 prd
+export SRTA_ENV=demo  # 演示模式；prd 为正式模式
 export SRTA_PORT=8080
 
 saastool daemon
@@ -2385,28 +2391,31 @@ saastool write -ds geoip -source ./geoip_data.jsonl -batchsize 5000
 package main
 
 import (
-    "context"
     "fmt"
-    "git.algo.com.cn/public/saasapi/pkg/rtapb"
+    "net/http"
+
+    "git.algo.com.cn/public/saasapi"
     "git.algo.com.cn/public/saasapi/pkg/saashttp"
 )
 
 func main() {
     // 1. 创建客户端
     client := &saashttp.SaasClient{
-        ApiUrls: saashttp.NewApiUrls(saashttp.ApiEnvDemo), // 或 ApiEnvPrd
-        Auth: &saashttp.SaasAuth{
-            Account: 2000,
+        ApiUrls: saashttp.InitAPIUrl(&saashttp.ApiUrls{BaseUrl: "https://api.rta.qq.com"}),
+        Auth: &saashttp.Auth{
+            Account: "2000",
             Token:   "your_token_here",
         },
-        Client: saashttp.DefaultClient,
+        Client:  &http.Client{},
+        Demo:   true, // 演示模式
     }
 
     // 2. 准备写入数据（示例：北京、上海、深圳、石家庄）
-    req := &rtapb.SaasReq{
-        Write: &rtapb.Write{
+    req := &saasapi.SaasReq{
+        Cmd: &saasapi.SaasReq_Write{
+            Write: &saasapi.Write{
             DataspaceId: "geoip",
-            WriteItems: []*rtapb.WriteItem{
+            WriteItems: []*saasapi.WriteItem{
                 {
                     Userid: "110000", // 北京市
                     BytesKv: map[uint32]uint32{
@@ -2416,7 +2425,7 @@ func main() {
                     Uint32SKv: map[uint32]uint32{
                         1: 5000000, // 投放预算（分）
                     },
-                    FlagsWithExpireKv: map[uint32]*rtapb.FlagWithExpire{
+                    FlagsWithExpireKv: map[uint32]*saasapi.FlagWithExpire{
                         1: {Flag: true}, // 启用投放
                     },
                 },
@@ -2429,7 +2438,7 @@ func main() {
                     Uint32SKv: map[uint32]uint32{
                         1: 4500000,
                     },
-                    FlagsWithExpireKv: map[uint32]*rtapb.FlagWithExpire{
+                    FlagsWithExpireKv: map[uint32]*saasapi.FlagWithExpire{
                         1: {Flag: true},
                     },
                 },
@@ -2445,24 +2454,25 @@ func main() {
                 },
             },
         },
+        },
     }
 
     // 3. 发起写入请求
-    res, err := client.Write(context.Background(), req)
+    res, err := client.Write(req)
     if err != nil {
         fmt.Printf("请求失败: %v\n", err)
         return
     }
 
     // 4. 检查返回结果
-    if res.Code != 0 {
+    if res.Code != saasapi.ErrorCode_SUCC {
         fmt.Printf("业务错误: code=%d, status=%s\n", res.Code, res.Status)
         return
     }
 
     // 5. 检查失败的 userid
-    if len(res.GetWrite().FailedUserid) > 0 {
-        fmt.Printf("部分写入失败: %v\n", res.GetWrite().FailedUserid)
+    if len(res.GetWriteRes().GetFailedUserid()) > 0 {
+        fmt.Printf("部分写入失败: %v\n", res.GetWriteRes().GetFailedUserid())
     } else {
         fmt.Println("✅ 所有数据写入成功")
     }
@@ -2478,7 +2488,7 @@ saastool 支持以 HTTP 服务模式运行，提供简单的 HTTP 接口进行�
 ```sh
 export SRTA_ACCOUNT=2000
 export SRTA_TOKEN=your_token_here
-export SRTA_ENV=demo  # 或 prd
+export SRTA_ENV=demo  # 演示模式；prd 为正式模式
 export SRTA_PORT=8080
 
 saastool daemon
@@ -2910,28 +2920,31 @@ saastool write -ds geofac -source ./geofac_data.jsonl -batchsize 5000
 package main
 
 import (
-    "context"
     "fmt"
-    "git.algo.com.cn/public/saasapi/pkg/rtapb"
+    "net/http"
+
+    "git.algo.com.cn/public/saasapi"
     "git.algo.com.cn/public/saasapi/pkg/saashttp"
 )
 
 func main() {
     // 1. 创建客户端
     client := &saashttp.SaasClient{
-        ApiUrls: saashttp.NewApiUrls(saashttp.ApiEnvDemo), // 或 ApiEnvPrd
-        Auth: &saashttp.SaasAuth{
-            Account: 2000,
+        ApiUrls: saashttp.InitAPIUrl(&saashttp.ApiUrls{BaseUrl: "https://api.rta.qq.com"}),
+        Auth: &saashttp.Auth{
+            Account: "2000",
             Token:   "your_token_here",
         },
-        Client: saashttp.DefaultClient,
+        Client:  &http.Client{},
+        Demo:   true, // 演示模式
     }
 
     // 2. 准备写入数据（示例：一线城市常住地数据）
-    req := &rtapb.SaasReq{
-        Write: &rtapb.Write{
+    req := &saasapi.SaasReq{
+        Cmd: &saasapi.SaasReq_Write{
+            Write: &saasapi.Write{
             DataspaceId: "geofac",
-            WriteItems: []*rtapb.WriteItem{
+            WriteItems: []*saasapi.WriteItem{
                 {
                     Userid: "110000", // 北京市
                     BytesKv: map[uint32]uint32{
@@ -2942,7 +2955,7 @@ func main() {
                     Uint32SKv: map[uint32]uint32{
                         1: 8000000, // 月度预算（分）
                     },
-                    FlagsWithExpireKv: map[uint32]*rtapb.FlagWithExpire{
+                    FlagsWithExpireKv: map[uint32]*saasapi.FlagWithExpire{
                         1: {Flag: true}, // 启用常住地投放
                     },
                 },
@@ -2956,7 +2969,7 @@ func main() {
                     Uint32SKv: map[uint32]uint32{
                         1: 7000000,
                     },
-                    FlagsWithExpireKv: map[uint32]*rtapb.FlagWithExpire{
+                    FlagsWithExpireKv: map[uint32]*saasapi.FlagWithExpire{
                         1: {Flag: true},
                     },
                 },
@@ -2973,24 +2986,25 @@ func main() {
                 },
             },
         },
+        },
     }
 
     // 3. 发起写入请求
-    res, err := client.Write(context.Background(), req)
+    res, err := client.Write(req)
     if err != nil {
         fmt.Printf("请求失败: %v\n", err)
         return
     }
 
     // 4. 检查返回结果
-    if res.Code != 0 {
+    if res.Code != saasapi.ErrorCode_SUCC {
         fmt.Printf("业务错误: code=%d, status=%s\n", res.Code, res.Status)
         return
     }
 
     // 5. 检查失败的 userid
-    if len(res.GetWrite().FailedUserid) > 0 {
-        fmt.Printf("部分写入失败: %v\n", res.GetWrite().FailedUserid)
+    if len(res.GetWriteRes().GetFailedUserid()) > 0 {
+        fmt.Printf("部分写入失败: %v\n", res.GetWriteRes().GetFailedUserid())
     } else {
         fmt.Println("✅ 所有数据写入成功")
     }
@@ -3006,7 +3020,7 @@ saastool 支持以 HTTP 服务模式运行，提供简单的 HTTP 接口进行�
 ```sh
 export SRTA_ACCOUNT=2000
 export SRTA_TOKEN=your_token_here
-export SRTA_ENV=demo  # 或 prd
+export SRTA_ENV=demo  # 演示模式；prd 为正式模式
 export SRTA_PORT=8080
 
 saastool daemon
