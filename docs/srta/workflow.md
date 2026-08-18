@@ -6,7 +6,7 @@ description: 探索sRTA的奥秘，开启程序化广告新篇章！本文深入
 keywords: [sRTA, 程序化广告, RTA能力, SaaS方式, 广告客户, 数据管理, 策略管理, 产品对比, 使用流程, 对接协议]
 ---
 
-# 2 数据流程
+# 2 数据流程 {#dataflow}
 
 sRTA 平台支持两种角色的数据上传和使用模式：
 
@@ -16,7 +16,7 @@ sRTA 平台支持两种角色的数据上传和使用模式：
 
 **整体过程可描述为**：账号申请-->数据生产-->数据写入-->脚本编写-->脚本测试-->脚本上线-->效果验证
 
-## 2.1 写入流程简述
+## 2.1 写入流程简述 {#quickstart}
 
 本示例演示如何通过 sRTA 平台实现根据用户设备ID的安装状态决策拉活拉新，并根据活跃用户级别调节竞争力系数。
 
@@ -38,7 +38,7 @@ sRTA 平台支持两种角色的数据上传和使用模式：
 - **拉活广告**：未安装用户不出。低价值用户降权、中等价值用户维持、高价值用户提权。无价值分数用户以不调节作为兜底。
 - **拉新广告**：未安装可出。
 
-### 数据准备：准备 JSONL 数据文件
+### 数据准备：准备 JSONL 数据文件 {#quickstart-jsonl}
 
 **数据定义规划**
 
@@ -64,7 +64,7 @@ sRTA 平台支持两种角色的数据上传和使用模式：
   - `{"1":1,"2":2}`：字节索引1=1（已安装），字节索引2=2（中等价值）
   - `{"1":1,"2":3}`：字节索引1=1（已安装），字节索引2=3（高价值）
 
-### 数据准备：通过 saastool 写入服务端
+### 数据准备：通过 saastool 写入服务端 {#quickstart-upload}
 
 使用命令行工具将数据写入 sRTA 平台：
 
@@ -87,7 +87,7 @@ saastool write -ds did -source ./users.jsonl
 
 如果有用户写入失败，失败的用户ID会被记录到 `WriteRes.failedUserid` 字段中
 
-### 数据准备：DS 中的数据存储
+### 数据准备：DS 中的数据存储 {#quickstart-storage}
 
 写入成功后，数据在 Redis 中的存储格式为字节数据。sRTA lua在查询时会自动取出当前用户下的数据转换为 dataspace Table变量 供 Lua 脚本使用：
 
@@ -97,7 +97,7 @@ saastool write -ds did -source ./users.jsonl
 "王五" = {[srta.U8] = {[1] = 1, [2] = 3}} --字节索引1=1（已安装），字节索引2=3（高价值）
 ```
 
-### 脚本：编写 Lua 实现拉活与调权
+### 脚本：编写 Lua 实现拉活与调权 {#quickstart-lua}
 
 创建 `sample.lua` 脚本，实现根据用户安装态及级别判断的拉活和调节系数：
 
@@ -155,7 +155,7 @@ function main()
 end
 ```
 
-### 脚本：测试
+### 脚本：测试 {#quickstart-test}
 
 本地测试脚本逻辑：
 
@@ -171,7 +171,7 @@ saastool script debug -lua ./sample.lua -did 王五 -os 2
 
 ```
 
-### 脚本：上线
+### 脚本：上线 {#quickstart-deploy}
 
 确认脚本测试无误后，上线脚本：
 
@@ -187,7 +187,7 @@ saastool script create -lua ./sample.lua -name sample
 saastool script use -name sample
 ```
 
-### 回收：效果验证
+### 回收：效果验证 {#quickstart-verify}
 
 脚本上线后，可以通过以下方式验证效果：
 
@@ -197,15 +197,15 @@ saastool exp get -beginday 20250101 -endday 20250131 -target active
 ```
 
 
-## 2.2 数据底层
+## 2.2 数据底层 {#datalayer}
 
-sRTA决策依赖数据源包括：来自于广告主的一方数据、来自于平台的二方数据、来自于服务商的三方数据。通过调用 API 或者使用 saastool 工具，可以将数据写入到 sRTA 数据存贮中。基本概念请参考[写入流程简述](#21-写入流程简述)。
+sRTA决策依赖数据源包括：来自于广告主的一方数据、来自于平台的二方数据、来自于服务商的三方数据。通过调用 API 或者使用 saastool 工具，可以将数据写入到 sRTA 数据存贮中。基本概念请参考[写入流程简述](#quickstart)。
 
-### 2.2.1 一方数据
+### 2.2.1 一方数据 {#first-party}
 
 以下是一方数据存储中的结构示意.
 
-#### 2.2.1.1 数据空间
+#### 2.2.1.1 数据空间 {#dataspace}
 
 每个账号下可以有多个数据空间，数据空间有多种类型：
 
@@ -219,7 +219,7 @@ sRTA决策依赖数据源包括：来自于广告主的一方数据、来自于�
 
 <!-- ![sRTA 存储](/img/srta_store1.png) -->
 
-#### 2.2.1.2 数据空间内存储
+#### 2.2.1.2 数据空间内存储 {#dataspace-storage}
 
 每种存储区有三种类型的字段，可满足不同场景的诉求。
 
@@ -229,17 +229,17 @@ sRTA决策依赖数据源包括：来自于广告主的一方数据、来自于�
 * **uint32**：共 8 个。
 * **flagWithExpire**：共 4 个。
 
-#### 2.2.1.3 字段使用
+#### 2.2.1.3 字段使用 {#dataspace-field}
 
 每个数组的一个值可视为 `一列` 或 `一个维度`，除有特别约定的GEO区外，其他情况下每一列存贮什么内容由使用方自由发挥。
 
-#### 2.2.1.4 使用示例
+#### 2.2.1.4 使用示例 {#dataspace-example}
 
 例如我们可将uint8 的第 0列用于App 的已安装状态，当该值为 1 时，即表示已安装。
 
 ![sRTA 存储结构](/img/srta_store3.png)
 
-#### 2.2.1.5 底层存储结构示意
+#### 2.2.1.5 底层存储结构示意 {#dataspace-struct}
 
 ```c
 // 仅作伪代码示意，非真实存储结构
@@ -260,22 +260,22 @@ struct StoreValue{
 ```
 
 
-#### 2.2.1.6 默认值
+#### 2.2.1.6 默认值 {#dataspace-default}
 + **uint8默认值**：0
 + **uint32默认值**：0
 + **flagWighExpire默认值**：flag = false, default_flag = false，expire = 0
 
 
-### 2.2.2 二方数据
+### 2.2.2 二方数据 {#second-party}
 
 二方数据通过 srta 库函数获取。
  
-#### 2.2.2.1 获取安装态
- 一次可以获得多个App安装态，每个返回值为 true(已安装)/false(未安装)/nil(无权限或不可靠)中的一个状态，参考函数[srta.get_apps](./lua.md#525-srtaget_apps函数)。
+#### 2.2.2.1 获取安装态 {#second-party-apps}
+ 一次可以获得多个App安装态，每个返回值为 true(已安装)/false(未安装)/nil(无权限或不可靠)中的一个状态，参考函数[srta.get_apps](./lua.md#get_apps)。
 
-#### 2.2.3.2 获取打分
+#### 2.2.3.2 获取打分 {#second-party-scores}
 
-一次可以获得多个模型打分，每个返回值为数字/nil(无权限或不可靠)中的一个状态，参考函数[srta.get_scores](./lua.md#526-srtaget_scores函数)。
+一次可以获得多个模型打分，每个返回值为数字/nil(无权限或不可靠)中的一个状态，参考函数[srta.get_scores](./lua.md#get_scores)。
 
 | 编号 | 模型 | 收费模式 |
 | :--- | :--- | :--- |
@@ -289,16 +289,16 @@ struct StoreValue{
 | 11 | 企业贷意愿分 | 金融行业免费 |
 | 20 | 保险续保分 | 金融行业免费 |
 
-### 2.2.3 三方数据
+### 2.2.3 三方数据 {#third-party}
 
 三方数据通过 srta 库函数获取，每个维度的数据均需要独立授权。某些三方数据需要收费，请与数据提供方洽淡。
 
-## 2.3 数据写入
-### 2.3.1 DID数据写入(DID区)
+## 2.3 数据写入 {#datawrite}
+### 2.3.1 DID数据写入(DID区) {#write-did}
 
 DID（Device ID）数据区用于存储设备维度的用户数据，支持通过设备ID（`OAID MD5` / `CAID 20250325版 MD5`）进行数据读写。本节介绍DID数据写入的完整流程。
 
-#### 2.3.1.1 检查数据区开通状态
+#### 2.3.1.1 检查数据区开通状态 {#write-did-check}
 
 在写入数据前，先使用 `saastool info` 命令检查是否已开通 DID 数据区。
 
@@ -324,9 +324,9 @@ Info res: {
 - `"20010101"`: 数据空间数字ID，也可在命令中使用
 - `targetId`: 已创建的策略ID列表（为空表示未创建策略）
 
-#### 2.3.1.2 数据准备
+#### 2.3.1.2 数据准备 {#write-did-prepare}
 
-##### **数据格式说明**
+##### **数据格式说明** {#write-did-format}
 
 DID 数据需要准备为 **JSONL 格式**（每行一个 JSON 对象），每个 JSON 对象包含以下字段：
 
@@ -342,7 +342,7 @@ DID 数据需要准备为 **JSONL 格式**（每行一个 JSON 对象），每�
 - `{"flag": false}` - 置位为 false
 - `{"flag": true, "expire": 1758686629}` - 在指定 Unix 时间戳前为 true，之后为 false
 
-##### **数据准备示例**
+##### **数据准备示例** {#write-did-example}
 
 创建数据文件 `users.jsonl`：
 
@@ -357,9 +357,9 @@ DID 数据需要准备为 **JSONL 格式**（每行一个 JSON 对象），每�
 - 第2条：用户 `a87ff679...` 的 U8[1]=2, U8[2]=200, FLAG[1]=true（永久）
 - 第3条：用户 `9dd4e461...` 的 U8[3]=50, U32[2]=5000000, FLAG[2]=true（在2025年9月24日12:03:49前有效）
 
-#### 2.3.1.3 写入方法
+#### 2.3.1.3 写入方法 {#write-did-methods}
 
-##### **方法一：使用 saastool 命令行工具写入**
+##### **方法一：使用 saastool 命令行工具写入** {#write-did-cli}
 
 **1. 批量写入文件**
 
@@ -427,7 +427,7 @@ saastool read -ds did -userids cfcd208495d565ef66e7dff9f98764da
   - `lastModifyTime`: 最后修改时间（Unix 时间戳）
   - `version`: 数据版本号
 
-##### **方法二：使用 API 接口写入**
+##### **方法二：使用 API 接口写入** {#write-did-api}
 
 通过调用 HTTP API 接口进行数据写入，适用于需要程序化集成的场景。
 
@@ -564,7 +564,7 @@ func main() {
 - ✅ 复用 saastool 已验证的代码
 - ✅ 支持所有 API 接口（Read、TaskCreate、TaskUpload 等）
 
-##### **方法三：使用 saastool HTTP daemon 模式**
+##### **方法三：使用 saastool HTTP daemon 模式** {#write-did-daemon}
 
 saastool 支持以 HTTP 服务模式运行，提供简单的 HTTP 接口进行数据读写。
 
@@ -609,7 +609,7 @@ curl -X POST "http://localhost:8080/write?ds=did" \
   -d "userid=9dd4e461268c8034f5c8564e155c67a6&u8.2=200&u32.6=1000000&flag.3=!3600"
 ```
 
-##### **方法四：使用 Task 任务批量写入（推荐大数据量）**
+##### **方法四：使用 Task 任务批量写入（推荐大数据量）** {#write-did-task}
 
 Task 任务模式用于**亿级用户数据的批量写入**，具有并发写入量大、支持断点续传、批量集中执行的特点。**适用于千万级以上的数据写入场景**。
 
@@ -926,7 +926,7 @@ Task 模式也支持通过 API 调用，主要接口如下：
 | 查询详情 | `/saas/task/info` | 获取任务详细信息 |
 | 删除任务 | `/saas/task/delete` | 删除指定任务 |
 
-详细的 API 调用格式请参考 [API 文档 - 任务管理](api.md#315-任务)。
+详细的 API 调用格式请参考 [API 文档 - 任务管理](api.md#tasks)。
 
 **Task 模式注意事项**：
 
@@ -955,7 +955,7 @@ Task 模式也支持通过 API 调用，主要接口如下：
    - 成功或失败的任务建议手动删除
    - 可通过 `/saas/task/list` 定期清理过期任务
 
-#### 2.3.1.5 数据验证
+#### 2.3.1.5 数据验证 {#write-did-verify}
 
 写入完成后，建议进行数据验证：
 
@@ -967,7 +967,7 @@ saastool read -ds did -userids cfcd208495d565ef66e7dff9f98764da
 curl "http://localhost:8080/read?ds=did&userid=cfcd208495d565ef66e7dff9f98764da"
 ```
 
-#### 2.3.1.6 写入方法对比
+#### 2.3.1.6 写入方法对比 {#write-did-compare}
 
 | 对比项 | 方法一：CLI 工具 | 方法二：API 接口 | 方法三：HTTP Daemon | 方法四：Task 任务 |
 | --- | --- | --- | --- | --- |
@@ -987,7 +987,7 @@ curl "http://localhost:8080/read?ds=did&userid=cfcd208495d565ef66e7dff9f98764da"
 - 快速验证、轻量级服务 → **方法三（Daemon）**
 - 千万级以上大批量数据 → **方法四（Task）**
 
-#### 2.3.1.7 注意事项
+#### 2.3.1.7 注意事项 {#write-did-notice}
 
 1. **用户ID格式**：DID 数据区的 `userid` 必须是设备ID的 MD5 值（32位小写十六进制字符串）
 2. **字段索引范围**：
@@ -1000,7 +1000,7 @@ curl "http://localhost:8080/read?ds=did&userid=cfcd208495d565ef66e7dff9f98764da"
 6. **失败重试**：API 返回失败的 `userid` 列表，建议对失败的数据进行重试
 7. **写入互斥**：Task 任务运行期间，实时写入接口会被阻塞，需等任务完成
 
-#### 2.3.1.8 最佳实践
+#### 2.3.1.8 最佳实践 {#write-did-bestpractice}
 
 1. **数据分批**：
    - 实时写入：每批不超过 10000 条记录
@@ -1014,11 +1014,11 @@ curl "http://localhost:8080/read?ds=did&userid=cfcd208495d565ef66e7dff9f98764da"
    - 大批量数据更新建议在业务低峰期执行
    - 使用监控脚本跟踪任务执行状态
 
-### 2.3.2 手机号数据写入(WUID区)
+### 2.3.2 手机号数据写入(WUID区) {#write-wuid}
 
 WUID（WeChat User ID）数据区用于存储基于**手机号**的用户数据。与 DID 数据区不同，WUID 数据区需要提供手机号的哈希值（MD5 或 SHA256）作为用户标识。本节介绍手机号数据写入的完整流程。
 
-#### 2.3.2.1 检查数据区开通状态
+#### 2.3.2.1 检查数据区开通状态 {#write-wuid-check}
 
 在写入数据前，先使用 `saastool info` 命令检查是否已开通 WUID 数据区。
 
@@ -1063,9 +1063,9 @@ Info res: {
 
 :::
 
-#### 2.3.2.2 数据准备
+#### 2.3.2.2 数据准备 {#write-wuid-prepare}
 
-##### **数据格式说明**
+##### **数据格式说明** {#write-wuid-format}
 
 WUID 数据需要准备为 **JSONL 格式**，每个 JSON 对象包含以下字段：
 
@@ -1082,7 +1082,7 @@ WUID 数据需要准备为 **JSONL 格式**，每个 JSON 对象包含以下字�
 - **SHA256**：对手机号计算 SHA256 值，取小写64位十六进制字符串
   - 示例：`13800138000` → `5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8`（示例值）
 
-##### **数据准备示例**
+##### **数据准备示例** {#write-wuid-example}
 
 创建数据文件 `users_phone.jsonl`：
 
@@ -1097,9 +1097,9 @@ WUID 数据需要准备为 **JSONL 格式**，每个 JSON 对象包含以下字�
 - 第2条：手机号MD5为 `c333677...` 的用户，U8[1]=2, U8[2]=200, FLAG[1]=true（永久）
 - 第3条：手机号SHA256为 `5e88489...` 的用户，U8[3]=50, U32[2]=5000000, FLAG[2]=true（在2025年9月24日前有效）
 
-#### 2.3.2.3 写入方法
+#### 2.3.2.3 写入方法 {#write-wuid-methods}
 
-##### **方法一：使用 saastool 命令行工具写入（手机号哈希）**
+##### **方法一：使用 saastool 命令行工具写入（手机号哈希）** {#write-wuid-cli}
 
 **1. 批量写入文件**
 
@@ -1133,7 +1133,7 @@ saastool write -ds wuid -source ./users_phone.jsonl -hashtype 1 -clear
 saastool read -ds wuid -userids e10adc3949ba59abbe56e057f20f883e -hashtype 1
 ```
 
-##### **方法二：使用 API 接口写入（手机号哈希）**
+##### **方法二：使用 API 接口写入（手机号哈希）** {#write-wuid-api}
 
 **Go 示例代码**：
 
@@ -1206,7 +1206,7 @@ func main() {
   - `saasapi.HashType_PHONE_MD5` (1)：手机号 MD5
   - `saasapi.HashType_PHONE_SHA256` (2)：手机号 SHA256
 
-##### **方法三：使用 Task 任务批量写入（推荐大数据量）**
+##### **方法三：使用 Task 任务批量写入（推荐大数据量）** {#write-wuid-task}
 
 适用于千万级以上手机号数据的批量写入场景。
 
@@ -1264,7 +1264,7 @@ saastool task info -sha256 <task_sha256>
 saastool task delete -sha256 <task_sha256>
 ```
 
-#### 2.3.2.4 注意事项
+#### 2.3.2.4 注意事项 {#write-wuid-notice}
 
 1. **用户ID格式**：
    - 必须是手机号的哈希值（MD5 或 SHA256）
@@ -1295,7 +1295,7 @@ saastool task delete -sha256 <task_sha256>
    - 手机号哈希后无法反推原始手机号
    - 建议在客户端完成哈希计算，避免明文传输
 
-#### 2.3.2.5 写入方法对比
+#### 2.3.2.5 写入方法对比 {#write-wuid-compare}
 
 | 对比项 | CLI 工具 | API 接口 | Task 任务 |
 | --- | --- | --- | --- |
@@ -1303,7 +1303,7 @@ saastool task delete -sha256 <task_sha256>
 | **数据量级** | < 100万 | < 1000万 | ≥ 1000万（亿级） |
 | **hashtype 指定** | 命令行参数 | API 字段 | task make 参数 |
 
-#### 2.3.2.6 最佳实践
+#### 2.3.2.6 最佳实践 {#write-wuid-bestpractice}
 
 1. **字段索引规划**（**最重要**）：
    - **务必在项目初期规划好手机号和 OpenID 的字段索引分配**
@@ -1337,11 +1337,11 @@ saastool task delete -sha256 <task_sha256>
    - 写入后使用 `read` 命令验证数据正确性
    - 检查 `failed_userid` 并重试失败的记录
 
-### 2.3.3 OpenID数据写入(WUID区)
+### 2.3.3 OpenID数据写入(WUID区) {#write-openid}
 
 WUID 数据区除了支持手机号数据外，还支持基于**微信 OpenID / UnionID**的用户数据写入。本节介绍如何通过微信小程序/公众号/视频号的 OpenID 进行数据写入。
 
-#### 2.3.3.1 检查数据区开通状态
+#### 2.3.3.1 检查数据区开通状态 {#write-openid-check}
 
 在写入数据前，先使用 `saastool info` 命令检查是否已开通 WUID 数据区。
 
@@ -1386,9 +1386,9 @@ OpenID 数据和手机号数据**共用同一个 WUID 数据区**，因此必须
 
 :::
 
-#### 2.3.3.2 数据准备
+#### 2.3.3.2 数据准备 {#write-openid-prepare}
 
-##### **数据格式说明**
+##### **数据格式说明** {#write-openid-format}
 
 OpenID 数据需要准备为 **JSONL 格式**，每个 JSON 对象包含以下字段：
 
@@ -1407,7 +1407,7 @@ OpenID 数据需要准备为 **JSONL 格式**，每个 JSON 对象包含以下�
   - OpenID：`oUpF8uMuAJO_M2pxb1Q9zNjWeS6o`
   - UnionID：`o6_bmasdasdsad6_2sgVt7hMZOPfL`
 
-##### **数据准备示例**
+##### **数据准备示例** {#write-openid-example}
 
 创建数据文件 `users_openid.jsonl`：
 
@@ -1422,9 +1422,9 @@ OpenID 数据需要准备为 **JSONL 格式**，每个 JSON 对象包含以下�
 - 第2条：OpenID 为 `oUpF8u...` 的用户，U8[1]=2, U8[2]=200, FLAG[1]=true（永久）
 - 第3条：UnionID 为 `o6_bma...` 的用户，U8[3]=50, U32[2]=5000000, FLAG[2]=true（在2025年9月24日前有效）
 
-#### 2.3.3.3 写入方法
+#### 2.3.3.3 写入方法 {#write-openid-methods}
 
-##### **方法一：使用 saastool 命令行工具写入（OpenID）**
+##### **方法一：使用 saastool 命令行工具写入（OpenID）** {#write-openid-cli}
 
 **1. 批量写入文件**
 
@@ -1472,7 +1472,7 @@ saastool read \
   -accountid 2000
 ```
 
-##### **方法二：使用 API 接口写入（OpenID）**
+##### **方法二：使用 API 接口写入（OpenID）** {#write-openid-api}
 
 **Go 示例代码**：
 
@@ -1559,7 +1559,7 @@ func main() {
 - `account_id`：广告主账号 ID
 - OpenID 使用原始值，无需哈希处理
 
-##### **方法三：使用 saastool HTTP daemon 模式（OpenID）**
+##### **方法三：使用 saastool HTTP daemon 模式（OpenID）** {#write-openid-daemon}
 
 **1. 启动 daemon 服务**
 
@@ -1591,7 +1591,7 @@ curl -X POST "http://localhost:8080/write?ds=wuid&appid=wx1234567890abcdef" \
   -d "userid=oUpF8uMuAJO_M2pxb1Q9zNjWeS6p&u8.1=60&flag.2=true"
 ```
 
-##### **方法四：使用 Task 任务批量写入（推荐大数据量）**
+##### **方法四：使用 Task 任务批量写入（推荐大数据量）** {#write-openid-task}
 
 适用于千万级以上 OpenID 数据的批量写入场景。
 
@@ -1642,7 +1642,7 @@ saastool task info -sha256 <task_sha256>
 saastool task delete -sha256 <task_sha256>
 ```
 
-#### 2.3.3.4 注意事项
+#### 2.3.3.4 注意事项 {#write-openid-notice}
 
 1. **AppID 与 AccountID 必填**：
    - 使用 OpenID 时，必须同时指定 `appid` 和 `accountid`
@@ -1674,7 +1674,7 @@ saastool task delete -sha256 <task_sha256>
    - 未授权的 AppID 无法写入数据
    - 如遇权限问题，请联系平台管理员
 
-#### 2.3.3.5 写入方法对比
+#### 2.3.3.5 写入方法对比 {#write-openid-compare}
 
 | 对比项 | CLI 工具 | API 接口 | HTTP Daemon | Task 任务 |
 | --- | --- | --- | --- | --- |
@@ -1683,7 +1683,7 @@ saastool task delete -sha256 <task_sha256>
 | **AppID 指定** | 命令行参数 | API 字段 | URL 参数 | task make 参数 |
 | **AccountID 指定** | 命令行参数 | API 字段 | 环境变量 | task make 参数 |
 
-#### 2.3.3.6 最佳实践
+#### 2.3.3.6 最佳实践 {#write-openid-bestpractice}
 
 1. **字段索引规划**（**最重要**）：
    - **务必与手机号数据协调字段索引分配，避免覆盖冲突**
@@ -1717,7 +1717,7 @@ saastool task delete -sha256 <task_sha256>
    - 建议记录失败的 OpenID 并分析原因
    - 权限错误通常需要联系平台管理员处理
 
-#### 2.3.3.7 OpenID 与手机号对比
+#### 2.3.3.7 OpenID 与手机号对比 {#write-openid-vs-wuid}
 
 | 对比项 | OpenID 数据 | 手机号数据 |
 | --- | --- | --- |
@@ -1734,11 +1734,11 @@ saastool task delete -sha256 <task_sha256>
 - 已有 UnionID 体系 → 优先使用 **UnionID**
 - 数据隐私要求高 → 使用 **手机号哈希数据**
 
-### 2.3.4 门店数据写入(GEO区)
+### 2.3.4 门店数据写入(GEO区) {#write-geo}
 
 GEO 数据区用于存储 **门店**(POI)相关的用户数据。与 DID 数据区不同，GEO 数据区的 `userid` 为客户自定义的门店 ID，无需哈希转换。本节介绍门店数据写入的完整流程。
 
-#### 2.3.4.1 检查数据区开通状态
+#### 2.3.4.1 检查数据区开通状态 {#write-geo-check}
 
 在写入数据前，先使用 `saastool info` 命令检查是否已开通 GEO 数据区。
 
@@ -1791,7 +1791,7 @@ UINT32[2] = int(latitude × 1000000)   # 纬度
 
 :::
 
-#### 2.3.4.2 数据准备
+#### 2.3.4.2 数据准备 {#write-geo-prepare}
 
 准备符合格式要求的 JSONL（JSON Lines）文件，每行一个 JSON 对象。
 
@@ -1850,11 +1850,11 @@ UINT32[2] = int(latitude × 1000000)   # 纬度
 - `{"flag": false}` - 永久为 false
 - `{"flag": true, "expire": 1758686629}` - 在 Unix 时间戳 1758686629 前为 true，之后为 false
 
-#### 2.3.4.3 写入方式
+#### 2.3.4.3 写入方式 {#write-geo-methods}
 
 GEO 数据区支持以下写入方式，可根据数据量和使用场景选择：
 
-##### **方法一：使用 saastool CLI 工具**
+##### **方法一：使用 saastool CLI 工具** {#write-geo-cli}
 
 最简单的写入方式，适合开发测试和小批量数据写入。
 
@@ -1878,7 +1878,7 @@ saastool write -ds geo -source ./stores.jsonl -batchsize 5000
 - `-batchsize`：批处理大小（默认 10000，建议 5000-10000）
 - `-clear`：写入前清空所有数据（可选，危险操作）
 
-##### **方法二：使用 saashttp 包（程序集成）**
+##### **方法二：使用 saashttp 包（程序集成）** {#write-geo-saashttp}
 
 在 Go 程序中使用 `saashttp` 包进行数据写入。
 
@@ -1965,7 +1965,7 @@ func main() {
 }
 ```
 
-##### **方法三：使用 saastool HTTP daemon 模式**
+##### **方法三：使用 saastool HTTP daemon 模式** {#write-geo-daemon}
 
 saastool 支持以 HTTP 服务模式运行，提供简单的 HTTP 接口进行数据读写。
 
@@ -2003,7 +2003,7 @@ curl -X POST "http://localhost:8080/write?ds=geo" \
   -d "userid=store_003&u32.1=113264385&u32.2=23129112&flag.1=true"
 ```
 
-##### **方法四：使用 Task 任务批量写入（推荐大数据量）**
+##### **方法四：使用 Task 任务批量写入（推荐大数据量）** {#write-geo-task}
 
 Task 任务模式适用于**千万级以上门店数据**的批量写入，支持断点续传和并发上传。
 
@@ -2051,7 +2051,7 @@ saastool task info -sha256 <taskSha256>
 saastool task delete -sha256 <taskSha256>
 ```
 
-#### 2.3.4.4 数据验证
+#### 2.3.4.4 数据验证 {#write-geo-verify}
 
 写入完成后，建议进行数据验证：
 
@@ -2088,7 +2088,7 @@ curl "http://localhost:8080/read?ds=geo&userid=store_001"
 纬度 = 39916527 ÷ 1000000 = 39.916527
 ```
 
-#### 2.3.4.5 注意事项
+#### 2.3.4.5 注意事项 {#write-geo-notice}
 
 1. **userid 格式**：
    - GEO 区的 `userid` 为**客户自定义的门店 ID**，可以是任意字符串
@@ -2122,7 +2122,7 @@ curl "http://localhost:8080/read?ds=geo&userid=store_001"
    - 同一时间只能运行一个任务
    - 任务运行期间，实时写入接口会被阻塞
 
-#### 2.3.4.6 最佳实践
+#### 2.3.4.6 最佳实践 {#write-geo-bestpractice}
 
 1. **经纬度数据规范**：
    - 始终将经度存入 `UINT32[1]`，纬度存入 `UINT32[2]`
@@ -2156,7 +2156,7 @@ curl "http://localhost:8080/read?ds=geo&userid=store_001"
    - 大批量数据（≥ 100万）使用 Task 模式
    - Task 模式建议在业务低峰期执行
 
-#### 2.3.4.7 GEO 区与其他数据区对比
+#### 2.3.4.7 GEO 区与其他数据区对比 {#write-geo-compare}
 
 | 对比项 | GEO 数据区 | DID 数据区 | WUID 数据区 |
 | --- | --- | --- | --- |
@@ -2172,7 +2172,7 @@ curl "http://localhost:8080/read?ds=geo&userid=store_001"
 - 需要存储设备用户行为 → 使用 **DID 数据区**
 - 需要手机号或微信用户数据 → 使用 **WUID 数据区**
 
-#### 2.3.4.8 经纬度转换工具函数
+#### 2.3.4.8 经纬度转换工具函数 {#write-geo-lnglat-util}
 
 为了方便开发者使用，提供以下经纬度转换工具函数：
 
@@ -2239,11 +2239,11 @@ print(f"经度: {lng2:.6f}, 纬度: {lat2:.6f}")
 # 输出: 经度: 116.397128, 纬度: 39.916527
 ```
 
-### 2.3.5 IP城市数据写入(GEOIP区)
+### 2.3.5 IP城市数据写入(GEOIP区) {#write-geoip}
 
 GEOIP 数据区用于存储基于**用户 IP 地址所在城市**的用户数据。与其他数据区不同，GEOIP 数据区的 `userid` 使用**中国行政区划码**（6位数字编码）作为用户标识。本节介绍 IP 城市数据写入的完整流程。
 
-#### 2.3.5.1 检查数据区开通状态
+#### 2.3.5.1 检查数据区开通状态 {#write-geoip-check}
 
 在写入数据前，先使用 `saastool info` 命令检查是否已开通 GEOIP 数据区。
 
@@ -2292,7 +2292,7 @@ GEOIP 区使用**中国行政区划码**作为 `userid`，行政区划码采用 
 
 :::
 
-#### 2.3.5.2 数据准备
+#### 2.3.5.2 数据准备 {#write-geoip-prepare}
 
 准备符合格式要求的 JSONL（JSON Lines）文件，每行一个 JSON 对象。
 
@@ -2355,11 +2355,11 @@ GEOIP 区使用**中国行政区划码**作为 `userid`，行政区划码采用 
 - `uint32sKv.1`：投放预算（单位：分）
 - `flagsWithExpireKv.1`：是否启用投放
 
-#### 2.3.5.3 写入方式
+#### 2.3.5.3 写入方式 {#write-geoip-methods}
 
 GEOIP 数据区支持以下写入方式，可根据数据量和使用场景选择：
 
-##### **方法一：使用 saastool CLI 工具**
+##### **方法一：使用 saastool CLI 工具** {#write-geoip-cli}
 
 最简单的写入方式，适合开发测试和小批量数据写入。
 
@@ -2383,7 +2383,7 @@ saastool write -ds geoip -source ./geoip_data.jsonl -batchsize 5000
 - `-batchsize`：批处理大小（默认 10000，建议 5000-10000）
 - `-clear`：写入前清空所有数据（可选，危险操作）
 
-##### **方法二：使用 saashttp 包（程序集成）**
+##### **方法二：使用 saashttp 包（程序集成）** {#write-geoip-saashttp}
 
 在 Go 程序中使用 `saashttp` 包进行数据写入。
 
@@ -2479,7 +2479,7 @@ func main() {
 }
 ```
 
-##### **方法三：使用 saastool HTTP daemon 模式**
+##### **方法三：使用 saastool HTTP daemon 模式** {#write-geoip-daemon}
 
 saastool 支持以 HTTP 服务模式运行，提供简单的 HTTP 接口进行数据读写。
 
@@ -2518,7 +2518,7 @@ curl -X POST "http://localhost:8080/write?ds=geoip" \
   -d "userid=130100&u8.1=7&u8.2=3&u32.1=1000000"
 ```
 
-##### **方法四：使用 Task 任务批量写入（推荐大数据量）**
+##### **方法四：使用 Task 任务批量写入（推荐大数据量）** {#write-geoip-task}
 
 Task 任务模式适用于**大量城市数据**的批量写入，支持断点续传和并发上传。
 
@@ -2566,7 +2566,7 @@ saastool task info -sha256 <taskSha256>
 saastool task delete -sha256 <taskSha256>
 ```
 
-#### 2.3.5.4 数据验证
+#### 2.3.5.4 数据验证 {#write-geoip-verify}
 
 写入完成后，建议进行数据验证：
 
@@ -2606,7 +2606,7 @@ curl "http://localhost:8080/read?ds=geoip&userid=110000"
 }
 ```
 
-#### 2.3.5.5 查询行政区划码
+#### 2.3.5.5 查询行政区划码 {#write-geoip-admincode}
 
 系统提供了 `admincode` 命令用于查询行政区划码：
 
@@ -2638,7 +2638,7 @@ saastool admincode list
 
 **完整的行政区划码映射表**请参考：[附录：行政区划码映射表](appendix.md)
 
-#### 2.3.5.6 注意事项
+#### 2.3.5.6 注意事项 {#write-geoip-notice}
 
 1. **userid 格式要求**：
    - ✅ **推荐使用 6 位数字行政区划码**：`"110000"`, `"130100"`
@@ -2673,7 +2673,7 @@ saastool admincode list
    - 如果省级也找不到，会回退到国家级代码 `100000`
    - 建议为常用省份和全国设置默认数据
 
-#### 2.3.5.7 最佳实践
+#### 2.3.5.7 最佳实践 {#write-geoip-bestpractice}
 
 1. **数据分层策略**：
    - **国家级**（`100000`）：设置全国默认数据
@@ -2711,7 +2711,7 @@ saastool admincode list
    - 为一线城市和重点省份设置具体数据
    - 其他城市可使用省级或国家级数据
 
-#### 2.3.5.8 GEOIP 区与其他数据区对比
+#### 2.3.5.8 GEOIP 区与其他数据区对比 {#write-geoip-compare}
 
 | 对比项 | GEOIP 数据区 | GEO 数据区 | DID 数据区 |
 | --- | --- | --- | --- |
@@ -2727,7 +2727,7 @@ saastool admincode list
 - 需要门店、POI 地理位置定向 → 使用 **GEO 数据区**
 - 需要存储设备用户行为 → 使用 **DID 数据区**
 
-#### 2.3.5.9 行政区划码示例
+#### 2.3.5.9 行政区划码示例 {#write-geoip-admincode-example}
 
 以下是常用城市的行政区划码示例：
 
@@ -2749,11 +2749,11 @@ saastool admincode list
 
 完整的行政区划码映射表请参考：**[附录：行政区划码映射表](appendix.md)**
 
-### 2.3.6 常住城市数据写入(GEOFAC区)
+### 2.3.6 常住城市数据写入(GEOFAC区) {#write-geofac}
 
 GEOFAC（Frequently Active City）数据区用于存储基于**用户常住城市**的用户数据。与 GEOIP 数据区类似，GEOFAC 数据区也使用**中国行政区划码**（6位数字编码）作为用户标识。本节介绍常住城市数据写入的完整流程。
 
-#### 2.3.6.1 检查数据区开通状态
+#### 2.3.6.1 检查数据区开通状态 {#write-geofac-check}
 
 在写入数据前，先使用 `saastool info` 命令检查是否已开通 GEOFAC 数据区。
 
@@ -2802,7 +2802,7 @@ GEOFAC 区使用**中国行政区划码**作为 `userid`，行政区划码采用
 
 :::
 
-#### 2.3.6.2 GEOFAC 与 GEOIP 的区别
+#### 2.3.6.2 GEOFAC 与 GEOIP 的区别 {#write-geofac-vs-geoip}
 
 虽然两者都使用行政区划码，但应用场景和数据含义不同：
 
@@ -2819,7 +2819,7 @@ GEOFAC 区使用**中国行政区划码**作为 `userid`，行政区划码采用
 - 需要基于用户当前位置的实时投放 → 使用 **GEOIP 数据区**
 - 可以同时使用两个数据区，在 Lua 脚本中实现更精准的定向逻辑
 
-#### 2.3.6.3 数据准备
+#### 2.3.6.3 数据准备 {#write-geofac-prepare}
 
 准备符合格式要求的 JSONL（JSON Lines）文件，每行一个 JSON 对象。
 
@@ -2884,11 +2884,11 @@ GEOFAC 区使用**中国行政区划码**作为 `userid`，行政区划码采用
 - `uint32sKv.1`：月度投放预算（单位：分）
 - `flagsWithExpireKv.1`：是否启用常住地投放
 
-#### 2.3.6.4 写入方式
+#### 2.3.6.4 写入方式 {#write-geofac-methods}
 
 GEOFAC 数据区支持以下写入方式，可根据数据量和使用场景选择：
 
-##### **方法一：使用 saastool CLI 工具**
+##### **方法一：使用 saastool CLI 工具** {#write-geofac-cli}
 
 最简单的写入方式，适合开发测试和小批量数据写入。
 
@@ -2912,7 +2912,7 @@ saastool write -ds geofac -source ./geofac_data.jsonl -batchsize 5000
 - `-batchsize`：批处理大小（默认 10000，建议 5000-10000）
 - `-clear`：写入前清空所有数据（可选，危险操作）
 
-##### **方法二：使用 saashttp 包（程序集成）**
+##### **方法二：使用 saashttp 包（程序集成）** {#write-geofac-saashttp}
 
 在 Go 程序中使用 `saashttp` 包进行数据写入。
 
@@ -3011,7 +3011,7 @@ func main() {
 }
 ```
 
-##### **方法三：使用 saastool HTTP daemon 模式**
+##### **方法三：使用 saastool HTTP daemon 模式** {#write-geofac-daemon}
 
 saastool 支持以 HTTP 服务模式运行，提供简单的 HTTP 接口进行数据读写。
 
@@ -3050,7 +3050,7 @@ curl -X POST "http://localhost:8080/write?ds=geofac" \
   -d "userid=130100&u8.1=7&u8.2=80&u32.1=2000000"
 ```
 
-##### **方法四：使用 Task 任务批量写入（推荐大数据量）**
+##### **方法四：使用 Task 任务批量写入（推荐大数据量）** {#write-geofac-task}
 
 Task 任务模式适用于**大量城市数据**的批量写入，支持断点续传和并发上传。
 
@@ -3098,7 +3098,7 @@ saastool task info -sha256 <taskSha256>
 saastool task delete -sha256 <taskSha256>
 ```
 
-#### 2.3.6.5 数据验证
+#### 2.3.6.5 数据验证 {#write-geofac-verify}
 
 写入完成后，建议进行数据验证：
 
@@ -3138,7 +3138,7 @@ curl "http://localhost:8080/read?ds=geofac&userid=110000"
 }
 ```
 
-#### 2.3.6.6 查询行政区划码
+#### 2.3.6.6 查询行政区划码 {#write-geofac-admincode}
 
 系统提供了 `admincode` 命令用于查询行政区划码：
 
@@ -3170,7 +3170,7 @@ saastool admincode list
 
 **完整的行政区划码映射表**请参考：**[附录：行政区划码映射表](appendix.md)**
 
-#### 2.3.6.7 注意事项
+#### 2.3.6.7 注意事项 {#write-geofac-notice}
 
 1. **userid 格式要求**（与 GEOIP 相同）：
    - ✅ **推荐使用 6 位数字行政区划码**：`"110000"`, `"130100"`
@@ -3205,7 +3205,7 @@ saastool admincode list
    - 如果省级也找不到，会回退到国家级代码 `100000`
    - 建议为常用省份和全国设置默认数据
 
-#### 2.3.6.8 最佳实践
+#### 2.3.6.8 最佳实践 {#write-geofac-bestpractice}
 
 1. **数据分层策略**（与 GEOIP 相同）：
    - **国家级**（`100000`）：设置全国默认数据
@@ -3250,7 +3250,7 @@ saastool admincode list
    - 在 Lua 脚本中可同时查询两个数据区，实现更精细的定向逻辑
    - 示例：优先使用常住地数据，常住地无数据时使用 IP 城市数据
 
-#### 2.3.6.9 GEOFAC、GEOIP 与其他数据区对比
+#### 2.3.6.9 GEOFAC、GEOIP 与其他数据区对比 {#write-geofac-compare}
 
 | 对比项 | GEOFAC（常住城市） | GEOIP（IP城市） | GEO（门店） | DID（设备） |
 | --- | --- | --- | --- | --- |
@@ -3269,7 +3269,7 @@ saastool admincode list
 - 需要门店、POI 地理位置定向 → 使用 **GEO 数据区**
 - 需要存储设备用户行为 → 使用 **DID 数据区**
 
-#### 2.3.6.10 行政区划码示例
+#### 2.3.6.10 行政区划码示例 {#write-geofac-admincode-example}
 
 以下是常用城市的行政区划码示例（与 GEOIP 相同）：
 

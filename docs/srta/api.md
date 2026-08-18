@@ -6,9 +6,9 @@ description: 深入解析程序化广告数据管理协议，掌握RTA SaaS系�
 keywords: [程序化广告, 数据管理, RTA SaaS系统, proto协议, API域名, 加密规则, 命令状态码, 任务管理, 策略绑定, 实时读写]
 ---
 
-# 3 API使用说明
+# 3 API使用说明 {#api}
 
-## 3.1 交互协议proto
+## 3.1 交互协议proto {#proto}
 
 协议源码地址（协议在高频变动中，最新版本请拉取 [git源码](https://git.algo.com.cn/public/saasapi.git)：
 
@@ -749,7 +749,7 @@ enum MAX {
 }
 ```
 
-## 3.2 API域名与演示模式
+## 3.2 API域名与演示模式 {#domain}
 
 **数据管理正式URL：https://api.rta.qq.com**
 
@@ -774,7 +774,7 @@ sRTA 不再使用独立的演示服务器，演示（Demo）模式与正式模�
 - **HTTP API 直接调用**：将各接口路径中的 `/saas/` 替换为 `/saas/demo/`，例如写入接口由 `/saas/write` 改为 `/saas/demo/write`。
 - **Go SDK（saashttp）**：构造 `saashttp.SaasClient` 时设置 `Demo: true` 字段，详见后续各代码示例。
 
-## 3.3 API请求
+## 3.3 API请求 {#request}
 
 HTTP Method：POST
 
@@ -788,7 +788,7 @@ HTTP Header 包含以下信息
 | Content-Type | 是 | 固定值：application/x-protobuf <br/><br/>**特殊**：在使用/saas/task/upload接口时，该项值为application/octet-stream |
 | Content-Encoding | **在上传时必填** | 当前服务端支持：gzip |
 
-## 3.4 加密串生成规则
+## 3.4 加密串生成规则 {#sign}
 
 Authorization=md5(Account+Token+Time)
 
@@ -805,11 +805,11 @@ Authorization=md5(Account+Token+Time)
 1. time与RTA服务器时间gap超过30min，则验证失败
 2. Authorization值和SaaS服务器按以上规则生成的值不一致，则验证失败
 
-## 3.5 API返回格式
+## 3.5 API返回格式 {#response}
 
 API以protobuf格式返回，返回信息为SaasRes结构
 
-## 3.6.命令状态码定义
+## 3.6.命令状态码定义 {#retcode}
 
 | 状态码 | proto常量 | 描述 |
 | :--- | :--- | :--- |
@@ -841,7 +841,7 @@ API以protobuf格式返回，返回信息为SaasRes结构
 | 301 | API_ERROR | 调用内部API错误 |
 | 401 | PARAM_ERROR | 参数错误 |
 
-## 3.7 任务状态码/过滤码定义
+## 3.7 任务状态码/过滤码定义 {#taskcode}
 
 | 状态码 | proto常量 | 描述 |
 | :--- | :--- | :--- |
@@ -853,7 +853,7 @@ API以protobuf格式返回，返回信息为SaasRes结构
 | 5 | FAIL | 失败 |
 | 10 | DELETED | 已删除，仅在执行删除成功时返回 |
 
-## 3.8 实践建议
+## 3.8 实践建议 {#practice}
 
 + **人群包上传**：使用任务接口，支持亿级处理。 
   1. 准备好数据（每一行为WriteItem 的json化内容），如存在多个文件，请放入同一目录。
@@ -870,7 +870,7 @@ API以protobuf格式返回，返回信息为SaasRes结构
   2. 分片机制对应于断点续传思路，使得在大量数据上传时不至于因为偶发网络波动而损失大量上传内容。
 + **JSON格式支持**：调试接口支持 JSON格式。出于成本节约目的，生产接口仅支持protobuf。
 
-## 3.9 基础协议
+## 3.9 基础协议 {#baseproto}
 
 **请求参数**：
 
@@ -915,7 +915,7 @@ API以protobuf格式返回，返回信息为SaasRes结构
 | 字段名称 | 字段类型 | 必填 | 描述 |
 | :--- | :--- | :--- | :--- |
 | SaasRes | SaasRes | 是 | 返回消息结构 |
-| SaasRes.code | ErrorCode | 是 | 返回状态码，请查阅[命令状态码定义](#36命令状态码定义) |
+| SaasRes.code | ErrorCode | 是 | 返回状态码，请查阅[命令状态码定义](#retcode) |
 | SaasRes.status | string | 否 | 返回状态描述 |
 |  |  |  | 以下字段根据操作返回 **唯一** 的一个 |
 | SaasRes.info | [InfoRes](#info) | 唯一 | 账号信息返回 |
@@ -1135,7 +1135,7 @@ saastool resetds -ds geoip
 saastool resetds -ds geofac
 ```
 
-## 3.15 任务
+## 3.15 任务 {#tasks}
 
 ### 3.15.1 创建 TaskCreate {#taskcreate}
 
@@ -1227,11 +1227,11 @@ saastool resetds -ds geofac
 
 <span id="taskupload"></span>
 
-### 3.15.3 上传数据文件分片 TaskUpload
+### 3.15.3 上传数据文件分片 TaskUpload {#taskupload}
 
 **说明**：该接口用于上传文件分块内容。注意该接口并不需要protobuf 的命令请求，而是以POST body 的方式直接上传文件内容分块，内容分块在上传时 `必须使用gzip压缩`。返回结果仍遵循protobuf协议。如上传大小超限，则会直接以 HTTP 413 状态码返回。
 
-此项请求与其他不同，请参阅 [API请求](#33-api请求)
+此项请求与其他不同，请参阅 [API请求](#request)
 
 **接口**：/saas/task/upload
 
@@ -1376,7 +1376,7 @@ saastool resetds -ds geofac
 | total_block | uint32 | 否 | 总块数 |
 | status | TaskStatus | 是 | 任务状态<br/>WAITING = 1;// 等待中<br/>READY = 2;// 上传完毕<br/>RUNNING = 3;// 运行中<br/>SUCCESS = 4;// 成功<br/>FAIL = 5;// 失败<br/>DELETED = 10; // 已删除，仅在执行删除成功时返回 |
 
-## 3.16 策略
+## 3.16 策略 {#targets}
 
 ### 3.16.1 列表 TargetList {#targetlist}
 
@@ -1522,7 +1522,7 @@ saastool resetds -ds geofac
 | :--- | :--- | :--- | :--- |
 | message | string | 否 | 更新结果消息 |
 
-## 3.17 绑定
+## 3.17 绑定 {#binds}
 
 ### 3.17.1 设置 BindSet {#bindset}
 
@@ -1589,7 +1589,7 @@ saastool resetds -ds geofac
 | errors.reason | string | 是 | 错误解绑原因 |
 
 
-## 3.18 数据授权 Grant
+## 3.18 数据授权 Grant {#grants}
 
 ### 3.18.1 列表 GrantList⚠️ {#grantlist}
 
@@ -1678,11 +1678,11 @@ saastool resetds -ds geofac
 | grant_index | string | 否 | 授权索引。格式为 "index1, index2, index55-index64"，例如 "1, 2, 55-64" |
 | dataspace_id | uint64 | 否 | 授权数据空间ID（数字型） |
 
-## 3.19 脚本
+## 3.19 脚本 {#scripts}
 
 ### 3.19.1 调试 ScriptDebug {#scriptdebug}
 
-**说明**：该接口用于调试 LUA 脚本，LUA 将在服务端沙箱环境运行并返回结果。调试模式下 print 函数将生效，可用于输出中间状态。关于该函数使用的更多信息，请参阅[代码调试](./lua.md#56-代码调试)。
+**说明**：该接口用于调试 LUA 脚本，LUA 将在服务端沙箱环境运行并返回结果。调试模式下 print 函数将生效，可用于输出中间状态。关于该函数使用的更多信息，请参阅[代码调试](./lua.md#debug)。
 
 **接口**：/saas/script/debug
 
@@ -1851,7 +1851,7 @@ saastool resetds -ds geofac
 | script_info.lua_used | bool | 否 | 是否在使用 |
 
 
-## 3.20 实验
+## 3.20 实验 {#exps}
 
 ### 3.20.1 列表 ExpList {#explist}
 
@@ -1927,7 +1927,7 @@ saastool resetds -ds geofac
 | exp_data.group.\<key\> | string  | 否 | 分组名称 |
 | exp_data.group.\<value\> | uint64  | 否 | 分组值 |
 
-#### 3.20.2.1 扩展实验指标
+#### 3.20.2.1 扩展实验指标 {#expdata-extfields}
 
 扩展实验指标字段仅在明确需要拉取时返回，如该字段值返回值为0，则返回字段不存在。
 
@@ -2036,7 +2036,7 @@ saastool resetds -ds geofac
 
 ## 3.21 实时实验报表 {#rtexpget}
 
-### 3.21.1 获取 RTExpGet
+### 3.21.1 获取 RTExpGet {#rtexpget-get}
 
 **说明**：该接口用于获取实时实验报表数据，数据源为 InfluxDB，由 tdbankconsumer 消费 ETL PageView 消息后写入。与 [ExpGet](#expdata)（T+1 离线数据）不同，RTExpGet 提供分钟级延迟的实时数据，支持自定义对照组/实验组分桶、时间范围精确到分钟、归一化等功能。
 
@@ -2131,7 +2131,7 @@ saasai rtexp get \
 
 ## 3.22 行政区划代码 {#admincodelist}
 
-### 3.21.1 列表 AdminCodeList
+### 3.21.1 列表 AdminCodeList {#admincodelist-list}
 
 **说明**：该接口用于获取中国行政区划代码列表，包括省、市级别的行政区划代码。
 

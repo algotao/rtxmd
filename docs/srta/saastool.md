@@ -6,7 +6,7 @@ description: 高效管理程序化广告数据与策略，saastool工具助您�
 keywords: [程序化广告, saastool工具, 数据管理, 策略管理, 命令行工具, 容器模式, 数据转换, 任务管理, 策略列表, 策略绑定]
 ---
 
-# 4 saastool工具
+# 4 saastool工具 {#saastool}
 
 saastool 是提供给客户的便捷命令行工具，使客户在不开发或少开发的情况下即可实现【数据管理】【策略管理】的对应功能。
 
@@ -14,7 +14,7 @@ saastool 是提供给客户的便捷命令行工具，使客户在不开发或�
 
 源码：[saastool](https://git.algo.com.cn/public/saasapi/src/branch/master/cmd/saastool) 
 
-## 4.1 命令行模式
+## 4.1 命令行模式 {#cli}
 
 
 ```sh
@@ -50,7 +50,7 @@ Commands:
 Use "saastool COMMAND -help" for more information about a command.
 ```
 
-### 4.1.1 cfg.toml配置文件
+### 4.1.1 cfg.toml配置文件 {#cli-cfg}
 
 saastool需要一个配置文件，其中可填写自己的Account、Token。使用配置文件可实现多账号多环境的区分。
 
@@ -67,7 +67,7 @@ token = "test"
 
 ```
 
-### 4.1.2 info（获取Saas信息）
+### 4.1.2 info（获取Saas信息） {#cli-info}
 
 获取sRTA服务的基本信息，包括数据空间、策略ID等配置信息。
 
@@ -93,7 +93,7 @@ Usage of info:
 saastool info
 ```
 
-### 4.1.3 read（读取用户数据）
+### 4.1.3 read（读取用户数据） {#cli-read}
 
 读取指定用户在数据空间中的数据（包括字节、uint32和标志位）。
 
@@ -150,7 +150,7 @@ saastool read -ds wuid -userids o_e3j4ggVPO2CP8iCPBLunzKL79n -appid wx1111111111
 saastool read -ds wuid -userids e10adc3949ba59abbe56e057f20f883e -hashtype 1
 ```
 
-### 4.1.4 write（写入用户数据
+### 4.1.4 write（写入用户数据 {#cli-write}
 
 向指定数据空间写入用户数据。支持批量写入和清空操作。
 
@@ -225,7 +225,7 @@ saastool write -ds wuid -source ./openid_users.jsonl -appid wx1111111111111111 -
 saastool write -ds wuid -source ./phone_users.jsonl -hashtype 1
 ```
 
-### 4.1.5 resetds（重置数据空间）
+### 4.1.5 resetds（重置数据空间） {#cli-resetds}
 
 重置指定数据空间，清除所有用户数据。
 
@@ -262,7 +262,7 @@ saastool resetds -ds geo
 saastool resetds -ds geofac
 ```
 
-### 4.1.6 convert（数据转换）
+### 4.1.6 convert（数据转换） {#cli-convert}
 
 将简化的数据格式转换为saastool写入格式，便于批量数据导入。
 
@@ -318,7 +318,7 @@ saastool convert -map ./map.json -source ./raw_data/ -dest ./converted_data/
 {"userid":"a763b592c846f0a78fb9b326d5c8ba78","bytesKv":{"1":1,"2":3}}
 ```
 
-### 4.1.7 columnclear（列清零）
+### 4.1.7 columnclear（列清零） {#cli-columnclear}
 
 将指定数据空间中全量用户的一个或多个列（byte、uint32、flag）清零。对于 DID/WUID 数据空间采用惰性失效机制，对于 Geo/GeoIP/GeoFAC 采用直接 Redis 覆写方式。
 
@@ -373,7 +373,7 @@ saastool columnclear -ds wuid -u32 1,2 -flag 1
 saastool columnclear -ds geo -all
 ```
 
-### 4.1.8 daemon（守护进程/HTTP服务）
+### 4.1.8 daemon（守护进程/HTTP服务） {#cli-daemon}
 
 以守护进程模式启动saastool HTTP服务，提供HTTP接口进行数据读写操作。
 
@@ -403,7 +403,7 @@ saastool daemon
 
 启动后，HTTP服务监听在配置的端口（默认8080），支持 `/read` 和 `/write` 接口。
 
-### 4.1.9 task（任务管理）命令列表
+### 4.1.9 task（任务管理）命令列表 {#cli-task}
 
 
 
@@ -433,7 +433,7 @@ Commands:
 Use "saastool task COMMAND -help" for more information about a command.
 ```
 
-#### 4.1.9.1 task list（查询任务列表）
+#### 4.1.9.1 task list（查询任务列表） {#cli-task-list}
 
 查询已创建的所有任务及其状态。
 
@@ -469,7 +469,7 @@ saastool task list -status running
 saastool task list -status success
 ```
 
-#### 4.1.9.2 task make（生成任务哈希）
+#### 4.1.9.2 task make（生成任务哈希） {#cli-task-make}
 
 计算本地文件或目录的SHA256哈希值，生成任务文件。这是上传文件前的必要步骤。
 
@@ -526,7 +526,7 @@ saastool task make -source ./users.jsonl -hashfile ./task.json -ds wuid -appid w
 saastool task make -source ./phones.jsonl -hashfile ./task.json -ds wuid -hashtype 1
 ```
 
-#### 4.1.9.3 task create（创建任务）
+#### 4.1.9.3 task create（创建任务） {#cli-task-create}
 
 将本地生成的任务文件上传到服务器，创建一个新任务。
 
@@ -555,7 +555,7 @@ Usage of create:
 saastool task create -hashfile ./task.json
 ```
 
-#### 4.1.9.4 task upload（上传任务文件）
+#### 4.1.9.4 task upload（上传任务文件） {#cli-task-upload}
 
 上传任务的文件块到服务器。
 
@@ -584,7 +584,7 @@ Usage of upload:
 saastool task upload -sha256 abc123def456...
 ```
 
-#### 4.1.9.5 task download（下载任务文件）
+#### 4.1.9.5 task download（下载任务文件） {#cli-task-download}
 
 从服务器下载任务的文件块到本地。
 
@@ -616,7 +616,7 @@ Usage of download:
 saastool task download -sha256 abc123def456... -dest ./output/
 ```
 
-#### 4.1.9.6 task run（运行任务）
+#### 4.1.9.6 task run（运行任务） {#cli-task-run}
 
 在服务器上运行任务，处理已上传的数据。
 
@@ -645,7 +645,7 @@ Usage of run:
 saastool task run -sha256 abc123def456...
 ```
 
-#### 4.1.9.7 task delete（删除任务）
+#### 4.1.9.7 task delete（删除任务） {#cli-task-delete}
 
 从服务器删除任务。
 
@@ -674,7 +674,7 @@ Usage of delete:
 saastool task delete -sha256 abc123def456...
 ```
 
-#### 4.1.9.8 task info（获取任务信息）
+#### 4.1.9.8 task info（获取任务信息） {#cli-task-info}
 
 获取服务器上的任务详细信息。
 
@@ -703,7 +703,7 @@ Usage of info:
 saastool task info -sha256 abc123def456...
 ```
 
-### 4.1.10 target（策略管理）命令列表
+### 4.1.10 target（策略管理）命令列表 {#cli-target}
 
 用于管理策略/目标，包括创建、查询和删除策略。
 
@@ -725,7 +725,7 @@ Commands:
 Use "saastool target COMMAND -help" for more information about a command.
 ```
 
-#### 4.1.10.1 target list（查询策略列表）
+#### 4.1.10.1 target list（查询策略列表） {#cli-target-list}
 
 查询已创建的所有策略及其信息。
 
@@ -764,7 +764,7 @@ saastool target list -targets my_target
 saastool target list -targets target1,target2 -b
 ```
 
-#### 4.1.10.2 target create（创建策略）
+#### 4.1.10.2 target create（创建策略） {#cli-target-create}
 
 创建一个新的策略。
 
@@ -800,7 +800,7 @@ saastool target create -target my_target
 saastool target create -target my_target -desc "核心用户策略"
 ```
 
-#### 4.1.10.3 target delete（删除策略）
+#### 4.1.10.3 target delete（删除策略） {#cli-target-delete}
 
 删除已创建的策略。
 
@@ -829,7 +829,7 @@ Usage of delete:
 saastool target delete -target my_target
 ```
 
-#### 4.1.10.4 target config（策略级配置）
+#### 4.1.10.4 target config（策略级配置） {#cli-target-config}
 
 用于管理策略级配置，目前支持**赔付期 CPA 出价调节**和**赔付期权重调节**两个开关。
 
@@ -852,7 +852,7 @@ Note: saastool update supports one target per call.
       For batch updates (up to 10 targets), use 'saasai target config update --items=...'.
 ```
 
-##### 4.1.10.4.1 target config list（查询策略级配置）
+##### 4.1.10.4.1 target config list（查询策略级配置） {#cli-target-config-list}
 
 查询本账户策略的赔付期配置状态。不传 `-targets` 时返回全部策略。
 
@@ -892,7 +892,7 @@ saastool target config list
 saastool target config list -targets t1,t2
 ```
 
-##### 4.1.10.4.2 target config update（修改策略级配置）
+##### 4.1.10.4.2 target config update（修改策略级配置） {#cli-target-config-update}
 
 修改单个策略的赔付期配置。**一次只能修改一个策略**；如需批量修改，请使用 `saasai target config update --items=...`。
 
@@ -936,7 +936,7 @@ saastool target config update -target t1 -enable-weight 0
 saastool target config update -target t1 -enable-cpa 2 -enable-weight 2
 ```
 
-### 4.1.11 bind（策略绑定）命令列表
+### 4.1.11 bind（策略绑定）命令列表 {#cli-bind}
 
 用于将广告主账户和广告组与策略进行绑定。
 
@@ -957,7 +957,7 @@ Commands:
 Use "saastool bind COMMAND -help" for more information about a command.
 ```
 
-#### 4.1.11.1 bind setaccount（绑定账户）
+#### 4.1.11.1 bind setaccount（绑定账户） {#cli-bind-setaccount}
 
 将广告主账户与策略进行绑定。
 
@@ -993,7 +993,7 @@ saastool bind setaccount -target my_target -accounts 123
 saastool bind setaccount -target my_target -accounts 123,456,789
 ```
 
-#### 4.1.11.2 bind setad（绑定广告组）
+#### 4.1.11.2 bind setad（绑定广告组） {#cli-bind-setad}
 
 将广告组与策略进行绑定。
 
@@ -1032,7 +1032,7 @@ saastool bind setad -target my_target -account 123 -ads 1001
 saastool bind setad -target my_target -account 123 -ads 1001,1002,1003
 ```
 
-#### 4.1.11.3 bind delete（删除绑定）
+#### 4.1.11.3 bind delete（删除绑定） {#cli-bind-delete}
 
 删除账户或广告组与策略的绑定关系。
 
@@ -1074,7 +1074,7 @@ saastool bind delete -target my_target -idtype 1 -ids 1001,1002,1003
 saastool bind delete -target my_target -idtype 3 -ids 123,456
 ```
 
-### 4.1.12 grant（授权管理）命令列表
+### 4.1.12 grant（授权管理）命令列表 {#cli-grant}
 
 用于管理数据空间的授权，允许其他账号访问您的数据。
 
@@ -1095,7 +1095,7 @@ Commands:
 Use "saastool grant COMMAND -help" for more information about a command.
 ```
 
-#### 4.1.12.1 grant list（查询授权列表）
+#### 4.1.12.1 grant list（查询授权列表） {#cli-grant-list}
 
 查询已授权给他人以及他人授权给您的权限。
 
@@ -1121,7 +1121,7 @@ Usage of list:
 saastool grant list
 ```
 
-#### 4.1.12.2 grant add（添加授权）
+#### 4.1.12.2 grant add（添加授权） {#cli-grant-add}
 
 为其他账号授权访问您的数据。
 
@@ -1160,7 +1160,7 @@ saastool grant add -account 2001 -ds 1 -index 1
 saastool grant add -account 2001 -ds 1 -index "1,2,4,10-20"
 ```
 
-#### 4.1.12.3 grant delete（删除授权）
+#### 4.1.12.3 grant delete（删除授权） {#cli-grant-delete}
 
 撤销已授予其他账号的数据访问权限。
 
@@ -1195,7 +1195,7 @@ Usage of delete:
 saastool grant delete -account 2001 -ds 1 -index "1,2"
 ```
 
-### 4.1.13 script（脚本管理）命令列表
+### 4.1.13 script（脚本管理）命令列表 {#cli-script}
 
 用于管理Lua脚本，用于数据处理和业务逻辑定制。
 
@@ -1219,7 +1219,7 @@ Commands:
 Use "saastool script COMMAND -help" for more information about a command.
 ```
 
-#### 4.1.13.1 script list（查询脚本列表）
+#### 4.1.13.1 script list（查询脚本列表） {#cli-script-list}
 
 列出所有已创建的脚本及其状态。
 
@@ -1245,7 +1245,7 @@ Usage of list:
 saastool script list
 ```
 
-#### 4.1.13.2 script debug（调试脚本）
+#### 4.1.13.2 script debug（调试脚本） {#cli-script-debug}
 
 在服务器上调试Lua脚本。
 
@@ -1287,7 +1287,7 @@ saastool script debug -lua ./script.lua -userid abc123def456 -os 2
 saastool script debug -lua ./script.lua -userid abc123def456 -ds 123 -os 2
 ```
 
-#### 4.1.13.3 script create（创建脚本）
+#### 4.1.13.3 script create（创建脚本） {#cli-script-create}
 
 在服务器上创建一个新的Lua脚本。
 
@@ -1319,7 +1319,7 @@ Usage of create:
 saastool script create -lua ./script.lua -name my-script
 ```
 
-#### 4.1.13.4 script delete（删除脚本）
+#### 4.1.13.4 script delete（删除脚本） {#cli-script-delete}
 
 从服务器删除一个脚本。
 
@@ -1348,7 +1348,7 @@ Usage of delete:
 saastool script delete -name my-script
 ```
 
-#### 4.1.13.5 script get（获取脚本内容）
+#### 4.1.13.5 script get（获取脚本内容） {#cli-script-get}
 
 从服务器获取指定脚本的内容。
 
@@ -1377,7 +1377,7 @@ Usage of get:
 saastool script get -name my-script
 ```
 
-#### 4.1.13.6 script use（设置默认脚本）
+#### 4.1.13.6 script use（设置默认脚本） {#cli-script-use}
 
 将指定的脚本设置为默认脚本。
 
@@ -1406,7 +1406,7 @@ Usage of use:
 saastool script use -name my-script
 ```
 
-### 4.1.14 exp（实验管理）命令列表
+### 4.1.14 exp（实验管理）命令列表 {#cli-exp}
 
 用于管理和查询实验数据。
 
@@ -1427,7 +1427,7 @@ Commands:
 Use "saastool exp COMMAND -help" for more information about a command.
 ```
 
-#### 4.1.14.1 exp list（查询实验列表）
+#### 4.1.14.1 exp list（查询实验列表） {#cli-exp-list}
 
 列出所有已创建的实验。
 
@@ -1453,7 +1453,7 @@ Usage of list:
 saastool exp list
 ```
 
-#### 4.1.14.2 exp get（获取实验报告）
+#### 4.1.14.2 exp get（获取实验报告） {#cli-exp-get}
 
 查询实验的数据报告。
 
@@ -1519,7 +1519,7 @@ saastool exp get -beginday 20250101 -endday 20250131 -target my_target -uid 123,
 saastool exp get -beginday 20250101 -endday 20250131 -target my_target -total -extfields "*"
 ```
 
-#### 4.1.14.3 exp grant（实验授权管理）
+#### 4.1.14.3 exp grant（实验授权管理） {#cli-exp-grant}
 
 管理实验的授权权限。
 
@@ -1540,7 +1540,7 @@ Commands:
 Use "saastool exp grant COMMAND -help" for more information about a command.
 ```
 
-##### 4.1.14.3.1 exp grant list（查询实验授权列表）
+##### 4.1.14.3.1 exp grant list（查询实验授权列表） {#cli-exp-grant-list}
 
 查询实验授权情况。
 
@@ -1566,7 +1566,7 @@ Usage of list:
 saastool exp grant list
 ```
 
-##### 4.1.14.3.2 exp grant add（添加实验授权）
+##### 4.1.14.3.2 exp grant add（添加实验授权） {#cli-exp-grant-add}
 
 为指定sRTA账户添加实验访问权限。
 
@@ -1595,7 +1595,7 @@ Usage of add:
 saastool exp grant add -account 12345
 ```
 
-##### 4.1.14.3.3 exp grant delete（删除实验授权）
+##### 4.1.14.3.3 exp grant delete（删除实验授权） {#cli-exp-grant-delete}
 
 撤销指定sRTA账户的实验访问权限。
 
@@ -1624,7 +1624,7 @@ Usage of delete:
 saastool exp grant delete -account 12345
 ```
 
-### 4.1.15 rtexp（实时实验报表）命令列表
+### 4.1.15 rtexp（实时实验报表）命令列表 {#cli-rtexp}
 
 用于查询实时实验报表数据（InfluxDB 数据源），支持自定义对照组/实验组分桶、分钟级时间范围和归一化。
 
@@ -1643,7 +1643,7 @@ Commands:
 Use "saastool rtexp COMMAND -help" for more information about a command.
 ```
 
-#### 4.1.15.1 rtexp get（获取实时实验报表）
+#### 4.1.15.1 rtexp get（获取实时实验报表） {#cli-rtexp-get}
 
 查询实时实验报表数据。与 `exp get`（离线 T+1 数据）不同，`rtexp get` 从 InfluxDB 实时流查询，延迟在分钟级。
 
@@ -1719,7 +1719,7 @@ saastool rtexp get -target my-target -basebuckets 1,5,6 -expbuckets "2,7;3,8" \
 saastool rtexp get -target 2033_target-v3 -basebuckets 1,5,6 -expbuckets "2,7"
 ```
 
-### 4.1.16 admincode（行政区划代码）命令列表
+### 4.1.16 admincode（行政区划代码）命令列表 {#cli-admincode}
 
 用于查询中国行政区划代码信息，包括省、市级别的行政区划代码。
 
@@ -1737,7 +1737,7 @@ Examples:
   saastool admincode list -c cfg.toml
 ```
 
-#### 4.1.16.1 admincode list（查询行政区划代码列表）
+#### 4.1.16.1 admincode list（查询行政区划代码列表） {#cli-admincode-list}
 
 查询所有中国行政区划代码，包括省、市级别的代码信息。
 
@@ -1808,7 +1808,7 @@ saastool admincode list -config my.toml
 - `110100`：北京市市辖区（地级）
 - `310000`：上海市（省级）
 
-## 4.2 容器/服务模式
+## 4.2 容器/服务模式 {#container}
 
 saastool提供了容器版本。在容器中将默认启动为daemon并提供http接口供调用。使用容器版本可以简化配置及开发工作，在操作量不高时使用更通用的http交互形式提供数据读写。
 
@@ -1816,7 +1816,7 @@ saastool提供了容器版本。在容器中将默认启动为daemon并提供htt
 在执行复杂而繁重的处理时，推荐使用标准API。
 :::
 
-### 4.2.1 Docker Compose配置
+### 4.2.1 Docker Compose配置 {#container-compose}
 
 :::tip[演示模式]
 ```yml
@@ -1855,7 +1855,7 @@ services:
 | SRTA_TOKEN | sRTA Token |
 | SRTA_ENV | 演示模式（demo）或正式模式（prd） |
 
-### 4.2.2 基础信息
+### 4.2.2 基础信息 {#container-info}
 
 在http交互时，sRTA daemon http服务使用 `Query String` 风格写入/读取数据。它是一种遵循Url规范的格式，通过字段key value来描述需要读取/写入的数据。
 
@@ -1909,7 +1909,7 @@ userid=cfcd208495d565ef66e7dff9f98764da&u8.1=10&u8.2=20&u32.1=100000&flag.1=true
 | u32.[n] | 写入uint32数字区 | u32.1=1000000 |
 | flag.[n] | 写入flag区 | 支持多种格式<br />flag.1=true 或 flag.1=false（置位且不过期）<br/ >flag.1=1758686629（在2025-09-24 12:03:49前为true，之后为false）<br/ >flag.1=!3600（在当前时间+3600秒之前为true，之后为false） |
 
-### 4.2.3 单个读
+### 4.2.3 单个读 {#container-read}
 
 使用HTTP GET方法发送read请求，读取单条数据。
 
@@ -1923,7 +1923,7 @@ curl "http://saastool/read?ds=did&userid=cfcd208495d565ef66e7dff9f98764da"
 curl "http://saastool/read?ds=wuid&userid=o_e3j4ggVPO2CP8iCPBLunzKL79n&appid=wx1111111111111111"
 ```
 
-### 4.2.4 单个写
+### 4.2.4 单个写 {#container-write}
 
 使用HTTP GET方法发送write请求，写入单条数据
 
@@ -1947,7 +1947,7 @@ curl "http://saastool/write?ds=wuid&userid=o_e3j4ggVPO2CP8iCPBLunzKL79n&appid=wx
 curl "http://saastool/write?ds=wuid&userid=o_e3j4ggVPO2CP8iCPBLunzKL79n&appid=wx1111111111111111&u8.1=10&u32.1=100000&clear=true"
 ```
 
-### 4.2.5 批量写
+### 4.2.5 批量写 {#container-batchwrite}
 
 在http POST模式下，sRTA daemon http服务使用 Query String 规范标记公共字段，并在Body中携带写入信息。Header中的 `Content-Type` 约定为 `text/plain`。
 
@@ -1961,7 +1961,7 @@ curl -X POST "http://saastool/write?ds=did" \
   -d "userid=9dd4e461268c8034f5c8564e155c67a6&u8.2=200&u32.6=1000000&flag.3=!3600" 
 ```
 
-### 4.2.6 容器中使用saastool
+### 4.2.6 容器中使用saastool {#container-usage}
 
 在容器中的saastool命令行仍然可以使用，运行时其配置依赖config文件，而不受环境变量的影响。
 

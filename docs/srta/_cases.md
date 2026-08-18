@@ -6,34 +6,34 @@ description: 以SaaS的方式，让广告客户能够以低门槛、高灵活度
 keywords: [RTA, sRTA, SaaS]
 ---
 
-# 2 应用场景
+# 2 应用场景 {#cases}
 
-## 2.1 我是广告主（一方）
+## 2.1 我是广告主（一方） {#case-advertiser}
 
-### 2.1.1 只用自己数据
+### 2.1.1 只用自己数据 {#case-advertiser-own}
 
-### 2.1.2 结合三方数据
+### 2.1.2 结合三方数据 {#case-advertiser-third}
 
-### 2.1.3 结合二方数据
+### 2.1.3 结合二方数据 {#case-advertiser-second}
 
-### 2.1.4 交给服务商
+### 2.1.4 交给服务商 {#case-advertiser-agency}
 
-## 2.2 我是技术服务商（三方）
+## 2.2 我是技术服务商（三方） {#case-provider}
 
-### 2.2.1 只用自己数据
+### 2.2.1 只用自己数据 {#case-provider-own}
 
-### 2.2.2 结合一方数据
+### 2.2.2 结合一方数据 {#case-provider-first}
 
-### 2.2.3 结合二方数据
+### 2.2.3 结合二方数据 {#case-provider-second}
 
-## 2.3 我是数据提供商（三方）
+## 2.3 我是数据提供商（三方） {#case-dataprovider}
 
-### 2.3.1 如何开放我的数据
+### 2.3.1 如何开放我的数据 {#case-dataprovider-open}
 
-### 2.3.2 如何授权
+### 2.3.2 如何授权 {#case-dataprovider-grant}
 
-### 2.3.3 如何查看使用情况
+### 2.3.3 如何查看使用情况 {#case-dataprovider-usage}
 
-### 2.3.4 如何查看效果
+### 2.3.4 如何查看效果 {#case-dataprovider-effect}
 
-### 2.3.4 如何计费
+### 2.3.4 如何计费 {#case-dataprovider-billing}

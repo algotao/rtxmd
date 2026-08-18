@@ -6,7 +6,7 @@ description: saasai 是 saastool 的 AI 友好衍生命令行工具，输出结�
 keywords: [程序化广告, saasai工具, AI友好命令行, 结构化输出, JSON输出, 退出码, dry-run, AI Agent, 自动化脚本, 数据管理, 策略管理, sRTA]
 ---
 
-# 6 saasai工具
+# 6 saasai工具 {#saasai}
 
 saasai 是 saastool 的 **AI 友好衍生版本**，与 saastool **并存**（同一套后端 API，同一份 `cfg.toml` 配置），专为 AI Agent、CI 流水线与自动化脚本设计：
 
@@ -23,9 +23,9 @@ saasai 是 saastool 的 **AI 友好衍生版本**，与 saastool **并存**（�
 
 源码：[saasai](https://git.algo.com.cn/public/saasapi/src/branch/master/cmd/saasai)
 
-## 6.1 基础约定
+## 6.1 基础约定 {#ai-basic}
 
-### 6.1.1 输出格式
+### 6.1.1 输出格式 {#ai-output}
 
 saasai 默认 `--output json`，成功时写入 stdout 的统一结构（envelope）：
 
@@ -67,7 +67,7 @@ saasai 默认 `--output json`，成功时写入 stdout 的统一结构（envelop
 | `error.retriable` | 是否可自动重试 |
 | `error.details` | 额外诊断信息（如入参 sha256） |
 
-### 6.1.2 退出码与错误类型
+### 6.1.2 退出码与错误类型 {#ai-exitcode}
 
 | code | type | 含义 | retriable |
 | --- | --- | --- | --- |
@@ -89,7 +89,7 @@ saasai 默认 `--output json`，成功时写入 stdout 的统一结构（envelop
 - `code = 30` 按业务语义处理（例如可视作"已不存在"）。
 :::
 
-### 6.1.3 全局参数
+### 6.1.3 全局参数 {#ai-globalargs}
 
 | 参数 | 默认 | 含义 |
 | --- | --- | --- |
@@ -104,7 +104,7 @@ saasai 默认 `--output json`，成功时写入 stdout 的统一结构（envelop
 `--output json`（默认）下，进度条与 info/debug 日志会**自动抑制**，确保 stderr 也是纯净 JSON。需要看进度请用 `-o table` 或显式加 `-v`。
 :::
 
-### 6.1.4 cfg.toml 配置文件
+### 6.1.4 cfg.toml 配置文件 {#ai-cfg}
 
 与 saastool **完全兼容**。默认名称 `cfg.toml`，置于 saasai 同目录；也可用 `-c` 或 `--config` 指定。
 
@@ -119,7 +119,7 @@ baseurl = "https://api.rta.qq.com"      # 正式环境
 #demo = true
 ```
 
-### 6.1.5 参数命名对照（与 saastool）
+### 6.1.5 参数命名对照（与 saastool） {#ai-argmap}
 
 saasai 采用 GNU 风格（双横线 kebab-case）；saastool 沿用 Go `flag` 风格。差异表：
 
@@ -138,7 +138,7 @@ saasai 采用 GNU 风格（双横线 kebab-case）；saastool 沿用 Go `flag` �
 | `-groupby` | `--group-by` | 分组 |
 | `-b`（target list） | `--list-binds` | 是否列出绑定 |
 
-## 6.2 命令总览
+## 6.2 命令总览 {#ai-commands}
 
 ```sh
 saasai --help
@@ -166,7 +166,7 @@ Available Commands:
 saasai **不提供** `daemon` / `web` 子命令，这两类长驻服务仍由 saastool 承担。
 :::
 
-## 6.3 info
+## 6.3 info {#ai-info}
 
 读取 sRTA 服务的基础信息（数据空间、策略 ID 等）。
 
@@ -193,7 +193,7 @@ saasai info
 }
 ```
 
-## 6.4 read（读取用户数据）
+## 6.4 read（读取用户数据） {#ai-read}
 
 读取指定用户在数据空间中的数据（bytes / uint32s / flags）。
 
@@ -227,7 +227,7 @@ saasai read --ds wuid --user-ids o_e3j4ggVPO2CP8iCPBLunzKL79n --appid wx11111111
 saasai read --ds wuid --id-type 1 --user-ids 6b23320fcfc29304d73ce8090bce8e96
 ```
 
-## 6.5 write（写入用户数据）
+## 6.5 write（写入用户数据） {#ai-write}
 
 向指定数据空间批量写入，source 可以是单文件或目录（递归处理）。
 
@@ -285,7 +285,7 @@ saasai --dry-run write --ds did --source ./users.jsonl --clear
 }
 ```
 
-## 6.6 resetds（重置数据空间）
+## 6.6 resetds（重置数据空间） {#ai-resetds}
 
 清除指定数据空间中的全部数据。
 
@@ -304,7 +304,7 @@ saasai --dry-run resetds --ds geo
 saasai resetds --ds geo
 ```
 
-## 6.7 convert（数据转换）
+## 6.7 convert（数据转换） {#ai-convert}
 
 根据映射配置把原始数据（`userid\t[tag1 tag2 ...]` 格式）转换成 write 可消费的 JSONL。**纯本地操作，不访问后端**。
 
@@ -329,7 +329,7 @@ saasai resetds --ds geo
 saasai convert --map ./map.json --source ./raw_data/ --dest ./converted_data/
 ```
 
-## 6.8 columnclear（列清零）
+## 6.8 columnclear（列清零） {#ai-columnclear}
 
 对数据空间的列（byte/uint32/flag）清零。
 
@@ -357,7 +357,7 @@ saasai columnclear --ds did --all
 saasai columnclear --ds wuid --u32 1,2 --flag 1
 ```
 
-## 6.9 task（任务管理）
+## 6.9 task（任务管理） {#ai-task}
 
 文件上传任务的全生命周期管理。
 
@@ -373,7 +373,7 @@ Available Commands:
   upload    Upload task's file blocks to server
 ```
 
-### 6.9.1 task list
+### 6.9.1 task list {#ai-task-list}
 
 | 参数 | 必填 | 含义 | 样例 |
 | --- | --- | --- | --- |
@@ -385,7 +385,7 @@ saasai task list
 saasai task list --status running
 ```
 
-### 6.9.2 task make
+### 6.9.2 task make {#ai-task-make}
 
 本地计算文件 / 目录的分块 SHA256，输出 hash 文件。**不联网**。
 
@@ -423,7 +423,7 @@ saasai task make --source ./users.jsonl --hash-file ./task.json \
 }
 ```
 
-### 6.9.3 task create
+### 6.9.3 task create {#ai-task-create}
 
 上传 hash 文件到服务端，创建任务。**支持 `--hash-file -` 从 stdin 读取**。
 
@@ -438,7 +438,7 @@ cat task.json | saasai task create --hash-file -
 saasai --dry-run task create --hash-file ./task.json
 ```
 
-### 6.9.4 task upload
+### 6.9.4 task upload {#ai-task-upload}
 
 | 参数 | 必填 | 含义 | 样例 |
 | --- | --- | --- | --- |
@@ -463,7 +463,7 @@ saasai task upload --sha256 abc123...
 }
 ```
 
-### 6.9.5 task download
+### 6.9.5 task download {#ai-task-download}
 
 | 参数 | 必填 | 含义 | 样例 |
 | --- | --- | --- | --- |
@@ -474,21 +474,21 @@ saasai task upload --sha256 abc123...
 saasai task download --sha256 abc123... --dest ./output/
 ```
 
-### 6.9.6 task run
+### 6.9.6 task run {#ai-task-run}
 
 ```sh
 saasai task run --sha256 abc123...
 saasai --dry-run task run --sha256 abc123...
 ```
 
-### 6.9.7 task delete
+### 6.9.7 task delete {#ai-task-delete}
 
 ```sh
 saasai task delete --sha256 abc123...
 saasai --dry-run task delete --sha256 abc123...
 ```
 
-### 6.9.8 task info
+### 6.9.8 task info {#ai-task-info}
 
 ```sh
 saasai task info --sha256 abc123...
@@ -510,7 +510,7 @@ saasai task info --sha256 abc123...
 }
 ```
 
-## 6.10 target（策略管理）
+## 6.10 target（策略管理） {#ai-target}
 
 ```
 Available Commands:
@@ -520,7 +520,7 @@ Available Commands:
   list     List targets
 ```
 
-### 6.10.1 target list
+### 6.10.1 target list {#ai-target-list}
 
 | 参数 | 必填 | 含义 | 样例 |
 | --- | --- | --- | --- |
@@ -532,7 +532,7 @@ saasai target list
 saasai target list --targets target1,target2 --list-binds
 ```
 
-### 6.10.2 target create
+### 6.10.2 target create {#ai-target-create}
 
 | 参数 | 必填 | 含义 | 样例 |
 | --- | --- | --- | --- |
@@ -545,7 +545,7 @@ saasai target create --target my_target --desc "核心用户策略"
 saasai --dry-run target create --target my_target
 ```
 
-### 6.10.3 target delete
+### 6.10.3 target delete {#ai-target-delete}
 
 | 参数 | 必填 | 含义 | 样例 |
 | --- | --- | --- | --- |
@@ -557,7 +557,7 @@ saasai target delete --target my_target
 saasai --dry-run target delete --target my_target
 ```
 
-### 6.10.4 target config list
+### 6.10.4 target config list {#ai-target-config-list}
 
 查询策略级配置（赔付期 CPA 调节 / 权重调节的启用状态）。
 
@@ -577,7 +577,7 @@ saasai target config list
 saasai target config list --targets t1,t2
 ```
 
-### 6.10.5 target config update
+### 6.10.5 target config update {#ai-target-config-update}
 
 修改策略级配置。支持**单条模式**和**批量模式**（两者互斥）。
 
@@ -589,7 +589,7 @@ saasai target config list --targets t1,t2
 | `0` | 启用（默认） |
 | `2` | 禁用 |
 
-#### 单条模式
+#### 单条模式 {#ai-target-config-update-single}
 
 | 参数 | 必填 | 含义 | 样例 |
 | --- | --- | --- | --- |
@@ -614,7 +614,7 @@ saasai target config update --target t1 --enable-cpa 2 --enable-weight 2
 saasai --dry-run target config update --target t1 --enable-cpa 2
 ```
 
-#### 批量模式
+#### 批量模式 {#ai-target-config-update-batch}
 
 | 参数 | 必填 | 含义 | 样例 |
 | --- | --- | --- | --- |
@@ -631,7 +631,7 @@ saasai target config update --items 't1:2:2,t2:-1:0,t3:2:-1'
 saasai --dry-run target config update --items 't1:2:2,t2:0:0'
 ```
 
-## 6.11 bind（策略绑定）
+## 6.11 bind（策略绑定） {#ai-bind}
 
 ```
 Available Commands:
@@ -640,7 +640,7 @@ Available Commands:
   setad       Set AdGroup binds
 ```
 
-### 6.11.1 bind setaccount
+### 6.11.1 bind setaccount {#ai-bind-setaccount}
 
 | 参数 | 必填 | 含义 | 样例 |
 | --- | --- | --- | --- |
@@ -652,7 +652,7 @@ Available Commands:
 saasai bind setaccount --target my_target --accounts 123,456
 ```
 
-### 6.11.2 bind setad
+### 6.11.2 bind setad {#ai-bind-setad}
 
 | 参数 | 必填 | 含义 | 样例 |
 | --- | --- | --- | --- |
@@ -665,7 +665,7 @@ saasai bind setaccount --target my_target --accounts 123,456
 saasai bind setad --target my_target --account 123 --ads 1001,1002,1003
 ```
 
-### 6.11.3 bind delete
+### 6.11.3 bind delete {#ai-bind-delete}
 
 | 参数 | 必填 | 含义 | 样例 |
 | --- | --- | --- | --- |
@@ -680,7 +680,7 @@ saasai bind delete --target my_target --id-type 1 --ids 1001
 saasai bind delete --target my_target --id-type 3 --ids 123
 ```
 
-## 6.12 grant（授权管理）
+## 6.12 grant（授权管理） {#ai-grant}
 
 ```
 Available Commands:
@@ -689,13 +689,13 @@ Available Commands:
   list    List data grants
 ```
 
-### 6.12.1 grant list
+### 6.12.1 grant list {#ai-grant-list}
 
 ```sh
 saasai grant list
 ```
 
-### 6.12.2 grant add
+### 6.12.2 grant add {#ai-grant-add}
 
 | 参数 | 必填 | 含义 | 样例 |
 | --- | --- | --- | --- |
@@ -708,7 +708,7 @@ saasai grant list
 saasai grant add --account 2001 --ds 20010101 --index "1,2,4,10-20"
 ```
 
-### 6.12.3 grant delete
+### 6.12.3 grant delete {#ai-grant-delete}
 
 参数同 `grant add`：
 
@@ -716,7 +716,7 @@ saasai grant add --account 2001 --ds 20010101 --index "1,2,4,10-20"
 saasai grant delete --account 2001 --ds 20010101 --index "1,2"
 ```
 
-## 6.13 script（脚本管理）
+## 6.13 script（脚本管理） {#ai-script}
 
 ```
 Available Commands:
@@ -728,13 +728,13 @@ Available Commands:
   use     Use a script as default
 ```
 
-### 6.13.1 script list
+### 6.13.1 script list {#ai-script-list}
 
 ```sh
 saasai script list
 ```
 
-### 6.13.2 script debug（别名：`run`）
+### 6.13.2 script debug（别名：`run`） {#ai-script-debug}
 
 在服务端运行本地 Lua 脚本进行调试。
 
@@ -766,7 +766,7 @@ cat script.lua | saasai script debug --lua - --userid abc123 --ds did
 }
 ```
 
-### 6.13.3 script create
+### 6.13.3 script create {#ai-script-create}
 
 | 参数 | 必填 | 含义 | 样例 |
 | --- | --- | --- | --- |
@@ -779,7 +779,7 @@ saasai script create --lua ./script.lua --name my-script
 cat script.lua | saasai script create --lua - --name my-script
 ```
 
-### 6.13.4 script delete / get / use
+### 6.13.4 script delete / get / use {#ai-script-other}
 
 | 参数 | 必填 | 含义 |
 | --- | --- | --- |
@@ -792,7 +792,7 @@ saasai script get    --name my-script
 saasai script use    --name my-script
 ```
 
-## 6.14 exp（实验管理）
+## 6.14 exp（实验管理） {#ai-exp}
 
 ```
 Available Commands:
@@ -801,13 +801,13 @@ Available Commands:
   list   List experiments
 ```
 
-### 6.14.1 exp list
+### 6.14.1 exp list {#ai-exp-list}
 
 ```sh
 saasai exp list
 ```
 
-### 6.14.2 exp get
+### 6.14.2 exp get {#ai-exp-get}
 
 | 参数 | 必填 | 含义 | 样例 |
 | --- | --- | --- | --- |
@@ -828,7 +828,7 @@ saasai exp get --begin-day 20250101 --end-day 20250131 --target my_target \
 saasai exp get --begin-day 20250101 --end-day 20250131 --target my_target --total --ext-fields "*"
 ```
 
-### 6.14.3 exp grant list / add / delete
+### 6.14.3 exp grant list / add / delete {#ai-exp-grant}
 
 ```sh
 saasai exp grant list
@@ -842,7 +842,7 @@ saasai --dry-run exp grant add --account 12345
 | `--account` | 是（add/delete） | sRTA 账户 ID | `12345` |
 | `--dry-run` | 否（仅 add/delete） | 仅预览 | — |
 
-## 6.15 rtexp（实时实验报表）
+## 6.15 rtexp（实时实验报表） {#ai-rtexp}
 
 查询实时实验报表数据（InfluxDB 数据源）。与 `exp get`（离线 T+1 数据）不同，`rtexp get` 从 InfluxDB 实时流查询，延迟在分钟级，支持自定义对照组/实验组分桶和归一化。
 
@@ -851,7 +851,7 @@ Available Commands:
   get         Get realtime exp report
 ```
 
-### 6.15.1 rtexp get
+### 6.15.1 rtexp get {#ai-rtexp-get}
 
 | 参数 | 必填 | 含义 | 样例 |
 | --- | --- | --- | --- |
@@ -889,7 +889,7 @@ saasai rtexp get --target my-target --base 1,5,6 --exp-groups "2,7;3,8" \
 saasai rtexp get --target 2033_target-v3 --base 1,5,6 --exp-groups "2,7"
 ```
 
-## 6.16 admincode（行政区划代码）
+## 6.16 admincode（行政区划代码） {#ai-admincode}
 
 查询中国行政区划代码。
 
@@ -914,9 +914,9 @@ saasai -o table admincode list   # 人类可读
 }
 ```
 
-## 6.17 AI Agent / 脚本集成范式
+## 6.17 AI Agent / 脚本集成范式 {#ai-integration}
 
-### 6.17.1 Bash
+### 6.17.1 Bash {#ai-integration-bash}
 
 ```sh
 if saasai task info --sha256 "$H" > ok.json 2> err.json; then
@@ -934,7 +934,7 @@ else
 fi
 ```
 
-### 6.17.2 Python
+### 6.17.2 Python {#ai-integration-python}
 
 ```python
 import json, subprocess
@@ -953,14 +953,14 @@ else:
         raise RuntimeError(f"{err['type']}: {err['message']}")
 ```
 
-### 6.17.3 关键约定
+### 6.17.3 关键约定 {#ai-integration-rules}
 
 - **永远先看 exit code**，再解析 stderr（error）或 stdout（data）。
 - **失败时 stdout 一定为空**，可放心 `cmd > out.json` 或 `| jq`。
 - **JSON 模式下 stderr 也是纯净 JSON**（或完全为空），方便 `2> err.json` 后直接解析。
 - 需要人工可读时加 `-o table`；需要诊断时加 `-v` 或 `-vv`。
 
-## 6.18 与 saastool 的关系
+## 6.18 与 saastool 的关系 {#ai-vs-saastool}
 
 | 维度 | saastool | saasai |
 | --- | --- | --- |
