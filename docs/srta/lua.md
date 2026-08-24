@@ -2,8 +2,8 @@
 sidebar_position: 5
 toc_min_heading_level: 2
 toc_max_heading_level: 5
-description: 深入探索LUA智能决策在RTA SaaS中的应用！本文全面介绍LUA智能决策的系统函数、内置模块（如srta、string、time）、被调函数（一次请求main、二次请求second）以及代码调试方法（通过sRTA沙箱和hijack函数模拟数据）。为广告开发者提供详细的LUA编程指南，助力实现精准的广告决策逻辑。
-keywords: [LUA智能决策, RTA SaaS, 系统函数, 内置模块, srta, string, time, 被调函数, main, second, 代码调试, sRTA沙箱, hijack函数]
+description: 深入探索LUA智能决策在RTA SaaS中的应用！本文全面介绍LUA智能决策的系统函数、内置模块（如srta、string、time）、决策结果写出函数srta.set_target（所有策略默认参竞，results表写法将于2026年9月底下线）、被调函数（一次请求main、二次请求second）以及代码调试方法（通过sRTA沙箱和hijack函数模拟数据）。为广告开发者提供详细的LUA编程指南，助力实现精准的广告决策逻辑。
+keywords: [LUA智能决策, RTA SaaS, 系统函数, 内置模块, srta, set_target, 默认参竞, results表下线, string, time, 被调函数, main, second, 代码调试, sRTA沙箱, hijack函数]
 ---
 
 # 5 LUA智能决策 {#lua}
@@ -67,12 +67,16 @@ keywords: [LUA智能决策, RTA SaaS, 系统函数, 内置模块, srta, string, 
 **策略参数**
 | 常量名称 | 含义 | 适用函数或变量 |
 | :-- | :-- | :-- |
-| srta.TARGETINFO_ENABLE | 策略参竞 | target_info |
-| srta.TARGETINFO_CPC_PRICE | CPC出价 | target_info |
-| srta.TARGETINFO_CPA_PRICE | CPA出价 | target_info |
-| srta.TARGETINFO_USER_WEIGHT_FACTOR | 用户权重系数 | target_info |
-| srta.TARGETINFO_CPC_FACTOR | CPC出价系数 | target_info |
-| srta.TARGETINFO_DC_INFOS | DCA标签信息（数组）| target_info |
+| srta.TARGETINFO_ENABLE | 策略参竞 | srta.set_target() |
+| srta.TARGETINFO_CPC_PRICE | CPC出价 | srta.set_target() |
+| srta.TARGETINFO_CPA_PRICE | CPA出价 | srta.set_target() |
+| srta.TARGETINFO_USER_WEIGHT_FACTOR | 用户权重系数 | srta.set_target() |
+| srta.TARGETINFO_CPC_FACTOR | CPC出价系数 | srta.set_target() |
+| srta.TARGETINFO_DC_INFOS | DCA标签信息（数组）| srta.set_target() |
+
+:::tip
+这组常量原用于 `main()` 返回的 results 表（target_info），现推荐配合 [srta.set_target](#set_target) 直接写出结果。**results 表写法将于 2026 年 9 月底下线**，详见 [srta.set_target](#set_target)。
+:::
 
 **DCA标签信息**
 | 常量名称 | 含义 | 适用函数或变量 |
@@ -90,6 +94,7 @@ keywords: [LUA智能决策, RTA SaaS, 系统函数, 内置模块, srta, string, 
 | srta.get_ds_u32 | 获取数据空间 U32 字段值（推荐） |
 | srta.get_ds_flag | 获取数据空间 FLAG 字段值（推荐） |
 | srta.get_targets | 获取需决策的策略ID列表 |
+| srta.set_target | 写出策略决策结果（推荐，替代 results 表返回） |
 | srta.get_apps | 获取App安装态(需授权) |
 | srta.get_scores | 获取模型分(需授权) |
 | srta.get_extscore | 简化版模型分查询(需授权) |
@@ -225,7 +230,258 @@ targets = srta.get_targets() -- 获取策略列表
 targets = {"news", "music", "video_for_new"}
 ```
 
-### 5.2.6 srta.get_apps函数 {#get_apps}
+### 5.2.6 srta.set_target函数 {#set_target}
+
+`srta.set_target` 用于**直接写出单个策略的决策结果**，是 `main()` 构造 results 表返回的高性能替代方案。
+
+:::danger results 表写法将于 2026 年 9 月底下线
+`main()` 通过 `return results` 返回结果表的写法**已进入待下线状态，将于 2026 年 9 月底停止支持**。请在此之前将脚本改造为 `srta.set_target`，改造方式见[下方对照示例](#set_target-migrate)。
+
+过渡期内两种写法都可用、可混用，语义完全一致。
+:::
+
+#### 5.2.6.1 默认参竞（重要语义变更） {#set_target-default-enable}
+
+:::warning 请先理解这条语义
+现在**所有待决策策略默认参竞**。脚本只需表达两件事：**排除谁**、**给谁调权/调权**。
+:::
+
+这与早期"必须显式写 `[srta.TARGETINFO_ENABLE] = true` 才参竞"的规则不同：
+
+| 脚本的表达 | 结果 |
+| :-- | :-- |
+| 完全没提到某策略 | **参竞**（默认放行） |
+| `srta.set_target(tid, srta.TARGETINFO_USER_WEIGHT_FACTOR, 1.2)` | 参竞 + 系数 1.2 |
+| `srta.set_target(tid, srta.TARGETINFO_ENABLE, false)` | **不参竞** |
+| 脚本运行报错 | 该账号本次无决策输出（不做默认放行） |
+
+这样改的原因：过去在 `for` 循环里漏填 `ENABLE = true`，或运营在后台新增了策略而脚本的 `if/elseif` 链没有覆盖它，该策略就会被**静默屏蔽**，排查困难。现在这类遗漏不会再导致策略无法投放。
+
+:::caution 人群定向类脚本请重点检查
+如果你的脚本原本是"**命中人群才写 `ENABLE = true`，未命中就不写**"的写法（靠"不写"来屏蔽），必须改为在未命中时**显式写 `ENABLE = false`**，否则未命中人群会被放行投放。
+:::
+
+#### 5.2.6.2 三种调用形态 {#set_target-forms}
+
+```lua
+-- 形态一：调权（不建 table，推荐）
+srta.set_target(targetid, srta.TARGETINFO_USER_WEIGHT_FACTOR, 1.2)
+
+-- 一次可写入多个字段，参数为「键, 值」交替排列，个数不限
+srta.set_target(targetid,
+    srta.TARGETINFO_USER_WEIGHT_FACTOR, 1.2,
+    srta.TARGETINFO_CPA_PRICE, 2500)
+
+-- 形态二：排除（不参竞）
+srta.set_target(targetid, srta.TARGETINFO_ENABLE, false)
+
+-- 形态三：整表（便于复用已有的、返回 info 表的辅助函数）
+srta.set_target(targetid, {
+    [srta.TARGETINFO_USER_WEIGHT_FACTOR] = 1.2,
+    [srta.TARGETINFO_CPA_PRICE] = 2500,
+})
+```
+
+**参数说明**：
+- 参数1：策略ID（字符串），来自 [srta.get_targets](#get_targets)
+- 参数2及之后，二选一：
+  - **键值对形式**：`srta.TARGETINFO_*` 常量与对应值交替排列，可传任意多组。末尾落单的参数会被忽略
+  - **整表形式**：一个以 `srta.TARGETINFO_*` 为键的 table（此时参数总数必须为 2）
+
+**返回值**：无。
+
+#### 5.2.6.3 使用要点 {#set_target-notes}
+
+**1. 参竞无需声明**
+
+`ENABLE = true` 是默认语义，写与不写完全等价。只调权时直接写字段即可：
+
+```lua
+-- 推荐
+srta.set_target(targetid, srta.TARGETINFO_CPA_PRICE, 2500)
+
+-- 等价，但 ENABLE 是多余的
+srta.set_target(targetid, srta.TARGETINFO_ENABLE, true, srta.TARGETINFO_CPA_PRICE, 2500)
+```
+
+**2. 排除是"粘性"的，不必关心调用顺序**
+
+一旦对某策略写了 `ENABLE = false`，后续再调 `set_target` **既不会让它恢复参竞，也不会给它带上任何字段**。因此"先统一调权、再逐条排除"这类写法可以放心使用：
+
+```lua
+for _, targetid in ipairs(srta.get_targets()) do
+    -- 先统一调权
+    srta.set_target(targetid, srta.TARGETINFO_USER_WEIGHT_FACTOR, 1.1)
+end
+
+-- 再排除黑名单，之前写入的系数会一并作废
+srta.set_target("bad_target", srta.TARGETINFO_ENABLE, false)
+```
+
+**3. 同一策略可多次调用，语义为增量合并**
+
+多次调用同一策略是**合并**而非覆盖，同一字段重复写入以最后一次为准。原先"读-改-写"的写法可直接改为再调一次：
+
+```lua
+-- 旧写法
+results[tid] = { [srta.TARGETINFO_ENABLE] = true, [srta.TARGETINFO_USER_WEIGHT_FACTOR] = 1.0 }
+if is_vip then
+    results[tid][srta.TARGETINFO_USER_WEIGHT_FACTOR] = 1.5
+end
+
+-- 新写法
+srta.set_target(tid, srta.TARGETINFO_USER_WEIGHT_FACTOR, 1.0)
+if is_vip then
+    srta.set_target(tid, srta.TARGETINFO_USER_WEIGHT_FACTOR, 1.5)
+end
+```
+
+**4. 只对本次待决策的策略生效**
+
+传入的策略ID若不在 [srta.get_targets](#get_targets) 返回的列表中，该次调用会被系统忽略，不产生任何副作用。因此**无需先判断策略是否在列表里**：
+
+```lua
+-- 无需遍历，直接写目标策略即可
+srta.set_target("my_special_target", srta.TARGETINFO_ENABLE, false)
+```
+
+**5. 与 `return results` 可以混用**
+
+过渡期内两种写法语义一致，系统会先取 `set_target` 写出的结果，再合并返回表。`ENABLE = false` 无论出现在哪一侧都是粘性排除。
+
+**6. DCA 标签的写法**
+
+`srta.TARGETINFO_DC_INFOS` 的值仍是数组表，结构不变：
+
+```lua
+srta.set_target(targetid, srta.TARGETINFO_DC_INFOS, {
+    { [srta.DC_TAG_NAME] = "category", [srta.DC_TAG_VALUE] = "electronics" },
+    { [srta.DC_TAG_NAME] = "brand",    [srta.DC_TAG_VALUE] = "tech_brand" },
+})
+```
+
+#### 5.2.6.4 改造对照 {#set_target-migrate}
+
+**场景一：全量调权**
+
+```lua
+-- 旧写法（9月底下线）
+function main()
+    local results = {}
+    for _, tid in ipairs(srta.get_targets()) do
+        results[tid] = {
+            [srta.TARGETINFO_ENABLE] = true,
+            [srta.TARGETINFO_USER_WEIGHT_FACTOR] = 1.05,
+        }
+    end
+    return results
+end
+
+-- 新写法
+function main()
+    for _, tid in ipairs(srta.get_targets()) do
+        srta.set_target(tid, srta.TARGETINFO_USER_WEIGHT_FACTOR, 1.05)
+    end
+end
+```
+
+**场景二：部分策略排除（含"漏填 ENABLE"隐患的修复）**
+
+```lua
+-- 旧写法（9月底下线）
+-- 注意：else 分支必须写 ENABLE=true，否则该策略会被静默屏蔽
+function main()
+    local results = {}
+    for _, tid in ipairs(srta.get_targets()) do
+        if tid == "t1" then
+            results[tid] = { [srta.TARGETINFO_ENABLE] = true,
+                             [srta.TARGETINFO_USER_WEIGHT_FACTOR] = 1.05 }
+        elseif tid == "t2" then
+            results[tid] = { [srta.TARGETINFO_ENABLE] = false }
+        else
+            results[tid] = { [srta.TARGETINFO_ENABLE] = true }  -- 兜底，容易漏写
+        end
+    end
+    return results
+end
+
+-- 新写法：无需兜底分支，也无需遍历
+function main()
+    srta.set_target("t1", srta.TARGETINFO_USER_WEIGHT_FACTOR, 1.05)
+    srta.set_target("t2", srta.TARGETINFO_ENABLE, false)
+end
+```
+
+**场景三：人群定向（必须显式排除，否则语义反转）**
+
+```lua
+-- 旧写法（9月底下线）：命中才写，未命中靠"不写"实现屏蔽
+function main()
+    local results = {}
+    for _, tid in ipairs(srta.get_targets()) do
+        local is_ta = srta.get_ds_u8(srta.DS_DID, 6) == 1
+        if is_ta then
+            results[tid] = { [srta.TARGETINFO_ENABLE] = true }
+        end
+        -- 未命中不写 -> 不参竞
+    end
+    return results
+end
+
+-- 新写法：⚠️ 未命中必须显式排除
+function main()
+    local is_ta = srta.get_ds_u8(srta.DS_DID, 6) == 1
+    if is_ta then
+        return -- 命中人群，全部默认参竞
+    end
+    for _, tid in ipairs(srta.get_targets()) do
+        srta.set_target(tid, srta.TARGETINFO_ENABLE, false)
+    end
+end
+```
+
+**场景四：复用返回 info 表的辅助函数**
+
+```lua
+local function build_info(tid)
+    local info = { [srta.TARGETINFO_ENABLE] = true }
+    if tid == "t1" then
+        info[srta.TARGETINFO_USER_WEIGHT_FACTOR] = 1.4
+    end
+    return info
+end
+
+-- 旧写法（9月底下线）
+function main()
+    local results = {}
+    for _, tid in ipairs(srta.get_targets()) do
+        results[tid] = build_info(tid)
+    end
+    return results
+end
+
+-- 新写法：辅助函数无需改动，用整表形态传入
+function main()
+    for _, tid in ipairs(srta.get_targets()) do
+        srta.set_target(tid, build_info(tid))
+    end
+end
+```
+
+#### 5.2.6.5 与 results 表写法的对比 {#set_target-compare}
+
+| 特性 | return results（待下线） | srta.set_target（推荐） |
+| :-- | :-- | :-- |
+| 状态 | **2026年9月底下线** | 推荐 |
+| 参竞的表达 | 需显式 `ENABLE = true` | 默认参竞，无需表达 |
+| 漏填 ENABLE 的后果 | 策略被静默屏蔽 | 无影响（默认参竞） |
+| 内存开销 | 一个 results 表 + 每策略一个 info 表 | 无需建表 |
+| 字段写入方式 | table 键值写入 | 直接传参 |
+| 只处理个别策略时 | 仍需遍历全部策略并逐个填表 | 直接写目标策略，无需遍历 |
+
+**使用场景**：所有需要输出决策结果的脚本，均应使用本函数。
+
+### 5.2.7 srta.get_apps函数 {#get_apps}
 
 一次可以获得多个App安装态，每个返回值为 true(已安装)/false(未安装)/nil(无权限或不可靠)中的一个状态
 
@@ -238,7 +494,7 @@ app2 = false
 app3 = nil
 ```
 
-### 5.2.7 srta.get_scores函数 {#get_scores}
+### 5.2.8 srta.get_scores函数 {#get_scores}
 
 一次可以获得多个模型打分，每个返回值为数字/nil(无权限或不可靠)中的一个状态
 
@@ -262,7 +518,7 @@ score2 = 80
 score3 = nil
 ```
 
-### 5.2.8 srta.get_extscore函数 {#get_extscore}
+### 5.2.9 srta.get_extscore函数 {#get_extscore}
 
 `srta.get_extscore` 是 `srta.get_scores` 的跨账号访问专用版，简化调用代码编写，用于查询其他账号数据空间的模型打分（需授权）。
 
@@ -291,7 +547,7 @@ score3 = nil  -- 等价于 U8列3 (模型ID:20020201003), 无权限或不存在�
 - 需要查询合作方或其他账号的模型打分数据进行联合决策
 - 在不需要完整 DS 数据时，直接获取指定列的打分值，性能更优
 
-### 5.2.9 srta.get_os函数 {#get_os}
+### 5.2.10 srta.get_os函数 {#get_os}
 
 获取终端的操作系统。返回值参考[系统常量]
 
@@ -302,7 +558,7 @@ os = srta.get_os() -- 获取终端操作系统
 1 -- 代表iOS，可以用srta常量进行判断
 ```
 
-### 5.2.10 srta.get_siteset函数 {#get_siteset}
+### 5.2.11 srta.get_siteset函数 {#get_siteset}
 
 获取媒体站点集ID。返回值参考[系统常量]
 
@@ -313,7 +569,7 @@ siteset = srta.get_siteset() -- 获取媒体站点集ID
 21 -- 21代表微信，可以用srta常量进行判断
 ```
 
-### 5.2.11 srta.get_expid函数 {#get_expid}
+### 5.2.12 srta.get_expid函数 {#get_expid}
 
 获取实验分桶编号。返回值为 0-10。1-10 每个分桶 UV 比例接近于 10%。由于系统原因，目前线上极少量的流量不会被分到任何实验分组，当分桶号为 0 时，代表流量未分桶。
 
@@ -324,7 +580,7 @@ expid = srta.get_expid() -- 获取实验分桶号
 5 -- 代表5号分桶
 ```
 
-### 5.2.12 srta.get_geo_nearest函数 {#get_geo_nearest}
+### 5.2.13 srta.get_geo_nearest函数 {#get_geo_nearest}
 
 获取地理位置最近的数据。传入搜索半径（单位：公里），返回距离（单位：米）和对应的数据表。
 
@@ -354,7 +610,7 @@ geoData = {
 - 地域性活动推广：向特定区域用户推送本地活动信息
 - 门店引流：向门店附近用户推送优惠信息
 
-### 5.2.13 srta.get_geo_points函数 {#get_geo_points}
+### 5.2.14 srta.get_geo_points函数 {#get_geo_points}
 
 获取半径范围内、按指定 U8 列倒序排列的地理位置数据点，最多返回 10 个。与 `srta.get_geo_nearest` 仅返回最近一个不同，该函数返回排序后的多点列表，适用于多个候选点的比选场景。
 
@@ -553,90 +809,115 @@ newstamp = time.setdate(2025, 6, 18, 12, 13, 14) -- 2025:06:18 12:13:14
 
 #### 5.5.1.1 调用 {#callback-main-call}
 
-业务逻辑由使用方实现，为便于系统调用，约定使用main函数名。该函数无入口参数，后续所需数据通过调用内置函数获取
+业务逻辑由使用方实现，为便于系统调用，约定使用main函数名。该函数无入口参数，后续所需数据通过调用内置函数获取，决策结果通过 [srta.set_target](#set_target) 写出。
 
 ```lua
 function main()
-    didData = srta.get_dsdata(srta.DS_DID) -- 获取DID数据
-    local results = {} -- 返回结果
-    
+    -- 按需读取所需数据
+    local v1 = srta.get_ds_u8(srta.DS_DID, 1)
+
     -- 客户逻辑
     ...
 
-    return results
+    -- 用 srta.set_target 写出结果，无需 return
 end
 ```
+
+:::info 所有策略默认参竞
+`main()` 中未被 `srta.set_target` 排除的策略都会参竞，因此脚本只需表达"**排除谁、给谁调权**"。详见 [默认参竞语义](#set_target-default-enable)。
+:::
 
 较为完整的使用示例
 
 ```lua
 -- 客户自定义变量，便于理解
-IDXU8_NEWS = 1
-IDXU8_MUSIC = 2
-IDXU8_VIDEO = 3
+local IDXU8_NEWS = 1
+local IDXU8_MUSIC = 2
+local IDXU8_VIDEO = 3
 
-IDXFLAG_NEWS = 1
-IDXFLAG_MUSIC = 2
+local IDXFLAG_NEWS = 1
+local IDXFLAG_MUSIC = 2
 
 function main()
-    didData = srta.get_dsdata(srta.DS_DID) -- 获取DID数据
-    targets = srta.get_targets()
-    local results = {} -- 返回结果
-    
-    for i, targetid in ipairs(targets) do -- 遍历待决策策略ID
-        if targetid == "news" then -- 新闻拉活策略
-            local is_news_installed = didData[srta.U8][IDXU8_NEWS] == 1 -- 是否新闻已安装
-            local is_news_touched = didData[srta.FLAG][IDXFLAG_NEWS] -- 是否新闻已完成当天唤起
-            if is_news_installed and (not is_news_touched) then
-                results[targetid] = { [srta.TARGETINFO_ENABLE] = true } -- 已安装未拉活，可出拉活广告
-            end
-        end
+    -- 按需读取 DID 数据的指定列
+    local u8_news, u8_music, u8_video = srta.get_ds_u8(srta.DS_DID,
+        IDXU8_NEWS, IDXU8_MUSIC, IDXU8_VIDEO)
+    local flag_news, flag_music = srta.get_ds_flag(srta.DS_DID,
+        IDXFLAG_NEWS, IDXFLAG_MUSIC)
 
-        if targetid == "music" then -- 音乐拉活策略
-            local is_music_installed = didData[srta.U8][IDXU8_MUSIC] == 1 -- 是否音乐已安装
-            local is_music_touched = didData[srta.FLAG][IDXFLAG_MUSIC] -- 是否音乐已完成当天唤起
-            if is_music_installed and (not is_music_touched) then
-                results[targetid] = { [srta.TARGETINFO_ENABLE] = true } -- 已安装未拉活，可出拉活广告
+    for _, targetid in ipairs(srta.get_targets()) do -- 遍历待决策策略ID
+        if targetid == "news" then -- 新闻拉活策略
+            -- 已安装且当天未拉活才出拉活广告，否则不参竞
+            if not (u8_news == 1 and not flag_news) then
+                srta.set_target(targetid, srta.TARGETINFO_ENABLE, false)
             end
-        end
-    
-        if targetid == "video_for_new" then -- 视频拉新策略
-            local is_video_not_installed = didData[srta.U8][IDXU8_VIDEO] == 0 -- 是否视频未安装
-            if is_video_not_installed then
-                results[targetid] = { [srta.TARGETINFO_ENABLE] = true } -- 未安装，可出拉新广告
+
+        elseif targetid == "music" then -- 音乐拉活策略
+            -- 已安装且当天未拉活才出拉活广告，否则不参竞
+            if not (u8_music == 1 and not flag_music) then
+                srta.set_target(targetid, srta.TARGETINFO_ENABLE, false)
+            end
+
+        elseif targetid == "video_for_new" then -- 视频拉新策略
+            -- 仅未安装用户出拉新广告
+            if u8_video ~= 0 then
+                srta.set_target(targetid, srta.TARGETINFO_ENABLE, false)
             end
         end
     end
-
-    return results
 end
 ```
 
+:::caution 与旧示例的差异
+上例中"不满足条件"的分支**显式写了 `ENABLE = false`**。旧写法是"满足条件才写 `ENABLE = true`、不满足就不写"，在默认参竞语义下这样会导致不满足条件的用户被放行投放。改造时务必逐条补上排除分支。
+:::
+
 #### 5.5.1.2 返回 {#callback-main-return}
 
-主函数返回一个结果，为table格式并可引用srta常量以设置以下成员编号
+:::danger 待下线
+`main()` 通过 `return results` 返回结果表的写法**将于 2026 年 9 月底停止支持**，请改用 [srta.set_target](#set_target) 写出结果。
 
-| 成员 | 类型 | 功能 |
-| :-- | :-- | :-- |
-| srta.TARGETINFO_ENABLE | bool | 策略是否参竞 |
-| srta.TARGETINFO_CPC_PRICE | int | 策略CPC出价 |
-| srta.TARGETINFO_CPA_PRICE | int | 策略CPA出价 |
-| srta.TARGETINFO_USER_WEIGHT_FACTOR | float | 策略用户权重系数 |
-| srta.TARGETINFO_CPC_FACTOR | float | 策略CPC出价系数 |
-| srta.TARGETINFO_DC_INFOS | table数组 | DCA标签信息（可选）|
+本节仅为便于存量脚本对照保留。过渡期内两种写法可混用，语义一致。
+:::
+
+使用 results 表时，`main()` 返回一个 table，键为策略ID，值可引用srta常量以设置以下成员编号
+
+| 成员 | 类型 | 功能 | srta.set_target 中的等价写法 |
+| :-- | :-- | :-- | :-- |
+| srta.TARGETINFO_ENABLE | bool | 策略是否参竞 | 参竞为默认值无需写；不参竞写 `set_target(tid, srta.TARGETINFO_ENABLE, false)` |
+| srta.TARGETINFO_CPC_PRICE | int | 策略CPC出价 | `set_target(tid, srta.TARGETINFO_CPC_PRICE, 100)` |
+| srta.TARGETINFO_CPA_PRICE | int | 策略CPA出价 | `set_target(tid, srta.TARGETINFO_CPA_PRICE, 2500)` |
+| srta.TARGETINFO_USER_WEIGHT_FACTOR | float | 策略用户权重系数 | `set_target(tid, srta.TARGETINFO_USER_WEIGHT_FACTOR, 1.2)` |
+| srta.TARGETINFO_CPC_FACTOR | float | 策略CPC出价系数 | `set_target(tid, srta.TARGETINFO_CPC_FACTOR, 1.2)` |
+| srta.TARGETINFO_DC_INFOS | table数组 | DCA标签信息（可选）| `set_target(tid, srta.TARGETINFO_DC_INFOS, {...})` |
 
 **DCA标签信息格式**
 
-`srta.TARGETINFO_DC_INFOS` 为一个数组，其中每个元素为包含 DCA 标签的 table 结构：
+`srta.TARGETINFO_DC_INFOS` 为一个数组，其中每个元素为包含 DCA 标签的 table 结构。两种写法的标签结构完全相同：
 
 ```lua
+-- 推荐写法
+srta.set_target(targetid,
+    srta.TARGETINFO_CPC_PRICE, 100,
+    srta.TARGETINFO_DC_INFOS, {
+        {
+            [srta.DC_TAG_NAME] = "tag_name_1",    -- DCA标签名称
+            [srta.DC_TAG_VALUE] = "tag_value_1"   -- DCA标签值
+        },
+        {
+            [srta.DC_TAG_NAME] = "tag_name_2",
+            [srta.DC_TAG_VALUE] = "tag_value_2"
+        }
+    })
+
+-- 旧写法（9月底下线）
 results[targetid] = {
     [srta.TARGETINFO_ENABLE] = true,
     [srta.TARGETINFO_CPC_PRICE] = 100,
     [srta.TARGETINFO_DC_INFOS] = {
         {
-            [srta.DC_TAG_NAME] = "tag_name_1",    -- DCA标签名称
-            [srta.DC_TAG_VALUE] = "tag_value_1"   -- DCA标签值
+            [srta.DC_TAG_NAME] = "tag_name_1",
+            [srta.DC_TAG_VALUE] = "tag_value_1"
         },
         {
             [srta.DC_TAG_NAME] = "tag_name_2",
@@ -755,26 +1036,22 @@ end
 
 **DCA标签信息沙箱模拟**
 
-在 hijack 函数中可以模拟返回 DCA 标签信息。DCA 标签作为策略返回值的一部分，用于设定广告的动态创意属性：
+DCA 标签由脚本自行写出，不需要 hijack 桩数据。在沙箱中调试时，只要模拟好判定所需的数据源，DCA 标签会随决策结果一起返回：
 
 ```lua
 function hijack()
     local sandbox = {
+        srta_get_targets = {"t1", "t2"},
         -- 其他模拟数据...
-        -- main函数中返回的数据会通过DCA标签进行增强
     }
     return sandbox
 end
 
 function main()
-    targets = srta.get_targets()
-    local results = {}
-    
-    for i, targetid in ipairs(targets) do
-        results[targetid] = {
-            [srta.TARGETINFO_ENABLE] = true,
-            [srta.TARGETINFO_CPC_PRICE] = 100,
-            [srta.TARGETINFO_DC_INFOS] = {
+    for _, targetid in ipairs(srta.get_targets()) do
+        srta.set_target(targetid,
+            srta.TARGETINFO_CPC_PRICE, 100,
+            srta.TARGETINFO_DC_INFOS, {
                 {
                     [srta.DC_TAG_NAME] = "category",
                     [srta.DC_TAG_VALUE] = "electronics"
@@ -783,11 +1060,8 @@ function main()
                     [srta.DC_TAG_NAME] = "brand",
                     [srta.DC_TAG_VALUE] = "tech_brand"
                 }
-            }
-        }
+            })
     end
-    
-    return results
 end
 ```
 
@@ -851,8 +1125,6 @@ function main()
 
     local didData = srta.get_dsdata(srta.DS_DID)
     local v1_old = didData[srta.U8][1]             -- 100
-
-    return {}
 end
 ```
 

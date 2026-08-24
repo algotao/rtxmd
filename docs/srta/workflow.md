@@ -106,67 +106,58 @@ saastool write -ds did -source ./users.jsonl
 -- 已安装：根据用户级别调节系数
 -- 未安装：出拉新广告
 
-IDXU8_USER_INSTALLED = 1      -- 字节索引1：已安装态
-IDXU8_USER_LEVEL = 2          -- 字节索引2：用户级别
+local IDXU8_USER_INSTALLED = 1      -- 字节索引1：已安装态
+local IDXU8_USER_LEVEL = 2          -- 字节索引2：用户级别
 
 -- 主函数：在每次用户决策时被调用
 function main()
-    -- 从DID数据空间获取用户信息，此处无须填写用户ID，该映射关系由sRTA平台自动处理为当前用户
-    didData = srta.get_dsdata(srta.DS_DID)
-    installed = didData[srta.U8][IDXU8_USER_INSTALLED] == 1 -- 是否已安装
-    userLevel = didData[srta.U8][IDXU8_USER_LEVEL] == 1 -- 用户级别
-    
-    local results = {} -- 定义返回结果
+    -- 从DID数据空间按需读取所需字节列，此处无须填写用户ID，
+    -- 该映射关系由sRTA平台自动处理为当前用户
+    local installFlag, userLevel = srta.get_ds_u8(srta.DS_DID,
+        IDXU8_USER_INSTALLED, IDXU8_USER_LEVEL)
+    local installed = installFlag == 1 -- 是否已安装
 
-    local targets = srta.get_targets() -- 获取所有策略ID
+    print("installed", installed, "userLevel", userLevel) -- 在手工调试时会输出，在正式运行时自动被禁止
 
-    for _, targetid in ipairs(targets) do
-        print("installed", installed) -- 打印已安装状态。在手工调试时会输出，在正式运行时自动被禁止。
-
-        if targetid == "active" and installed then -- 拉活策略
-            if userLevel == 3 then
-                results[targetid] = {
-                    [srta.TARGETINFO_ENABLE] = true,
-                    [srta.TARGETINFO_USER_WEIGHT_FACTOR]= 1.3 -- 高价值用户提权
-                }
-            elseif userLevel == 2 then
-                results[targetid] = {
-                    [srta.TARGETINFO_ENABLE] = true,
-                    [srta.TARGETINFO_USER_WEIGHT_FACTOR]= 1.0 -- 中价值用户维持
-                }
+    -- 所有策略默认参竞，因此只需表达「排除谁、给谁调权」
+    for _, targetid in ipairs(srta.get_targets()) do
+        if targetid == "active" then -- 拉活策略：仅投已安装用户
+            if not installed then
+                srta.set_target(targetid, srta.TARGETINFO_ENABLE, false) -- 未安装不参竞
+            elseif userLevel == 3 then
+                srta.set_target(targetid, srta.TARGETINFO_USER_WEIGHT_FACTOR, 1.3) -- 高价值用户提权
             elseif userLevel == 1 then
-                results[targetid] = {
-                    [srta.TARGETINFO_ENABLE] = true,
-                    [srta.TARGETINFO_USER_WEIGHT_FACTOR]= 0.8 --低价值用户降权
-                }
-            else 
-                results[targetid] = {
-                    [srta.TARGETINFO_ENABLE] = true -- 其他情况不调节
-                }
+                srta.set_target(targetid, srta.TARGETINFO_USER_WEIGHT_FACTOR, 0.8) -- 低价值用户降权
             end
-        else if targetid=="new" and not installed then -- 拉新策略
-            results[targetid] = {
-                [srta.TARGETINFO_ENABLE] = true
-            }
+            -- 中价值(userLevel==2)及其他级别：维持原出价不调节，无需任何调用
+
+        elseif targetid == "new" then -- 拉新策略：仅投未安装用户
+            if installed then
+                srta.set_target(targetid, srta.TARGETINFO_ENABLE, false) -- 已安装不参竞
+            end
         end
     end
-
-    return results
 end
 ```
+
+:::tip 这段示例体现了三个要点
+1. **无需 `return`**：决策结果通过 [srta.set_target](./lua.md#set_target) 直接写出，不再构造 results 表返回（results 表写法将于 2026 年 9 月底下线）。
+2. **参竞不用声明**：所有待决策策略默认参竞，所以"中价值用户维持原价"这一档不需要写任何代码。
+3. **不投的情况必须显式排除**：`active` 遇到未安装用户、`new` 遇到已安装用户，都要写 `ENABLE = false`。若沿用旧写法的"不满足条件就不写"，在默认参竞下这些用户会被误投。
+:::
 
 ### 脚本：测试 {#quickstart-test}
 
 本地测试脚本逻辑：
 
 ```sh
-# 测试 USERID1（低价值用户）
+# 测试 USERID1（低价值用户）：active 降权 0.8，new 不参竞
 saastool script debug -lua ./sample.lua -did 张三 -os 2
 
-# 测试 USERID2（中等价值用户）
+# 测试 USERID2（中等价值用户）：active 参竞不调权，new 不参竞
 saastool script debug -lua ./sample.lua -did 李四 -os 2
 
-# 测试 USERID3（高价值用户）
+# 测试 USERID3（高价值用户）：active 提权 1.3，new 不参竞
 saastool script debug -lua ./sample.lua -did 王五 -os 2
 
 ```

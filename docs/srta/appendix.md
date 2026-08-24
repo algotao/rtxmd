@@ -34,8 +34,16 @@ keywords: [行政区划码, 省市映射, 区划代码, 地理位置, 城市编�
 代码示例
 
 ```lua
-geofacData = srta.get_dsdata(srta.DS_GEOFAC) -- 获取常住地数据
+-- 按需读取常住地数据的指定列（推荐）
+local v1, v2 = srta.get_ds_u8(srta.DS_GEOFAC, 1, 2)   -- U8 第 1、2 列
+local n1 = srta.get_ds_u32(srta.DS_GEOFAC, 1)         -- U32 第 1 列
+local f1 = srta.get_ds_flag(srta.DS_GEOFAC, 1)        -- FLAG 第 1 列
 ```
+
+:::tip
+`srta.get_dsdata(srta.DS_GEOFAC)` 的写法**已待下线**，请改用上面的
+[srta.get_ds_u8 / get_ds_u32 / get_ds_flag](./lua.md#get_ds_field)，按需只取所需列，性能更优。
+:::
 
 ### 特殊说明 {#usage-special}
 
