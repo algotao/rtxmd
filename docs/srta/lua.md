@@ -2,8 +2,8 @@
 sidebar_position: 5
 toc_min_heading_level: 2
 toc_max_heading_level: 5
-description: 深入探索LUA智能决策在RTA SaaS中的应用！本文全面介绍LUA智能决策的系统函数、内置模块（如srta、string、time）、决策结果写出函数srta.set_target（所有策略默认参竞，results表写法将于2026年9月底下线）、被调函数（一次请求main、二次请求second）以及代码调试方法（通过sRTA沙箱和hijack函数模拟数据）。为广告开发者提供详细的LUA编程指南，助力实现精准的广告决策逻辑。
-keywords: [LUA智能决策, RTA SaaS, 系统函数, 内置模块, srta, set_target, 默认参竞, results表下线, string, time, 被调函数, main, second, 代码调试, sRTA沙箱, hijack函数]
+description: 深入探索LUA智能决策在RTA SaaS中的应用！本文全面介绍LUA智能决策的系统函数、内置模块（如srta、string、time）、决策结果写出函数srta.set_target（所有策略默认参竞，results表写法将于2026年9月底下线）、分场景决策（按微信朋友圈/搜索/视频号/公众号/小程序设置场景扩展系数）、被调函数（一次请求main、二次请求second）以及代码调试方法（通过sRTA沙箱和hijack函数模拟数据）。为广告开发者提供详细的LUA编程指南，助力实现精准的广告决策逻辑。
+keywords: [LUA智能决策, RTA SaaS, 系统函数, 内置模块, srta, set_target, 默认参竞, results表下线, 分场景决策, 场景扩展系数, SCENE_WECHAT_MOMENTS, TARGETINFO_SCENE_FACTORS, string, time, 被调函数, main, second, 代码调试, sRTA沙箱, hijack函数]
 ---
 
 # 5 LUA智能决策 {#lua}
@@ -64,6 +64,19 @@ keywords: [LUA智能决策, RTA SaaS, 系统函数, 内置模块, srta, set_targ
 | srta.SITESET_XS_NEWS | 腾讯新闻 | srta.get_siteset() |
 | srta.SITESET_XS_VIDEO | 腾讯视频 | srta.get_siteset() |
 
+**场景（微信细分场景）**
+| 常量名称 | 含义 | 适用函数或变量 |
+| :-- | :-- | :-- |
+| srta.SCENE_WECHAT_MOMENTS | 微信朋友圈 | srta.set_target() |
+| srta.SCENE_WECHAT_SEARCH | 微信搜索 | srta.set_target() |
+| srta.SCENE_WECHAT_CHANNELS | 微信视频号 | srta.set_target() |
+| srta.SCENE_WECHAT_SUBSCRIPTIONS | 微信公众号 | srta.set_target() |
+| srta.SCENE_WECHAT_MINI_PROGRAMS | 微信小程序 | srta.set_target() |
+
+::::tip 场景与站点集的区别
+`srta.get_siteset()` 返回的是**媒体站点集**（微信、优量汇等），属于脚本的**输入**；场景常量是脚本的**输出**，用于同属微信的朋友圈 / 搜索 / 视频号 / 公众号 / 小程序之间做差异化调权。详见 [分场景决策](#set_target-scene)。
+::::
+
 **策略参数**
 | 常量名称 | 含义 | 适用函数或变量 |
 | :-- | :-- | :-- |
@@ -72,6 +85,7 @@ keywords: [LUA智能决策, RTA SaaS, 系统函数, 内置模块, srta, set_targ
 | srta.TARGETINFO_CPA_PRICE | CPA出价 | srta.set_target() |
 | srta.TARGETINFO_USER_WEIGHT_FACTOR | 用户权重系数 | srta.set_target() |
 | srta.TARGETINFO_CPC_FACTOR | CPC出价系数 | srta.set_target() |
+| srta.TARGETINFO_SCENE_FACTORS | 微信细分场景扩展系数（场景→系数表，**需授权**）| srta.set_target() |
 | srta.TARGETINFO_DC_INFOS | DCA标签信息（数组）| srta.set_target() |
 
 :::tip
@@ -360,7 +374,94 @@ srta.set_target(targetid, srta.TARGETINFO_DC_INFOS, {
 })
 ```
 
-#### 5.2.6.4 改造对照 {#set_target-migrate}
+**7. 分场景决策的写法**
+
+按微信细分场景（朋友圈 / 搜索 / 视频号 / 公众号 / 小程序）差异化调权时，用 `srta.TARGETINFO_SCENE_FACTORS` 传入「场景→系数」表，详见 [分场景决策](#set_target-scene)。**该功能需授权开通。**
+
+#### 5.2.6.4 分场景决策（微信细分场景） {#set_target-scene}
+
+`srta.TARGETINFO_SCENE_FACTORS` 用于**在用户权重系数之上，再按最终投放的微信细分场景乘一个系数**，实现"同一策略在不同场景用不同强度出价"。
+
+::::info 本功能需授权开通
+分场景回复加权为**授权能力**，账号未开通时不可用：脚本写出的场景系数**不会生效**，其余决策逻辑不受影响。如需使用请联系运营/商务开通。
+::::
+
+修正后系数为基础加权与场景系数的乘积：
+
+```text
+修正后系数 = srta.TARGETINFO_USER_WEIGHT_FACTOR × 该场景的系数
+```
+
+```lua
+function main()
+    for _, tid in ipairs(srta.get_targets()) do
+        srta.set_target(tid, srta.TARGETINFO_USER_WEIGHT_FACTOR, 1.1)
+        srta.set_target(tid, srta.TARGETINFO_SCENE_FACTORS, {
+            [srta.SCENE_WECHAT_MOMENTS]  = 1.2,  -- 朋友圈加价 20%
+            [srta.SCENE_WECHAT_CHANNELS] = 0.8,  -- 视频号降权 20%
+        })
+    end
+end
+```
+
+**参数说明**：
+- 值为一个「场景 → 系数」的 table
+- 键必须使用 `srta.SCENE_*` 常量（见[场景常量](#srta-const)），值为数字系数
+- 系数合法区间 `0.2 ~ 5`，与 `srta.TARGETINFO_USER_WEIGHT_FACTOR` 一致——修正后系数是两者之积，按同一口径防护可避免乘积把策略推到极端值
+
+**使用要点**：
+
+**1. 基础加权必须同时给出（顺序不限）**：场景系数是乘在基础加权之上的一层，修正后系数 = 基础加权 × 场景系数，因此**只有写了 `srta.TARGETINFO_USER_WEIGHT_FACTOR`（且落在 `0.2 ~ 5` 内）时，场景系数才会随回复下发**；只写场景系数、或基础加权越界被防护拦掉时，场景系数会被丢弃。
+
+两个字段写在同一次回复里即可，**先后顺序没有要求**：
+
+```lua
+-- 两种顺序完全等价
+srta.set_target(tid, srta.TARGETINFO_USER_WEIGHT_FACTOR, 1.1)
+srta.set_target(tid, srta.TARGETINFO_SCENE_FACTORS, { [srta.SCENE_WECHAT_MOMENTS] = 1.2 })
+
+srta.set_target(tid, srta.TARGETINFO_SCENE_FACTORS, { [srta.SCENE_WECHAT_MOMENTS] = 1.2 })
+srta.set_target(tid, srta.TARGETINFO_USER_WEIGHT_FACTOR, 1.1)
+```
+
+**2. 按场景合并**：同一策略多次写入时，**重复写同一场景以最后一次为准，不同场景累加**，与 `set_target` 整体的增量合并语义一致：
+
+```lua
+srta.set_target(tid, srta.TARGETINFO_SCENE_FACTORS, { [srta.SCENE_WECHAT_MOMENTS] = 1.2 })
+srta.set_target(tid, srta.TARGETINFO_SCENE_FACTORS, { [srta.SCENE_WECHAT_SEARCH] = 0.9 })
+-- 结果：朋友圈 1.2、搜索 0.9，两个场景都生效
+```
+
+**3. 非法项只丢弃自己**：键不是 `srta.SCENE_*` 取值、或系数超出 `0.2 ~ 5` 时，该场景被忽略，同表内其它场景照常下发，也不会导致策略停投。
+
+**4. 只写关心的场景即可**：未写入的场景不回传系数，按基础加权执行，无需为全部场景兜底。
+
+::::caution 只写场景系数、不写基础加权 = 不生效
+场景系数不会单独下发。若某策略只写了 `srta.TARGETINFO_SCENE_FACTORS` 而没有有效的 `srta.TARGETINFO_USER_WEIGHT_FACTOR`，场景系数会被丢弃，该策略按未调权处理。沙箱调试的策略输出中也不会出现它。
+::::
+
+**5. 可与其它字段一同写出**，也可写在整表里：
+
+```lua
+-- 键值对形态
+srta.set_target(tid,
+    srta.TARGETINFO_USER_WEIGHT_FACTOR, 1.1,
+    srta.TARGETINFO_SCENE_FACTORS, {
+        [srta.SCENE_WECHAT_MOMENTS] = 1.2,
+        [srta.SCENE_WECHAT_CHANNELS] = 0.8,
+    })
+
+-- 整表形态
+srta.set_target(tid, {
+    [srta.TARGETINFO_USER_WEIGHT_FACTOR] = 1.1,
+    [srta.TARGETINFO_SCENE_FACTORS] = {
+        [srta.SCENE_WECHAT_MOMENTS] = 1.2,
+        [srta.SCENE_WECHAT_CHANNELS] = 0.8,
+    },
+})
+```
+
+#### 5.2.6.5 改造对照 {#set_target-migrate}
 
 **场景一：全量调权**
 
@@ -468,7 +569,7 @@ function main()
 end
 ```
 
-#### 5.2.6.5 与 results 表写法的对比 {#set_target-compare}
+#### 5.2.6.6 与 results 表写法的对比 {#set_target-compare}
 
 | 特性 | return results（待下线） | srta.set_target（推荐） |
 | :-- | :-- | :-- |
@@ -889,7 +990,32 @@ end
 | srta.TARGETINFO_CPA_PRICE | int | 策略CPA出价 | `set_target(tid, srta.TARGETINFO_CPA_PRICE, 2500)` |
 | srta.TARGETINFO_USER_WEIGHT_FACTOR | float | 策略用户权重系数 | `set_target(tid, srta.TARGETINFO_USER_WEIGHT_FACTOR, 1.2)` |
 | srta.TARGETINFO_CPC_FACTOR | float | 策略CPC出价系数 | `set_target(tid, srta.TARGETINFO_CPC_FACTOR, 1.2)` |
+| srta.TARGETINFO_SCENE_FACTORS | table | 微信细分场景扩展系数（可选，**需授权**）| `set_target(tid, srta.TARGETINFO_SCENE_FACTORS, {...})` |
 | srta.TARGETINFO_DC_INFOS | table数组 | DCA标签信息（可选）| `set_target(tid, srta.TARGETINFO_DC_INFOS, {...})` |
+
+**场景扩展系数格式**
+
+`srta.TARGETINFO_SCENE_FACTORS` 为一个「场景 → 系数」的 table，键为[场景常量](#srta-const)，值为 `0.2 ~ 5` 的系数，语义与写法见 [分场景决策](#set_target-scene)。**必须与 `srta.TARGETINFO_USER_WEIGHT_FACTOR` 同时给出才会生效**（顺序不限）：
+
+```lua
+-- 推荐写法
+srta.set_target(targetid,
+    srta.TARGETINFO_USER_WEIGHT_FACTOR, 1.1,
+    srta.TARGETINFO_SCENE_FACTORS, {
+        [srta.SCENE_WECHAT_MOMENTS]  = 1.2,   -- 朋友圈
+        [srta.SCENE_WECHAT_CHANNELS] = 0.8    -- 视频号
+    })
+
+-- 旧写法（9月底下线）
+results[targetid] = {
+    [srta.TARGETINFO_ENABLE] = true,
+    [srta.TARGETINFO_USER_WEIGHT_FACTOR] = 1.1,
+    [srta.TARGETINFO_SCENE_FACTORS] = {
+        [srta.SCENE_WECHAT_MOMENTS]  = 1.2,
+        [srta.SCENE_WECHAT_CHANNELS] = 0.8
+    }
+}
+```
 
 **DCA标签信息格式**
 
@@ -1060,6 +1186,31 @@ function main()
                     [srta.DC_TAG_NAME] = "brand",
                     [srta.DC_TAG_VALUE] = "tech_brand"
                 }
+            })
+    end
+end
+```
+
+**场景扩展系数沙箱模拟**
+
+与 DCA 标签一样，场景系数由脚本自行写出，**不需要 hijack 桩数据**。沙箱调试时它随决策结果一并返回，便于直接核对各场景的系数是否按预期写出：
+
+```lua
+function hijack()
+    local sandbox = {
+        srta_get_targets = {"t1", "t2"},
+        -- 其他模拟数据...
+    }
+    return sandbox
+end
+
+function main()
+    for _, targetid in ipairs(srta.get_targets()) do
+        srta.set_target(targetid,
+            srta.TARGETINFO_USER_WEIGHT_FACTOR, 1.1,
+            srta.TARGETINFO_SCENE_FACTORS, {
+                [srta.SCENE_WECHAT_MOMENTS]  = 1.2,
+                [srta.SCENE_WECHAT_CHANNELS] = 0.8
             })
     end
 end
