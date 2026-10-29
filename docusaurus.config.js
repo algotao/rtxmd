@@ -9,7 +9,7 @@ const darkTheme = themes.dracula;
 const config = {
   title: '程序化知识库',
   tagline: 'RTA & RTB & PDB',
-  url: 'https://wiki.algo.com.cn',
+  url: 'https://doc.algo.com.cn',
   baseUrl: '/',
   onBrokenLinks: 'throw',
   favicon: 'img/favicon.ico',
