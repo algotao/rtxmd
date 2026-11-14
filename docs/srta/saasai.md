@@ -736,19 +736,34 @@ saasai script list
 
 ### 6.13.2 script debug（别名：`run`） {#ai-script-debug}
 
-在服务端运行本地 Lua 脚本进行调试。
+在服务端运行本地 Lua 脚本进行调试。`--os` 选择设备类型，`--ds` 可选择 WUID 分区，`--phase` 选择一次/二次请求。
 
 | 参数 | 必填 | 含义 | 样例 |
 | --- | --- | --- | --- |
 | `--lua` | 是 | Lua 文件路径，或 `-` 表示 stdin | `./script.lua` |
-| `--userid` | 是 | 测试用户 ID | `abc123...` |
-| `--ds` | 否 | 数据空间 ID | `did` |
-| `--os` | 否 | 1=iOS、2=Android、7=Harmony | `2`（默认） |
+| `--userid` | 条件必填 | 测试用户 ID。DID 区、演示环境 WUID 区必填；正式环境 WUID 区不填（填写也会被服务端忽略） | `abc123...` |
+| `--ds` | 否 | 数据空间 ID | `did` / `wuid` |
+| `--os` | 否 | 设备类型：1=iOS、2=Android、7=Harmony | `2`（默认） |
+| `--phase` | 否 | `p2`=一次请求（默认，执行 `main()`），`p3`=二次请求（执行 `second()`） | `p3` |
+| `--ads` | `--phase p3` 必填 | P3 候选广告 JSON 数组文件或 `-`（stdin），1~20 条 | `./ads.json` |
+
+`--lua -` 与 `--ads -` 不能同时使用（两者都要读 stdin）。
+
+**WUID 分区调试**：演示环境可填 `--userid`，直接作为 WUID 使用、不做 ID 转换；正式环境无需填写 `--userid`，也无须「WUID ID转换参数」，服务端不做 ID 转换并返回空的用户数据（脚本仍执行，print、策略及 P3 广告输出正常返回）。正式环境直接读取 WUID 分区仍被禁止。
 
 ```sh
 saasai script debug --lua ./script.lua --userid abc123 --os 2
 saasai script run   --lua ./script.lua --userid abc123 --os 1
 cat script.lua | saasai script debug --lua - --userid abc123 --ds did
+
+# 演示环境调试 WUID 分区
+saasai script debug --lua ./script.lua --userid demo-openid --ds wuid
+
+# 正式环境调试 WUID 分区：不填用户 ID，返回空的用户数据
+saasai script debug --lua ./script.lua --ds wuid
+
+# P3 二次请求
+saasai script debug --lua ./script.lua --userid abc123 --phase p3 --ads ./ads.json
 ```
 
 **JSON 模式下的结构化输出**
@@ -761,10 +776,14 @@ cat script.lua | saasai script debug --lua - --userid abc123 --ds did
     "error_output": "...",
     "print_output": "...",
     "dataspace_output": "...",
-    "targets_output": "..."
+    "targets_output": "...",
+    "ads_output": "...",
+    "ads_result": {}
   }
 }
 ```
+
+`ads_output` / `ads_result` 仅在 `--phase p3` 时返回。
 
 ### 6.13.3 script create {#ai-script-create}
 

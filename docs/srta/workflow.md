@@ -152,13 +152,13 @@ end
 
 ```sh
 # 测试 USERID1（低价值用户）：active 降权 0.8，new 不参竞
-saastool script debug -lua ./sample.lua -did 张三 -os 2
+saastool script debug -lua ./sample.lua -userid 张三 -os 2
 
 # 测试 USERID2（中等价值用户）：active 参竞不调权，new 不参竞
-saastool script debug -lua ./sample.lua -did 李四 -os 2
+saastool script debug -lua ./sample.lua -userid 李四 -os 2
 
 # 测试 USERID3（高价值用户）：active 提权 1.3，new 不参竞
-saastool script debug -lua ./sample.lua -did 王五 -os 2
+saastool script debug -lua ./sample.lua -userid 王五 -os 2
 
 ```
 

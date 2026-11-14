@@ -1247,7 +1247,7 @@ saastool script list
 
 #### 4.1.13.2 script debug（调试脚本） {#cli-script-debug}
 
-在服务器上调试Lua脚本。
+在服务器上调试Lua脚本。设备类型（`-os`）、数据空间（`-ds`，含 WUID 区）、调试阶段（`-phase`，一次/二次）均可选择。
 
 ```sh
 saastool script debug -help
@@ -1255,16 +1255,20 @@ saastool script debug -help
 
 ```
 Usage of debug:
+  -ads string
+        P3 candidate ads JSON array file (required with -phase p3)
   -config string
         Config file. (default "cfg.toml")
-  -lua string
-        LUA file name (required)
-  -userid string
-        device md5 (lower case) / openid / phone md5 / phone sha256 (required)
   -ds string
-        dataspace id
+        Data space ID
+  -lua string
+        LUA file name
   -os uint
-        1=iOS, 2=Android, 7=Harmony default=2
+        1=iOS, 2=Android, 7=Harmony default=2 (default 2)
+  -phase string
+        debug phase: p2 (first request) or p3 (second request) (default "p2")
+  -userid string
+        test userid (optional for wuid dataspace in production mode)
 ```
 
 **参数说明**
@@ -1272,19 +1276,39 @@ Usage of debug:
 | 参数 | 必填 | 含义 | 样例 |
 | --- | --- | --- | --- |
 | -lua | 是 | Lua脚本文件路径 | ./script.lua |
-| -userid | 是 | 用户ID（设备md5值小写、openid、手机号md5、手机号sha256） | abc123def456... |
-| -ds | 否 | 数据空间ID | 123 |
-| -os | 否 | 操作系统：1=iOS，2=Android，7=Harmony | 2（默认） |
+| -userid | 条件必填 | 测试用户ID。DID区、演示环境WUID区必填；正式环境WUID区不填（填写也会被服务端忽略） | abc123def456... |
+| -ds | 否 | 数据空间ID | wuid |
+| -os | 否 | 操作系统（设备类型）：1=iOS，2=Android，7=Harmony | 2（默认） |
+| -phase | 否 | 调试阶段：p2=一次请求（默认），p3=二次请求 | p3 |
+| -ads | p3 必填 | P3候选广告的JSON数组文件，1~20条，仅与 `-phase p3` 配合使用 | ./ads.json |
 | -config | 否 | 配置文件路径 | cfg.toml（默认） |
+
+**WUID 分区调试**
+
+| 环境 | 用户ID | 「WUID ID转换参数」 | 用户数据 |
+| --- | --- | --- | --- |
+| 演示环境 | 可填、必填，直接作为 WUID 使用（不做ID转换） | 无须填写 | 读取该 WUID 分区数据 |
+| 正式环境 | 不可填（Web 界面不显示输入框） | 无须显示、无须填写 | 不转换用户ID，返回空的用户数据 |
+
+正式环境调试 WUID 分区时，服务端不下发用户ID、不访问用户数据，脚本仍会执行，print、策略及 P3 广告输出正常返回。正式环境直接读取 WUID 分区（`read`）仍被禁止。
 
 **使用示例**
 
 ```sh
-# 调试脚本
+# 调试脚本（默认 P2 一次请求）
 saastool script debug -lua ./script.lua -userid abc123def456 -os 2
 
 # 指定数据空间
 saastool script debug -lua ./script.lua -userid abc123def456 -ds 123 -os 2
+
+# 演示环境调试 WUID 分区：用户ID直接作为 WUID
+saastool script debug -lua ./script.lua -userid demo-openid -ds wuid
+
+# 正式环境调试 WUID 分区：不填用户ID，返回空的用户数据
+saastool script debug -lua ./script.lua -ds wuid -os 2
+
+# P3 二次请求调试
+saastool script debug -lua ./script.lua -userid abc123def456 -phase p3 -ads ./ads.json
 ```
 
 #### 4.1.13.3 script create（创建脚本） {#cli-script-create}
@@ -1822,7 +1846,7 @@ saastool提供了容器版本。在容器中将默认启动为daemon并提供htt
 ```yml
 services:
   saastool:
-    image: rta-docker.pkg.coding.net/public/docker/saastool:202608121230
+    image: rta-docker.pkg.coding.net/public/docker/saastool:202611141023
     restart: unless-stopped
     environment:
       - SRTA_ACCOUNT=2000
@@ -1837,7 +1861,7 @@ services:
 ```yml
 services:
   saastool:
-    image: rta-docker.pkg.coding.net/public/docker/saastool:202608121230
+    image: rta-docker.pkg.coding.net/public/docker/saastool:202611141023
     restart: unless-stopped
     environment:
       - SRTA_ACCOUNT=2000

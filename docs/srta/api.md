@@ -269,9 +269,33 @@ message Grant {
 // ScriptDebug 调试脚本
 message ScriptDebug {
     string lua_script                            = 1;   // 要调试的lua脚本
-    string userid                                = 2;   // 将从服务端读取该用户ID下的数据。当使用WUID区时,该字段将直接作为用户ID使用,而不会进行ID转换,且仅在演示环境有效。
+    string userid                                = 2;   // 调试用用户ID。DID区或演示环境WUID区必填；正式环境WUID区忽略该字段，不做ID转换，返回空的用户数据。
     string dataspace_id                          = 4;   // 数据空间ID
-    OS os                                        = 5;   // 操作系统
+    OS os                                        = 5;   // 操作系统（设备类型）
+    string appid                                 = 6;   // 废弃：脚本调试不再进行WUID ID转换，保留字段兼容旧客户端
+    int64 account_id                             = 7;   // 废弃：同上
+    HashType hash_type                           = 8;   // 废弃：同上
+    DebugPhase phase                             = 9;   // 调试阶段，默认P2
+    repeated DebugAd ads                         = 10;  // P3候选广告，phase=P3时必填，1~20条
+}
+
+// DebugPhase 调试阶段
+enum DebugPhase {
+    DEBUG_PHASE_P2                               = 0;   // 一次请求（默认）
+    DEBUG_PHASE_P3                               = 1;   // 二次请求
+}
+
+// DebugAd P3调试用的候选广告，字段与脚本中 srta.get_ads() 返回的 ad 对象一一对应
+message DebugAd {
+    uint64 adgroup_id                            = 1;   // 广告ID，必填，非0
+    uint32 advertiser_id                         = 2;   // 广告主ID
+    string target                                = 3;   // 裸策略ID，必填，服务端按账号补前缀
+    float user_weight_factor                     = 4;   // 用户加权系数
+    uint32 cpa_price                             = 5;   // CPA出价
+    float cpc_factor                             = 6;   // CPC系数
+    uint32 cpc_price                             = 7;   // CPC出价
+    uint64 dsp_tag                               = 8;   // DSP标签
+    uint32 original_cpa_price                    = 9;   // 原始CPA出价
 }
 
 // ScriptCreate 创建脚本
@@ -554,6 +578,8 @@ message ScriptDebugRes {
     string error_output                           = 2;  // 错误信息
     string targets_output                         = 3;  // 策略输出
     string dataspace_out                          = 4;  // 数据区输出
+    string ads_output                             = 5;  // P3广告级结果（文本表格），P2为空
+    string ads_output_json                        = 6;  // P3广告级结果（JSON），P2为空
 }
 
 message ScriptInfo {
@@ -1684,6 +1710,17 @@ saastool resetds -ds geofac
 
 **说明**：该接口用于调试 LUA 脚本，LUA 将在服务端沙箱环境运行并返回结果。调试模式下 print 函数将生效，可用于输出中间状态。关于该函数使用的更多信息，请参阅[代码调试](./lua.md#debug)。
 
+`phase` 选择调试阶段：`DEBUG_PHASE_P2`（默认，一次请求，执行 `main()`）或 `DEBUG_PHASE_P3`（二次请求，执行 `second()`，需携带 1~20 条 `ads`）。`os` 选择设备类型，`dataspace_id` 可选择 DID 区或 WUID 区。
+
+**WUID 分区调试**
+
+| 环境 | 用户 ID | ID 转换 | 用户数据 |
+| --- | --- | --- | --- |
+| 演示环境 | 可填、必填，直接作为 WUID 使用 | 不转换 | 读取该 WUID 分区数据 |
+| 正式环境 | 不可填（填写也被服务端忽略） | 不转换 | 返回空的用户数据，`dataspace_out` 为空 |
+
+正式环境调试 WUID 分区时无须显示或填写「WUID ID转换参数」（`appid` / `account_id` / `hash_type` 已废弃），服务端不下发用户 ID、不访问用户数据，避免敏感 ID 数据被回读；脚本仍会执行，print、策略及 P3 广告输出正常返回。正式环境**直接读取** WUID 分区（read 接口）仍被禁止。
+
 **接口**：/saas/script/debug
 
 **请求参数**：
@@ -1693,22 +1730,27 @@ saastool resetds -ds geofac
 | 字段名称 | 字段类型 | 必填 | 描述 |
 | :--- | :--- | :--- | :--- |
 | lua_script | string | 是 | LUA脚本 |
-| userid | string | 是 | 将从服务端读取该用户ID下的数据。当使用WUID区时，该字段将直接作为用户ID使用，而不会进行ID转换，且仅在演示环境有效。 |
-| dataspace_id | string | 否 | 数据空间ID |
-| os | os OS | 否 | 操作系统<br/>IOS = 1;<br/>Android = 2;<br/>默认 2  |
+| userid | string | 条件必填 | DID区、演示环境WUID区必填；正式环境WUID区不填（填写也被服务端忽略） |
+| dataspace_id | string | 否 | 数据空间ID，缺省为 did |
+| os | OS | 否 | 操作系统（设备类型）<br/>IOS = 1;<br/>Android = 2;<br/>HARMONY = 7;<br/>默认 2 |
+| phase | DebugPhase | 否 | 调试阶段：0 = P2 一次请求（默认）；1 = P3 二次请求 |
+| ads | array of DebugAd | P3 必填 | P3候选广告，1~20条。`target` 为裸策略ID，服务端按账号补前缀 |
+| appid / account_id / hash_type | — | 否 | 已废弃：脚本调试不再进行 WUID ID 转换，保留字段兼容旧客户端 |
 
 **返回参数**：
 
 顶层节点 SaasRes.code/SaasRes.status 表达全局的操作成功/失败状态。
 
-表格节点位于 SaasRes.script_run_res
+表格节点位于 SaasRes.script_debug_res
 
 | 字段名称 | 字段类型 | 必填 | 描述 |
 | :--- | :--- | :--- | :--- |
 | print_output | string | 否 | 调用print函数的打印输出 |
 | error_output | string | 否 | LUA脚本运行错误 |
-| targets_output | string | 否 | 策略输出内容 |
-| dataspace_out | string | 否 | 数据区输出内容 |
+| targets_output | string | 否 | 策略输出内容（TargetsOut 的 protojson 文本） |
+| dataspace_out | string | 否 | 数据区输出内容；正式环境WUID区调试为空的用户数据 |
+| ads_output | string | 否 | P3广告级结果（文本表格），P2为空 |
+| ads_output_json | string | 否 | P3广告级结果（JSON），P2为空 |
 
 ### 3.19.2 创建 ScriptCreate {#scriptcreate}
 
