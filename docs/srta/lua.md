@@ -2,7 +2,7 @@
 sidebar_position: 5
 toc_min_heading_level: 2
 toc_max_heading_level: 5
-description: 深入探索LUA智能决策在RTA SaaS中的应用！本文全面介绍LUA智能决策的系统函数、内置模块（如srta、string、time）、决策结果写出函数srta.set_target（所有策略默认参竞，results表写法将于2026年9月底下线）、分场景决策（按微信朋友圈/搜索/视频号/公众号/小程序设置场景扩展系数）、被调函数（一次请求main、二次请求second）以及代码调试方法（通过sRTA沙箱和hijack函数模拟数据）。为广告开发者提供详细的LUA编程指南，助力实现精准的广告决策逻辑。
+description: 深入探索LUA智能决策在RTA SaaS中的应用！本文全面介绍LUA智能决策的系统函数、内置模块（如srta、string、time、math）、决策结果写出函数srta.set_target（所有策略默认参竞，results表写法将于2026年9月底下线）、分场景决策（按微信朋友圈/搜索/视频号/公众号/小程序设置场景扩展系数）、被调函数（一次请求main、二次请求second）以及代码调试方法（通过sRTA沙箱和hijack函数模拟数据）。为广告开发者提供详细的LUA编程指南，助力实现精准的广告决策逻辑。
 keywords: [LUA智能决策, RTA SaaS, 系统函数, 内置模块, srta, set_target, 默认参竞, results表下线, 分场景决策, 场景扩展系数, SCENE_WECHAT_MOMENTS, TARGETINFO_SCENE_FACTORS, string, time, 被调函数, main, second, 代码调试, sRTA沙箱, hijack函数]
 ---
 
@@ -15,6 +15,8 @@ keywords: [LUA智能决策, RTA SaaS, 系统函数, 内置模块, srta, set_targ
 | 函数名 | 功能 |
 | :-- | :-- |
 | next | 对table进行遍历 |
+| ipairs | 按连续整数下标（1、2、3……）遍历数组型 table，遇到第一个空值即停止 |
+| pairs | 遍历 table 的全部键值对，遍历顺序不保证 |
 | print | 打印信息（注：**在生产环境中该函数被设置为不输出**） |
 | tonumber | 转换为数字 |
 | tostring | 转换为文本 |
@@ -840,6 +842,7 @@ time为时间计算相关功能函数，系统使用uint32为基础格式，存�
 | time.minute | 获取分钟 |
 | time.second | 获取秒 |
 | time.weekday | 获取星期几，星期日为 0，星期一为 1，以此类推 |
+| time.diff | 计算两个时间戳之差（秒），返回 `时间戳1 - 时间戳2` |
 | time.truncate | 向下取整，第二参数可指定取整类型 |
 | time.addtime | 增减时间，可一次增减时分秒 |
 | time.adddate | 增减日期，可一次增减年月日 |
@@ -938,11 +941,46 @@ newstamp = time.adddate(now, -1, 1, 1) -- 去年，再增加1月1天
 newstamp = time.setdate(2025, 6, 18, 12, 13, 14) -- 2025:06:18 12:13:14
 ```
 
-## 5.5 被调函数 {#callback}
+### 5.4.12 time.diff函数 {#time-diff}
 
-### 5.5.1 一次请求main {#callback-main}
+函数传入两个时间戳，返回两者的差值（单位：秒），即 `时间戳1 - 时间戳2`。
 
-#### 5.5.1.1 调用 {#callback-main-call}
+```lua
+now = time.now()
+before = time.addtime(now, -1, 0, 0) -- 1小时前
+diff = time.diff(now, before)        -- 3600
+```
+
+## 5.5 内置模块math {#mod-math}
+
+math为数值计算相关功能函数。出于安全考虑，沙箱只提供下列五个函数，不加载完整标准 math 库。参数类型或个数不合法时会抛出 LUA 错误，脚本报错即本次无输出，调用方需按平台惯例做好判空。
+
+### 5.5.1 函数列表 {#math-funclist}
+
+| 函数名 | 功能 |
+| :-- | :-- |
+| math.abs | 返回绝对值 |
+| math.floor | 向下取整（结果仍为 number） |
+| math.ceil | 向上取整（结果仍为 number） |
+| math.min | 返回参数中的最小值，至少 1 个参数 |
+| math.max | 返回参数中的最大值，至少 1 个参数 |
+
+### 5.5.2 使用示例 {#math-example}
+
+```lua
+x = -3.7
+print(math.abs(x))       -- 3.7
+print(math.floor(x))     -- -4
+print(math.ceil(x))      -- -3
+print(math.min(3, 1, 2)) -- 1
+print(math.max(3, 1, 2)) -- 3
+```
+
+## 5.6 被调函数 {#callback}
+
+### 5.6.1 一次请求main {#callback-main}
+
+#### 5.6.1.1 调用 {#callback-main-call}
 
 业务逻辑由使用方实现，为便于系统调用，约定使用main函数名。该函数无入口参数，后续所需数据通过调用内置函数获取，决策结果通过 [srta.set_target](#set_target) 写出。
 
@@ -1007,7 +1045,7 @@ end
 上例中"不满足条件"的分支**显式写了 `ENABLE = false`**。旧写法是"满足条件才写 `ENABLE = true`、不满足就不写"，在默认参竞语义下这样会导致不满足条件的用户被放行投放。改造时务必逐条补上排除分支。
 :::
 
-#### 5.5.1.2 返回 {#callback-main-return}
+#### 5.6.1.2 返回 {#callback-main-return}
 
 :::danger 待下线
 `main()` 通过 `return results` 返回结果表的写法**将于 2026 年 9 月底停止支持**，请改用 [srta.set_target](#set_target) 写出结果。
@@ -1088,17 +1126,17 @@ results[targetid] = {
 ```
 
 
-### 5.5.2 二次请求second {#callback-second}
+### 5.6.2 二次请求second {#callback-second}
 
-#### 5.5.2.1 调用 {#callback-second-call}
-
-待更新
-
-#### 5.5.2.2 返回 {#callback-second-return}
+#### 5.6.2.1 调用 {#callback-second-call}
 
 待更新
 
-## 5.6 代码调试 {#debug}
+#### 5.6.2.2 返回 {#callback-second-return}
+
+待更新
+
+## 5.7 代码调试 {#debug}
 
 sRTA 创建了完全独立的 LUA 运行时，有自己的生态库及机密数据依赖，所以`无法在IDE内调试`。需要通过 [API接口](./api.md#scriptdebug) 提交代码`在服务端沙箱运行并返回结果`。
 
@@ -1110,9 +1148,9 @@ sRTA 创建了完全独立的 LUA 运行时，有自己的生态库及机密数�
 | 二方 | 否 | 可 | 通过hijack模拟返回 |
 | 三方 | 否 | 可 | 通过hijack模拟返回 |
 
-### 5.6.1 沙箱函数hijack {#hijack}
+### 5.7.1 沙箱函数hijack {#hijack}
 
-#### 5.6.1.1 入口 {#hijack-entry}
+#### 5.7.1.1 入口 {#hijack-entry}
 
 约定使用hijack函数名并由使用方实现，在该函数内可以劫持部分系统模块功能调用，以桩数据内容返回。该函数无入口参数。
 
@@ -1126,7 +1164,7 @@ end
 ```
 
 
-#### 5.6.1.2 返回 {#hijack-return}
+#### 5.7.1.2 返回 {#hijack-return}
 
 hijack函数返回一个沙箱结果集合。
 
@@ -1275,7 +1313,7 @@ end
 | geo_fac | 使用请求中的常住城市行政区划码。如未指定则为0，读取 srta.DS_GEOFAC 将无数据 |
 | geo_lnglat | 使用请求中的用户常住经纬度。如未指定则 srta.get_geo_nearest() 查无结果 |
 
-#### 5.6.1.3 srta.get_ds_u8等函数的沙箱模拟 {#hijack-get_ds_field}
+#### 5.7.1.3 srta.get_ds_u8等函数的沙箱模拟 {#hijack-get_ds_field}
 
 `srta.get_ds_u8` / `srta.get_ds_u32` / `srta.get_ds_flag` **没有独立的 hijack 成员名**，它们与 `srta.get_dsdata` 读取同一份底层数据，因此直接复用已有的桩数据即可模拟：
 

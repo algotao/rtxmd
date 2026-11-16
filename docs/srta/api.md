@@ -1066,7 +1066,7 @@ API以protobuf格式返回，返回信息为SaasRes结构
 | write_item.bytes_kv | map of uint32 | 否 | 写入uint8，key为1-64索引值，value为0-255数值。index/value超限会丢弃 |
 | write_item.bytes_kv.\<key\>| uint32 | 是 | uint8区域编号 |
 | write_item.bytes_kv.\<value\>| uint32 | 是 | uint8区域数值 |
-| write_item.uint32s_kv | map of uint32 | 否 | 写入uint32，key为1-4索引值，value为uint32数值。index超限会丢弃 |
+| write_item.uint32s_kv | map of uint32 | 否 | 写入uint32，key为1-8索引值，value为uint32数值。index超限会丢弃 |
 | write_item.uint32s_kv.\<key\>| uint32 | 是 | uint32区域编号 |
 | write_item.uint32s_kv.\<value\>| uint32 | 是 | uint32区域数值 |
 | write_item.flags_with_expire_kv | map of FlagWithExpire | 否 | 写入标志位，key为1-4索引值，index超限会丢弃 |
@@ -1130,9 +1130,9 @@ API以protobuf格式返回，返回信息为SaasRes结构
 
 **说明**：该接口用于清空指定数据空间中账号下的所有数据。支持清空 `geo`、`geoip`、`geofac` 数据空间。清空后数据不可恢复，请谨慎操作。
 
-**调用限制**：
-  + 当有任务处于"运行"状态时，不可调用。
-  + 每自然天调用上限为 5 次。
+:::warning 使用提示
+在任务执行或写入时重置可能产生脏数据，建议在无执行时重置。
+:::
 
 **接口**：/saas/resetds
 
@@ -2108,7 +2108,7 @@ saastool resetds -ds geofac
 | normalization_flag | uint32 | 否 | 是否归一化：0=否，1=按分桶数量归一化（值÷桶数×10） |
 
 **时间范围约束**：
-- `where_begin_time` 不能小于 T-2（今天0点减2天）
+- `where_begin_time` 不能小于 T-7（今天0点减7天）
 - `where_end_time` 不能大于当前时间
 - `where_end_time` 不能小于 `where_begin_time + 1分钟`
 - 秒数自动清零（如 `20250617120102` → `20250617120100`）
